@@ -28,14 +28,18 @@ export function Navbar() {
               Home
             </motion.span>
           </Link>
-          <Link to="/#creators">
-            <motion.span
-              whileHover={{ color: "hsl(var(--accent))" }}
-              className="text-sm font-medium smooth-transition"
-            >
-              Criadores
-            </motion.span>
-          </Link>
+          <motion.a
+            href="#creators"
+            whileHover={{ color: "hsl(var(--accent))" }}
+            className="text-sm font-medium smooth-transition cursor-pointer"
+            onClick={(e) => {
+              e.preventDefault();
+              const element = document.getElementById('creators');
+              element?.scrollIntoView({ behavior: 'smooth' });
+            }}
+          >
+            Criadores
+          </motion.a>
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
