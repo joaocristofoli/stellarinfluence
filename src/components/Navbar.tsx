@@ -40,6 +40,14 @@ export function Navbar() {
           >
             Criadores
           </motion.a>
+          <Link to="/admin">
+            <motion.span
+              whileHover={{ color: "hsl(var(--accent))" }}
+              className="text-sm font-medium smooth-transition"
+            >
+              Admin
+            </motion.span>
+          </Link>
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
