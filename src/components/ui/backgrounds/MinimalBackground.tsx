@@ -1,47 +1,111 @@
-import { motion } from "framer-motion";
+import { motion, useScroll, useTransform } from "framer-motion";
+import { useRef } from "react";
 
-interface BackgroundProps {
-    theme?: {
-        primaryColor?: string;
-        secondaryColor?: string;
-        backgroundColor?: string;
-    };
-    position?: 'fixed' | 'absolute';
+interface MinimalBackgroundProps {
+    primaryColor?: string;
+    backgroundColor?: string;
 }
 
-export const MinimalBackground = ({ theme, position = 'fixed' }: BackgroundProps) => {
-    const primaryColor = theme?.primaryColor || '#000000';
-    const bgColor = theme?.backgroundColor || '#FFFFFF';
+export const MinimalBackground = ({ primaryColor = "#6366F1", backgroundColor = "#FFFFFF" }: MinimalBackgroundProps) => {
+    const ref = useRef(null);
+    const { scrollYProgress } = useScroll({
+        target: ref,
+        offset: ["start start", "end start"]
+    });
+
+    const y = useTransform(scrollYProgress, [0, 1], [0, -100]);
+    const x = useTransform(scrollYProgress, [0, 1], [0, 100]);
 
     return (
-        <div className={`${position} inset-0 overflow-hidden pointer-events-none z-[-1]`} style={{ backgroundColor: bgColor }}>
-            {/* Subtle Grid */}
+        <div ref={ref} className="absolute inset-0 overflow-hidden">
+            {/* Subtle Grid Pattern */}
             <div
                 className="absolute inset-0 opacity-[0.03]"
                 style={{
                     backgroundImage: `linear-gradient(${primaryColor} 1px, transparent 1px), linear-gradient(90deg, ${primaryColor} 1px, transparent 1px)`,
-                    backgroundSize: '100px 100px'
+                    backgroundSize: '50px 50px'
                 }}
             />
 
             {/* Slow Moving Gradient Blob */}
             <motion.div
-                className="absolute w-[800px] h-[800px] rounded-full blur-[120px] opacity-5"
+                className="absolute w-[600px] h-[600px] rounded-full blur-[120px] opacity-30"
                 style={{
-                    backgroundColor: primaryColor,
-                    top: '50%',
-                    left: '50%',
-                    x: '-50%',
-                    y: '-50%',
+                    background: `radial-gradient(circle, ${primaryColor}, transparent)`,
+                    top: '10%',
+                    left: '-10%',
+                    y,
+                    x
                 }}
                 animate={{
                     scale: [1, 1.2, 1],
-                    rotate: [0, 90, 0],
+                }}
+                transition={{
+                    duration: 15,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                }}
+            />
+
+            <motion.div
+                className="absolute w-[500px] h-[500px] rounded-full blur-[100px] opacity-20"
+                style={{
+                    background: `radial-gradient(circle, ${primaryColor}80, transparent)`,
+                    bottom: '5%',
+                    right: '-5%',
+                    y: useTransform(scrollYProgress, [0, 1], [0, 150])
+                }}
+                animate={{
+                    scale: [1, 1.3, 1],
+                    rotate: [0, 180, 360]
                 }}
                 transition={{
                     duration: 20,
                     repeat: Infinity,
                     ease: "linear"
+                }}
+            />
+
+            {/* Minimal Floating Dots */}
+            {[...Array(12)].map((_, i) => (
+                <motion.div
+                    key={i}
+                    className="absolute w-2 h-2 rounded-full"
+                    style={{
+                        background: primaryColor,
+                        opacity: 0.15,
+                        left: `${10 + i * 7}%`,
+                        top: `${20 + (i % 5) * 15}%`,
+                    }}
+                    animate={{
+                        y: [0, -30, 0],
+                        opacity: [0.1, 0.25, 0.1]
+                    }}
+                    transition={{
+                        duration: 8 + i * 0.5,
+                        repeat: Infinity,
+                        delay: i * 0.4,
+                        ease: "easeInOut"
+                    }}
+                />
+            ))}
+
+            {/* Clean Lines */}
+            <motion.div
+                className="absolute h-[1px] bg-gradient-to-r from-transparent via-current to-transparent opacity-10"
+                style={{
+                    width: '100%',
+                    top: '30%',
+                    color: primaryColor
+                }}
+                animate={{
+                    scaleX: [0.8, 1, 0.8],
+                    opacity: [0.05, 0.15, 0.05]
+                }}
+                transition={{
+                    duration: 10,
+                    repeat: Infinity,
+                    ease: "easeInOut"
                 }}
             />
         </div>
