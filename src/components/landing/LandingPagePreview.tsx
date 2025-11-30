@@ -5,6 +5,7 @@ import { motion, useScroll, useTransform, useSpring, useMotionTemplate, AnimateP
 // --- Helper Components ---
 
 import { ThemeBackground } from "@/components/ui/ThemeBackground";
+import { ScrollIndicator } from "@/components/landing/ScrollIndicator";
 import { LuxuryOverlay } from "@/components/ui/LuxuryOverlay";
 import { MagneticButton } from "@/components/ui/MagneticButton";
 import { Counter } from "@/components/ui/Counter";
@@ -361,7 +362,10 @@ function renderSection(
                             </div>
                         </div>
 
-
+                        {/* Scroll Indicator - Mobile Only */}
+                        <div className="md:hidden absolute bottom-20 left-1/2 -translate-x-1/2 z-20">
+                            <ScrollIndicator accentColor={theme.primaryColor} />
+                        </div>
                         {config.showScrollIndicator && (
                             <motion.div
                                 className="absolute bottom-4 left-1/2 -translate-x-1/2"

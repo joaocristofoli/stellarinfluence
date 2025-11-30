@@ -1,12 +1,14 @@
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useRef } from "react";
 
+import { LandingTheme } from "@/types/landingTheme";
+
 interface BoldBackgroundProps {
-    primaryColor?: string;
-    secondaryColor?: string;
+    theme: LandingTheme;
+    position?: 'fixed' | 'absolute';
 }
 
-export const BoldBackground = ({ primaryColor = "#FF6B35", secondaryColor = "#004E89" }: BoldBackgroundProps) => {
+export const BoldBackground = ({ theme, position = 'fixed' }: BoldBackgroundProps) => {
     const ref = useRef(null);
     const { scrollYProgress } = useScroll({
         target: ref,
@@ -18,13 +20,25 @@ export const BoldBackground = ({ primaryColor = "#FF6B35", secondaryColor = "#00
     const rotate = useTransform(scrollYProgress, [0, 1], [0, 180]);
     const scale = useTransform(scrollYProgress, [0, 1], [1, 1.2]);
 
+    const primaryColor = theme.primaryColor || "#FF6B35";
+    const secondaryColor = theme.secondaryColor || "#E91E63";
+    const backgroundColor = theme.backgroundColor || "#1A1A2E";
+
     return (
-        <div ref={ref} className="absolute inset-0 overflow-hidden">
-            {/* Animated Gradient Background */}
+        <div ref={ref} className={`${position} inset-0 overflow-hidden z-[-1]`}>
+            {/* Dark Base Background */}
+            <div
+                className="absolute inset-0"
+                style={{
+                    background: backgroundColor,
+                }}
+            />
+
+            {/* Animated Gradient Overlay */}
             <motion.div
                 className="absolute inset-0"
                 style={{
-                    background: `linear-gradient(135deg, ${primaryColor}20, ${secondaryColor}40)`,
+                    background: `linear-gradient(135deg, ${primaryColor}15, ${secondaryColor}20)`,
                     scale
                 }}
             />
@@ -49,26 +63,29 @@ export const BoldBackground = ({ primaryColor = "#FF6B35", secondaryColor = "#00
                 }}
             />
 
-            {/* Glitch Lines */}
-            {[...Array(15)].map((_, i) => (
+            {/* Animated Glitch Lines - Using Theme Colors */}
+            {[...Array(20)].map((_, i) => (
                 <motion.div
                     key={i}
-                    className="absolute h-[2px] bg-white/10"
+                    className="absolute h-[3px]"
                     style={{
-                        top: `${5 + i * 6}%`,
+                        top: `${5 + i * 4.5}%`,
                         left: 0,
                         right: 0,
-                        width: `${60 + (i % 3) * 20}%`,
-                        x: `${i % 2 === 0 ? -100 : 100}%`
+                        width: `${70 + (i % 3) * 15}%`,
+                        background: `linear-gradient(90deg, transparent, ${i % 2 === 0 ? primaryColor : secondaryColor}80, transparent)`,
+                        x: `${i % 2 === 0 ? -100 : 100}%`,
+                        boxShadow: `0 0 10px ${i % 2 === 0 ? primaryColor : secondaryColor}50`
                     }}
                     animate={{
                         x: ["0%", `${i % 2 === 0 ? 100 : -100}%`],
-                        opacity: [0, 0.3, 0]
+                        opacity: [0, 0.6, 0]
                     }}
                     transition={{
-                        duration: 4 + (i % 3),
+                        duration: 3 + (i % 3),
                         repeat: Infinity,
-                        delay: i * 0.2
+                        delay: i * 0.15,
+                        ease: "easeInOut"
                     }}
                 />
             ))}

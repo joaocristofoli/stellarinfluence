@@ -64,15 +64,16 @@ export interface CtaConfig {
 }
 
 export interface LandingTheme {
-    // Colors and Typography
+    layout: LayoutType;
     primaryColor: string;
     secondaryColor: string;
     backgroundColor: string;
     textColor: string;
     fontFamily: string;
-
-    // Layout
-    layout: LayoutType;
+    backgroundImage?: string;
+    backgroundBlur?: number; // px
+    backgroundOpacity?: number; // 0-1
+    enableAnimatedBackground?: boolean; // Toggle animated theme background
     headerStyle: HeaderStyle;
 
     // Sections (active and ordered)
@@ -89,9 +90,6 @@ export interface LandingTheme {
     // Global Assets
     logoImage?: string;
     faviconUrl?: string;
-    backgroundImage?: string;
-    backgroundBlur?: number; // px
-    backgroundOpacity?: number; // 0-1
 }
 
 export const defaultLandingTheme: LandingTheme = {

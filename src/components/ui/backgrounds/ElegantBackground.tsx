@@ -1,12 +1,14 @@
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useRef } from "react";
 
+import { LandingTheme } from "@/types/landingTheme";
+
 interface ElegantBackgroundProps {
-    primaryColor?: string;
-    secondaryColor?: string;
+    theme: LandingTheme;
+    position?: 'fixed' | 'absolute';
 }
 
-export const ElegantBackground = ({ primaryColor = "#D4AF37", secondaryColor = "#1A1A2E" }: ElegantBackgroundProps) => {
+export const ElegantBackground = ({ theme, position = 'fixed' }: ElegantBackgroundProps) => {
     const ref = useRef(null);
     const { scrollYProgress } = useScroll({
         target: ref,
@@ -15,15 +17,26 @@ export const ElegantBackground = ({ primaryColor = "#D4AF37", secondaryColor = "
 
     const y = useTransform(scrollYProgress, [0, 1], [0, 200]);
     const opacity = useTransform(scrollYProgress, [0, 0.5, 1], [1, 0.5, 0.2]);
+    const scale = useTransform(scrollYProgress, [0, 1], [1, 1.2]);
+
+    const primaryColor = theme.primaryColor || "#FFD700";
+    const secondaryColor = theme.secondaryColor || "#1A1A2E";
+    const backgroundColor = theme.backgroundColor || "#0F0F1E";
 
     return (
-        <div ref={ref} className="absolute inset-0 overflow-hidden">
-            {/* Smooth Gradient Base */}
+        <div ref={ref} className={`${position} inset-0 overflow-hidden z-[-1]`}>
+            {/*  Dark Base Background */}
+            <div
+                className="absolute inset-0"
+                style={{ background: backgroundColor }}
+            />
+
+            {/* Animated Gradient Background */}
             <motion.div
                 className="absolute inset-0"
                 style={{
-                    background: `radial-gradient(ellipse at top, ${primaryColor}15, ${secondaryColor}30)`,
-                    opacity
+                    background: `radial-gradient(circle at 50% 50%, ${primaryColor}10, ${secondaryColor}30)`,
+                    scale
                 }}
             />
 

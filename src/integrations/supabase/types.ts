@@ -12,6 +12,11 @@ export interface AgencyBranding {
     agency_name: string;
     primary_color: string;
     secondary_color: string;
+    // Advanced Settings
+    logo_position?: 'left' | 'center' | 'right';
+    logo_height_desktop?: number;
+    logo_height_mobile?: number;
+    logo_margin_top?: number;
 }
 
 // Platform Settings Type

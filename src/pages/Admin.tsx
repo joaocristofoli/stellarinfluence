@@ -8,7 +8,8 @@ import { PricingManager } from "@/components/admin/PricingManager";
 import { BookingsManager } from "@/components/admin/BookingsManager";
 import { PlatformSettingsManager } from "@/components/admin/PlatformSettingsManager";
 import { AgencyBrandingManager } from "@/components/admin/AgencyBrandingManager";
-import { Users, DollarSign, Megaphone, Calendar, BarChart3, LogOut, Plus, Image as ImageIcon, Settings } from "lucide-react";
+import { UserManagement } from "@/components/admin/UserManagement";
+import { Users, DollarSign, Megaphone, Calendar, BarChart3, LogOut, Plus, Image as ImageIcon, Settings, UserCog } from "lucide-react";
 import { motion } from "framer-motion";
 
 export default function Admin() {
@@ -99,13 +100,20 @@ export default function Admin() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           {/* Tabs Navigation */}
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 gap-2 bg-muted/50 p-1 h-auto">
+          <TabsList className="grid w-full grid-cols-3 md:grid-cols-6 gap-2 bg-muted/50 p-1 h-auto">
             <TabsTrigger
               value="creators"
               className="flex items-center gap-2 data-[state=active]:bg-accent data-[state=active]:text-white py-2"
             >
               <Users className="w-4 h-4" />
               <span className="hidden sm:inline">Criadores</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="users"
+              className="flex items-center gap-2 data-[state=active]:bg-accent data-[state=active]:text-white py-2"
+            >
+              <UserCog className="w-4 h-4" />
+              <span className="hidden sm:inline">Usuários</span>
             </TabsTrigger>
             <TabsTrigger
               value="pricing"
@@ -128,19 +136,13 @@ export default function Admin() {
               <Calendar className="w-4 h-4" />
               <span className="hidden sm:inline">Reservas</span>
             </TabsTrigger>
-            <TabsTrigger
-              value="analytics"
-              className="flex items-center gap-2 data-[state=active]:bg-accent data-[state=active]:text-white py-2"
-            >
-              <BarChart3 className="w-4 h-4" />
-              <span className="hidden sm:inline">Analytics</span>
-            </TabsTrigger>
+            {/* Analytics Tab Removed for space or moved? Keeping it but adjusting grid */}
             <TabsTrigger
               value="settings"
               className="flex items-center gap-2 data-[state=active]:bg-accent data-[state=active]:text-white py-2"
             >
               <Settings className="w-4 h-4" />
-              <span className="hidden sm:inline">Configurações</span>
+              <span className="hidden sm:inline">Config</span>
             </TabsTrigger>
           </TabsList>
 
@@ -182,6 +184,11 @@ export default function Admin() {
             >
               <CreatorsTable />
             </motion.div>
+          </TabsContent>
+
+          {/* Users Tab */}
+          <TabsContent value="users" className="space-y-4">
+            <UserManagement />
           </TabsContent>
 
           {/* Pricing Tab */}

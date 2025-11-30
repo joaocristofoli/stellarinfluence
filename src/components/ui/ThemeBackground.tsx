@@ -26,15 +26,25 @@ function hexToRgba(hex: string, alpha: number = 1) {
 }
 
 export const ThemeBackground = ({ theme, overlay = false, position = 'fixed' }: ThemeBackgroundProps) => {
-    const { layout, backgroundImage, backgroundBlur = 0, backgroundOpacity = 1, backgroundColor } = theme;
-
-    // Create a modified theme with transparent background color
-    const modifiedTheme = {
-        ...theme,
-        backgroundColor: hexToRgba(backgroundColor, backgroundOpacity)
-    };
+    const { layout, backgroundImage, backgroundBlur = 0, backgroundOpacity = 1, backgroundColor, enableAnimatedBackground = true } = theme;
 
     const renderBackground = () => {
+        // If animated background is disabled, just show solid color
+        if (!enableAnimatedBackground) {
+            return (
+                <div
+                    className={`${position} inset-0 z-[-1]`}
+                    style={{ backgroundColor: backgroundColor }}
+                />
+            );
+        }
+
+        // Create theme with adjusted background color for opacity
+        const modifiedTheme = {
+            ...theme,
+            backgroundColor: backgroundColor // Pass original backgroundColor to animated backgrounds
+        };
+
         switch (layout) {
             case 'elegant':
                 return <ElegantBackground theme={modifiedTheme} position={position} />;
@@ -54,16 +64,29 @@ export const ThemeBackground = ({ theme, overlay = false, position = 'fixed' }: 
 
     return (
         <>
-            {/* Global Background Image Layer */}
+            {/* Background Image Layer - ONLY this should have blur */}
             {backgroundImage && !overlay && (
                 <div
-                    className={`${position} inset-0 z-[-2] bg-cover bg-center bg-no-repeat transition-all duration-500`}
+                    className={`${position} inset-0 z-[-3]`}
                     style={{
                         backgroundImage: `url(${backgroundImage})`,
-                        filter: `blur(${backgroundBlur}px)`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        backgroundRepeat: 'no-repeat',
+                        filter: `blur(${backgroundBlur}px)`, // Blur only affects background image
                     }}
                 />
             )}
+
+            {/* Color Overlay Layer - ONLY this should have opacity */}
+            <div
+                className={`${position} inset-0 z-[-2]`}
+                style={{
+                    backgroundColor: hexToRgba(backgroundColor, backgroundOpacity), // Opacity only affects this overlay
+                }}
+            />
+
+            {/* Animated Background Layer */}
             {renderBackground()}
         </>
     );

@@ -1,12 +1,14 @@
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useRef } from "react";
 
+import { LandingTheme } from "@/types/landingTheme";
+
 interface MinimalBackgroundProps {
-    primaryColor?: string;
-    backgroundColor?: string;
+    theme: LandingTheme;
+    position?: 'fixed' | 'absolute';
 }
 
-export const MinimalBackground = ({ primaryColor = "#6366F1", backgroundColor = "#FFFFFF" }: MinimalBackgroundProps) => {
+export const MinimalBackground = ({ theme, position = 'fixed' }: MinimalBackgroundProps) => {
     const ref = useRef(null);
     const { scrollYProgress } = useScroll({
         target: ref,
@@ -16,22 +18,22 @@ export const MinimalBackground = ({ primaryColor = "#6366F1", backgroundColor = 
     const y = useTransform(scrollYProgress, [0, 1], [0, -100]);
     const x = useTransform(scrollYProgress, [0, 1], [0, 100]);
 
+    const primaryColor = theme.primaryColor || "#FFD700";
+    const backgroundColor = theme.backgroundColor || "#FFFFFF";
+
     return (
-        <div ref={ref} className="absolute inset-0 overflow-hidden">
-            {/* Subtle Grid Pattern */}
+        <div ref={ref} className={`${position} inset-0 overflow-hidden z-[-1]`}>
+            {/* Clean Background */}
             <div
-                className="absolute inset-0 opacity-[0.03]"
-                style={{
-                    backgroundImage: `linear-gradient(${primaryColor} 1px, transparent 1px), linear-gradient(90deg, ${primaryColor} 1px, transparent 1px)`,
-                    backgroundSize: '50px 50px'
-                }}
+                className="absolute inset-0"
+                style={{ background: backgroundColor }}
             />
 
             {/* Slow Moving Gradient Blob */}
             <motion.div
                 className="absolute w-[600px] h-[600px] rounded-full blur-[120px] opacity-30"
                 style={{
-                    background: `radial-gradient(circle, ${primaryColor}, transparent)`,
+                    background: `radial - gradient(circle, ${primaryColor}, transparent)`,
                     top: '10%',
                     left: '-10%',
                     y,
@@ -50,7 +52,7 @@ export const MinimalBackground = ({ primaryColor = "#6366F1", backgroundColor = 
             <motion.div
                 className="absolute w-[500px] h-[500px] rounded-full blur-[100px] opacity-20"
                 style={{
-                    background: `radial-gradient(circle, ${primaryColor}80, transparent)`,
+                    background: `radial - gradient(circle, ${primaryColor}80, transparent)`,
                     bottom: '5%',
                     right: '-5%',
                     y: useTransform(scrollYProgress, [0, 1], [0, 150])
@@ -74,8 +76,8 @@ export const MinimalBackground = ({ primaryColor = "#6366F1", backgroundColor = 
                     style={{
                         background: primaryColor,
                         opacity: 0.15,
-                        left: `${10 + i * 7}%`,
-                        top: `${20 + (i % 5) * 15}%`,
+                        left: `${10 + i * 7}% `,
+                        top: `${20 + (i % 5) * 15}% `,
                     }}
                     animate={{
                         y: [0, -30, 0],

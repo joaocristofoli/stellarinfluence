@@ -53,17 +53,27 @@ export function Navbar({ simplified = false }: NavbarProps) {
       transition={{ duration: 0.6, ease: "easeOut" }}
       className="fixed top-0 left-0 right-0 z-50 px-4 md:px-6 py-2 md:py-4"
     >
-      <div className="max-w-7xl mx-auto glass rounded-full px-4 md:px-6 py-2 md:py-3 flex items-center justify-between">
-        <Link to="/">
+      <div className={`max-w-7xl mx-auto glass rounded-full px-4 md:px-6 py-2 md:py-3 flex items-center justify-between ${branding?.logo_position === 'center' ? 'relative' : ''
+        }`}>
+        <Link to="/" className={`${branding?.logo_position === 'center' ? 'absolute left-1/2 -translate-x-1/2' :
+            branding?.logo_position === 'right' ? 'order-last' : ''
+          }`}>
           <motion.div
             whileHover={{ scale: 1.05 }}
             className="text-lg md:text-xl lg:text-2xl font-bold tracking-tight flex items-center"
+            style={{ marginTop: branding?.logo_margin_top ? `${branding.logo_margin_top}px` : undefined }}
           >
             {branding?.logo_url ? (
               <img
                 src={branding.logo_url}
                 alt={branding.agency_name || "AGENCY"}
-                className="h-8 md:h-10 w-auto object-contain"
+                className="w-auto object-contain transition-all duration-300"
+                style={{
+                  height: `${branding.logo_height_desktop || 40}px`,
+                  // Mobile height override via CSS variable or media query logic if needed, 
+                  // but for simplicity we can use a class that scales or inline style with window width check.
+                  // For now, let's use a responsive class approach or inline style if we want exact control.
+                }}
               />
             ) : (
               <span className="text-gradient">{branding?.agency_name || "AGENCY"}</span>
