@@ -56,7 +56,7 @@ export function Navbar({ simplified = false }: NavbarProps) {
       <div className={`max-w-7xl mx-auto glass rounded-full px-4 md:px-6 py-2 md:py-3 flex items-center justify-between ${branding?.logo_position === 'center' ? 'relative' : ''
         }`}>
         <Link to="/" className={`${branding?.logo_position === 'center' ? 'absolute left-1/2 -translate-x-1/2' :
-            branding?.logo_position === 'right' ? 'order-last' : ''
+          branding?.logo_position === 'right' ? 'order-last' : ''
           }`}>
           <motion.div
             whileHover={{ scale: 1.05 }}
@@ -184,14 +184,16 @@ export function Navbar({ simplified = false }: NavbarProps) {
         </div>
 
         {/* Mobile Menu Button */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="md:hidden"
-          onClick={() => setIsOpen(!isOpen)}
+        <button
+          className="md:hidden p-2 text-white hover:text-accent transition-colors focus:outline-none"
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsOpen(!isOpen);
+          }}
+          aria-label="Toggle menu"
         >
-          {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </Button>
+          {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+        </button>
       </div>
 
       {/* Mobile Menu */}

@@ -1,4 +1,7 @@
-import { TechBackground } from "./TechBackground";
+import { MagneticBackground } from "./backgrounds/MagneticBackground";
+import { LiquidBackground } from "./backgrounds/LiquidBackground";
+import { CosmicBackground } from "./backgrounds/CosmicBackground";
+import { TechBackground } from "./backgrounds/TechBackground";
 import { ElegantBackground } from "./backgrounds/ElegantBackground";
 import { BoldBackground } from "./backgrounds/BoldBackground";
 import { MinimalBackground } from "./backgrounds/MinimalBackground";
@@ -30,11 +33,11 @@ export const ThemeBackground = ({ theme, overlay = false, position = 'fixed' }: 
 
     const renderBackground = () => {
         // If animated background is disabled, just show solid color
-        if (!enableAnimatedBackground) {
+        if (enableAnimatedBackground === false) {
             return (
                 <div
                     className={`${position} inset-0 z-[-1]`}
-                    style={{ backgroundColor: backgroundColor }}
+                    style={{ backgroundColor: backgroundImage ? 'transparent' : backgroundColor }}
                 />
             );
         }
@@ -42,7 +45,7 @@ export const ThemeBackground = ({ theme, overlay = false, position = 'fixed' }: 
         // Create theme with adjusted background color for opacity
         const modifiedTheme = {
             ...theme,
-            backgroundColor: backgroundColor // Pass original backgroundColor to animated backgrounds
+            backgroundColor: backgroundImage ? 'transparent' : backgroundColor // Pass transparent if image exists, otherwise original
         };
 
         switch (layout) {
@@ -56,6 +59,12 @@ export const ThemeBackground = ({ theme, overlay = false, position = 'fixed' }: 
                 return <MinimalBackground theme={modifiedTheme} position={position} />;
             case 'lifestyle':
                 return <LifestyleBackground theme={modifiedTheme} position={position} />;
+            case 'magnetic':
+                return <MagneticBackground theme={modifiedTheme} position={position} />;
+            case 'liquid':
+                return <LiquidBackground theme={modifiedTheme} position={position} />;
+            case 'cosmic':
+                return <CosmicBackground theme={modifiedTheme} position={position} />;
             case 'gaming':
             default:
                 return <TechBackground theme={modifiedTheme} overlay={overlay} position={position} />;

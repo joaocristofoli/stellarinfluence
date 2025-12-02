@@ -1,6 +1,5 @@
-import { motion, useScroll, useTransform } from "framer-motion";
+import { motion, useScroll, useTransform, useVelocity, useSpring } from "framer-motion";
 import { useRef } from "react";
-
 import { LandingTheme } from "@/types/landingTheme";
 
 interface BoldBackgroundProps {
@@ -10,116 +9,80 @@ interface BoldBackgroundProps {
 
 export const BoldBackground = ({ theme, position = 'fixed' }: BoldBackgroundProps) => {
     const ref = useRef(null);
-    const { scrollYProgress } = useScroll({
+    const { scrollYProgress, scrollY } = useScroll({
         target: ref,
         offset: ["start start", "end start"]
     });
 
-    const y1 = useTransform(scrollYProgress, [0, 1], [0, 300]);
-    const y2 = useTransform(scrollYProgress, [0, 1], [0, -200]);
-    const rotate = useTransform(scrollYProgress, [0, 1], [0, 180]);
-    const scale = useTransform(scrollYProgress, [0, 1], [1, 1.2]);
+    const scrollVelocity = useVelocity(scrollY);
+    const smoothVelocity = useSpring(scrollVelocity, {
+        damping: 50,
+        stiffness: 400
+    });
+
+    const rotate = useTransform(scrollYProgress, [0, 1], [0, 360]);
+    const scale = useTransform(scrollYProgress, [0, 0.5, 1], [1, 1.5, 1]);
+
+    // Velocity based skew
+    const skew = useTransform(smoothVelocity, [-1000, 0, 1000], [-10, 0, 10]);
 
     const primaryColor = theme.primaryColor || "#FF6B35";
     const secondaryColor = theme.secondaryColor || "#E91E63";
     const backgroundColor = theme.backgroundColor || "#1A1A2E";
 
     return (
-        <div ref={ref} className={`${position} inset-0 overflow-hidden z-[-1]`}>
-            {/* Dark Base Background */}
+        <div ref={ref} className={`${position} inset-0 overflow-hidden z-[-1] bg-black`}>
             <div
                 className="absolute inset-0"
-                style={{
-                    background: backgroundColor,
-                }}
+                style={{ background: backgroundColor }}
             />
 
-            {/* Animated Gradient Overlay */}
+            {/* Dynamic Vortex Spiral */}
             <motion.div
-                className="absolute inset-0"
+                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[150vw] h-[150vw] opacity-20"
                 style={{
-                    background: `linear-gradient(135deg, ${primaryColor}15, ${secondaryColor}20)`,
-                    scale
-                }}
-            />
-
-            {/* Sharp Angular Shapes */}
-            <motion.div
-                className="absolute w-[800px] h-[800px] -top-40 -right-20"
-                style={{
-                    y: y1,
+                    background: `conic-gradient(from 0deg, ${primaryColor}, transparent, ${secondaryColor}, transparent, ${primaryColor})`,
                     rotate,
-                    background: `linear-gradient(45deg, ${primaryColor}30, transparent)`,
-                    clipPath: "polygon(0 0, 100% 0, 100% 70%, 30% 100%, 0 60%)"
+                    scale,
+                    filter: 'blur(80px)'
                 }}
             />
 
-            <motion.div
-                className="absolute w-[600px] h-[600px] bottom-0 left-0"
-                style={{
-                    y: y2,
-                    background: `linear-gradient(225deg, ${secondaryColor}25, transparent)`,
-                    clipPath: "polygon(0 30%, 70% 0, 100% 100%, 0 100%)"
-                }}
-            />
-
-            {/* Animated Glitch Lines - Using Theme Colors */}
-            {[...Array(20)].map((_, i) => (
+            {/* High Contrast Geometric Shapes */}
+            {[...Array(5)].map((_, i) => (
                 <motion.div
                     key={i}
-                    className="absolute h-[3px]"
+                    className="absolute border-[20px] rounded-full opacity-10"
                     style={{
-                        top: `${5 + i * 4.5}%`,
-                        left: 0,
-                        right: 0,
-                        width: `${70 + (i % 3) * 15}%`,
-                        background: `linear-gradient(90deg, transparent, ${i % 2 === 0 ? primaryColor : secondaryColor}80, transparent)`,
-                        x: `${i % 2 === 0 ? -100 : 100}%`,
-                        boxShadow: `0 0 10px ${i % 2 === 0 ? primaryColor : secondaryColor}50`
-                    }}
-                    animate={{
-                        x: ["0%", `${i % 2 === 0 ? 100 : -100}%`],
-                        opacity: [0, 0.6, 0]
-                    }}
-                    transition={{
-                        duration: 3 + (i % 3),
-                        repeat: Infinity,
-                        delay: i * 0.15,
-                        ease: "easeInOut"
+                        width: `${(i + 1) * 20}vw`,
+                        height: `${(i + 1) * 20}vw`,
+                        borderColor: i % 2 === 0 ? primaryColor : secondaryColor,
+                        top: '50%',
+                        left: '50%',
+                        x: '-50%',
+                        y: '-50%',
+                        rotate: useTransform(scrollYProgress, [0, 1], [0, (i + 1) * 90 * (i % 2 === 0 ? 1 : -1)]),
+                        skew
                     }}
                 />
             ))}
 
-            {/* Fast Moving Particles */}
-            {[...Array(30)].map((_, i) => (
+            {/* Glitch Lines */}
+            {[...Array(15)].map((_, i) => (
                 <motion.div
-                    key={`particle-${i}`}
-                    className="absolute w-1 h-1 rounded-full"
+                    key={`glitch-${i}`}
+                    className="absolute h-[2px] w-full opacity-30"
                     style={{
-                        background: i % 2 === 0 ? primaryColor : secondaryColor,
                         top: `${Math.random() * 100}%`,
-                        left: `${Math.random() * 100}%`,
-                    }}
-                    animate={{
-                        x: [0, (Math.random() - 0.5) * 1000],
-                        y: [0, (Math.random() - 0.5) * 1000],
-                        opacity: [0, 1, 0],
-                        scale: [0, 1.5, 0]
-                    }}
-                    transition={{
-                        duration: 3 + Math.random() * 2,
-                        repeat: Infinity,
-                        delay: Math.random() * 2
+                        background: i % 2 === 0 ? primaryColor : secondaryColor,
+                        scaleX: useTransform(smoothVelocity, [-2000, 0, 2000], [1.5, 0.2, 1.5]),
                     }}
                 />
             ))}
 
-            {/* Bold Radial Gradient */}
-            <div
-                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1200px] h-[1200px] opacity-30"
-                style={{
-                    background: `radial-gradient(circle, ${primaryColor}40 0%, transparent 70%)`
-                }}
+            {/* Vignette */}
+            <div className="absolute inset-0 bg-radial-gradient from-transparent to-black opacity-80"
+                style={{ background: 'radial-gradient(circle, transparent 40%, black 100%)' }}
             />
         </div>
     );

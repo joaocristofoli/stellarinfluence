@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, forwardRef, useImperativeHandle } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ interface PlatformSetting {
     bg_color: string | null;
     is_transparent: boolean;
     use_theme_color: boolean;
+    base_url?: string;
 }
 
 const PLATFORMS = [
@@ -24,7 +25,7 @@ const PLATFORMS = [
     { key: 'kwai', label: 'Kwai' },
 ];
 
-export function PlatformSettingsManager() {
+export const PlatformSettingsManager = forwardRef((props, ref) => {
     const [settings, setSettings] = useState<PlatformSetting[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -33,6 +34,10 @@ export function PlatformSettingsManager() {
     useEffect(() => {
         fetchSettings();
     }, []);
+
+    useImperativeHandle(ref, () => ({
+        save: handleSave
+    }));
 
     const fetchSettings = async () => {
         try {
@@ -111,10 +116,6 @@ export function PlatformSettingsManager() {
                         Personalize os ícones e cores das plataformas.
                     </p>
                 </div>
-                <Button onClick={handleSave} disabled={saving} className="bg-green-600 hover:bg-green-700">
-                    {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                    Salvar Tudo
-                </Button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -207,4 +208,4 @@ export function PlatformSettingsManager() {
             </div>
         </div>
     );
-}
+});

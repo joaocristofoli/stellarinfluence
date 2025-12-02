@@ -25,6 +25,7 @@ interface UserData {
     full_name: string;
     is_admin: boolean;
     created_at: string;
+    email_confirmed_at: string | null;
 }
 
 export function UserManagement() {
@@ -82,6 +83,26 @@ export function UserManagement() {
         }
     };
 
+    const handleConfirmEmail = async (targetUser: UserData) => {
+        try {
+            setActionLoading(targetUser.id);
+
+            const { error } = await supabase.rpc('confirm_user_email', {
+                target_user_id: targetUser.id
+            });
+
+            if (error) throw error;
+
+            toast.success(`Email confirmado para: ${targetUser.email}`);
+            await fetchUsers();
+        } catch (error: any) {
+            console.error("Error confirming email:", error);
+            toast.error(error.message || "Erro ao confirmar email");
+        } finally {
+            setActionLoading(null);
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex justify-center p-8">
@@ -127,42 +148,59 @@ export function UserManagement() {
                                 </TableCell>
                                 <TableCell className="text-right">
                                     {u.email !== 'contatojoaochristofoli@gmail.com' && (
-                                        <AlertDialog>
-                                            <AlertDialogTrigger asChild>
+                                        <div className="flex justify-end gap-2">
+                                            {!u.email_confirmed_at && (
                                                 <Button
-                                                    variant={u.is_admin ? "destructive" : "default"}
+                                                    variant="outline"
                                                     size="sm"
                                                     disabled={actionLoading === u.id}
+                                                    onClick={() => handleConfirmEmail(u)}
+                                                    className="text-yellow-500 hover:text-yellow-600 border-yellow-500/20 hover:bg-yellow-500/10"
                                                 >
                                                     {actionLoading === u.id ? (
                                                         <Loader2 className="h-4 w-4 animate-spin" />
-                                                    ) : u.is_admin ? (
-                                                        "Remover Admin"
                                                     ) : (
-                                                        "Tornar Admin"
+                                                        "Confirmar Email"
                                                     )}
                                                 </Button>
-                                            </AlertDialogTrigger>
-                                            <AlertDialogContent>
-                                                <AlertDialogHeader>
-                                                    <AlertDialogTitle>
-                                                        {u.is_admin ? "Remover acesso Admin?" : "Conceder acesso Admin?"}
-                                                    </AlertDialogTitle>
-                                                    <AlertDialogDescription>
-                                                        {u.is_admin
-                                                            ? `O usuário ${u.email} perderá acesso ao painel administrativo.`
-                                                            : `O usuário ${u.email} terá acesso total ao painel administrativo.`
-                                                        }
-                                                    </AlertDialogDescription>
-                                                </AlertDialogHeader>
-                                                <AlertDialogFooter>
-                                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => handleToggleAdmin(u)}>
-                                                        Confirmar
-                                                    </AlertDialogAction>
-                                                </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                        </AlertDialog>
+                                            )}
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button
+                                                        variant={u.is_admin ? "destructive" : "default"}
+                                                        size="sm"
+                                                        disabled={actionLoading === u.id}
+                                                    >
+                                                        {actionLoading === u.id ? (
+                                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                                        ) : u.is_admin ? (
+                                                            "Remover Admin"
+                                                        ) : (
+                                                            "Tornar Admin"
+                                                        )}
+                                                    </Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle>
+                                                            {u.is_admin ? "Remover acesso Admin?" : "Conceder acesso Admin?"}
+                                                        </AlertDialogTitle>
+                                                        <AlertDialogDescription>
+                                                            {u.is_admin
+                                                                ? `O usuário ${u.email} perderá acesso ao painel administrativo.`
+                                                                : `O usuário ${u.email} terá acesso total ao painel administrativo.`
+                                                            }
+                                                        </AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => handleToggleAdmin(u)}>
+                                                            Confirmar
+                                                        </AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                        </div>
                                     )}
                                     {u.email === 'contatojoaochristofoli@gmail.com' && (
                                         <span className="text-xs text-muted-foreground italic">

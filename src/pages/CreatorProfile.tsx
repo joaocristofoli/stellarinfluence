@@ -62,6 +62,41 @@ export default function CreatorProfile() {
           if (parsedTheme.fontFamily) mergedTheme.fontFamily = parsedTheme.fontFamily;
           if (parsedTheme.layout) mergedTheme.layout = parsedTheme.layout;
           if (parsedTheme.headerStyle) mergedTheme.headerStyle = parsedTheme.headerStyle;
+          if (parsedTheme.backgroundImage) mergedTheme.backgroundImage = parsedTheme.backgroundImage;
+
+          // Background Image
+          console.log('Creator ID:', (data as any).id);
+          console.log('DB background_image_url:', (data as any).background_image_url);
+          console.log('Parsed theme backgroundImage:', parsedTheme.backgroundImage);
+
+          if ((data as any).background_image_url) {
+            mergedTheme.backgroundImage = (data as any).background_image_url;
+            // If image exists and opacity is default (1), reduce it to show the image
+            // We check against the default value or if it wasn't set in the parsed theme
+            if (parsedTheme.backgroundOpacity === undefined || parsedTheme.backgroundOpacity === 1) {
+              mergedTheme.backgroundOpacity = 0.5;
+            }
+          }
+          console.log('Final mergedTheme backgroundImage:', mergedTheme.backgroundImage);
+          console.log('Final mergedTheme backgroundOpacity:', mergedTheme.backgroundOpacity);
+
+          // Animation & Background Settings
+          // Check if properties exist in the theme JSON first, otherwise fallback to defaults
+          // But here we want to prioritize what's in the creator record if we decide to store them as top-level columns later.
+          // For now, they are likely inside landing_theme JSON if saved via CreatorForm.
+
+          // However, CreatorForm saves them into landing_theme JSON.
+          // So the loop above that merges parsedTheme should have already handled it IF those properties were in parsedTheme.
+          // Let's double check if we are merging them.
+
+          if (parsedTheme.enableAnimatedBackground !== undefined) mergedTheme.enableAnimatedBackground = parsedTheme.enableAnimatedBackground;
+          if (parsedTheme.backgroundBlur !== undefined) mergedTheme.backgroundBlur = parsedTheme.backgroundBlur;
+          if (parsedTheme.backgroundOpacity !== undefined) mergedTheme.backgroundOpacity = parsedTheme.backgroundOpacity;
+
+          // Sync Bio to About Section
+          if (data.bio) {
+            mergedTheme.sections.about.config.content = data.bio;
+          }
 
           // Merge sections config if they exist
           if (parsedTheme.sections) {

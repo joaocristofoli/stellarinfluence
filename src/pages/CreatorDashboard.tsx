@@ -113,6 +113,15 @@ export default function CreatorDashboard() {
                                 Compartilhar
                             </Button>
                             <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => window.open(`/creator/${creator.slug || creator.id}`, '_blank')}
+                                className="flex items-center gap-2"
+                            >
+                                <ExternalLink className="w-4 h-4 mr-2" />
+                                Ver Perfil
+                            </Button>
+                            <Button
                                 variant="destructive"
                                 size="sm"
                                 onClick={handleSignOut}

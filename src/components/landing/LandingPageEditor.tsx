@@ -11,8 +11,11 @@ import { ThemeSelector } from "./ThemeSelector";
 import { ColorPicker } from "./ColorPicker";
 import { FontSelector } from "./FontSelector";
 import { SectionManager } from "./SectionManager";
+
 import { SectionEditor } from "./SectionEditor";
+import { ImageUpload } from "@/components/ImageUpload";
 import { useToast } from "@/hooks/use-toast";
+import { Slider } from "@/components/ui/slider";
 
 interface LandingPageEditorProps {
     theme: LandingTheme;
@@ -164,22 +167,47 @@ export function LandingPageEditor({ theme: initialTheme, creatorId, creatorData,
                                         <h3 className="font-semibold text-sm">Fundo</h3>
 
                                         <div>
-                                            <Label>Imagem de Fundo (URL)</Label>
-                                            <Input
-                                                value={theme.backgroundImage || ''}
-                                                onChange={(e) => setTheme({ ...theme, backgroundImage: e.target.value })}
-                                                placeholder="https://..."
+                                            <ImageUpload
+                                                currentImage={theme.backgroundImage || ''}
+                                                onImageUploaded={(url) => {
+                                                    const updates: any = { backgroundImage: url as string };
+                                                    // Auto-adjust opacity if it's currently 1 (opaque)
+                                                    if ((theme.backgroundOpacity === undefined || theme.backgroundOpacity === 1)) {
+                                                        updates.backgroundOpacity = 0.5;
+                                                    }
+                                                    setTheme({ ...theme, ...updates });
+                                                }}
+                                                label="Imagem de Fundo"
                                             />
                                             <p className="text-xs text-muted-foreground mt-1">
-                                                Cole o link de uma imagem para usar como fundo.
+                                                Faça upload de uma imagem para usar como fundo da página.
                                             </p>
                                         </div>
 
                                         <ColorPicker
                                             label="Cor de Fundo (Overlay)"
                                             color={theme.backgroundColor}
-                                            onChange={(color) => handleUpdateColor('backgroundColor', color)}
+                                            onChange={(color) => setTheme({ ...theme, backgroundColor: color })}
                                         />
+
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between">
+                                                <Label>Opacidade do Fundo</Label>
+                                                <span className="text-xs text-muted-foreground">
+                                                    {Math.round((theme.backgroundOpacity !== undefined ? theme.backgroundOpacity : 1) * 100)}%
+                                                </span>
+                                            </div>
+                                            <Slider
+                                                value={[theme.backgroundOpacity !== undefined ? theme.backgroundOpacity : 1]}
+                                                min={0}
+                                                max={1}
+                                                step={0.05}
+                                                onValueChange={([value]) => setTheme({ ...theme, backgroundOpacity: value })}
+                                            />
+                                            <p className="text-xs text-muted-foreground">
+                                                Ajuste a opacidade da cor para ver a imagem de fundo.
+                                            </p>
+                                        </div>
                                         <p className="text-xs text-muted-foreground -mt-3">
                                             Essa cor fica sobre a imagem. Ajuste a opacidade abaixo.
                                         </p>

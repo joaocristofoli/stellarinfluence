@@ -14,6 +14,7 @@ import Pricing from "./pages/Pricing";
 import EditLanding from "./pages/EditLanding";
 import Preview from "./pages/Preview";
 import BannerGenerator from "./pages/admin/BannerGenerator";
+import ThemeManager from "./pages/admin/ThemeManager";
 
 const queryClient = new QueryClient();
 
@@ -35,6 +36,7 @@ const App = () => (
           <Route path="/admin/creators/:id" element={<CreatorForm />} />
           <Route path="/admin/creators/:id/landing" element={<EditLanding />} />
           <Route path="/admin/banners" element={<BannerGenerator />} />
+          <Route path="/admin/themes" element={<ThemeManager />} />
           <Route path="/preview" element={<Preview />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

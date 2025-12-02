@@ -9,34 +9,49 @@ interface ThemeSelectorProps {
 
 const THEME_PREVIEWS = {
     minimal: {
-        name: "Minimalist",
-        description: "Clean and professional",
+        name: "Ethereal (Premium)",
+        description: "Breathing gradients & noise",
         gradient: "from-gray-900 to-gray-700",
     },
     bold: {
-        name: "Poder Feminino",
-        description: "Intense and energetic",
+        name: "Vortex (Premium)",
+        description: "High-contrast spiral physics",
         gradient: "from-pink-600 to-purple-700",
     },
     rock: {
-        name: "Rock",
-        description: "Fire and intensity",
+        name: "Inferno (Premium)",
+        description: "Heat distortion & embers",
         gradient: "from-orange-600 to-red-800",
     },
     elegant: {
-        name: "Elegant / Soft",
-        description: "Sophisticated luxury",
+        name: "Silk (Premium)",
+        description: "Flowing golden lines",
         gradient: "from-amber-600 to-amber-800",
     },
     gaming: {
-        name: "Tech / Gaming",
-        description: "Modern and futuristic",
+        name: "Cyber Grid (Premium)",
+        description: "3D perspective & rain",
         gradient: "from-green-500 to-emerald-600",
     },
     lifestyle: {
-        name: "Lifestyle",
-        description: "Soft and welcoming",
+        name: "Bloom (Premium)",
+        description: "Watercolor mixing",
         gradient: "from-pink-400 to-blue-400",
+    },
+    magnetic: {
+        name: "Magnetic (Premium)",
+        description: "Interactive physics & depth",
+        gradient: "from-blue-600 to-violet-600",
+    },
+    liquid: {
+        name: "Liquid (Premium)",
+        description: "Morphing blobs & glass",
+        gradient: "from-pink-500 to-cyan-500",
+    },
+    cosmic: {
+        name: "Cosmic (Premium)",
+        description: "Interactive starfield",
+        gradient: "from-purple-600 to-indigo-900",
     },
 };
 

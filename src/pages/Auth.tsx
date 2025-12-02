@@ -13,7 +13,6 @@ export default function Auth() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [secretCode, setSecretCode] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -107,26 +106,15 @@ export default function Auth() {
 
         if (error) throw error;
 
-        // If secret code is correct, grant admin role
-        if (secretCode === "admin123" && data.user) {
-          const { error: roleError } = await (supabase as any)
-            .from("user_roles")
-            .insert([
-              {
-                user_id: data.user.id,
-                role: "admin",
-              },
-            ]);
-
-          if (roleError) console.error("Error assigning admin role:", roleError);
-        }
-
         toast({
           title: "Conta criada!",
-          description: secretCode === "admin123"
-            ? "Você foi registrado como administrador."
-            : "Verifique seu email para confirmar.",
+          description: "Bem-vindo! Configure seu perfil para começar.",
         });
+
+        // Redirect to creator setup after signup
+        setTimeout(() => {
+          navigate("/creator/setup");
+        }, 1500); // Wait 1.5s to show the toast message
       }
     } catch (error: any) {
       toast({
@@ -196,24 +184,7 @@ export default function Auth() {
               />
             </div>
 
-            {!isLogin && (
-              <div className="space-y-2">
-                <Label htmlFor="secretCode" className="text-xs text-muted-foreground">
-                  Código Secreto (opcional)
-                </Label>
-                <Input
-                  id="secretCode"
-                  type="password"
-                  placeholder="Digite o código para acesso admin"
-                  value={secretCode}
-                  onChange={(e) => setSecretCode(e.target.value)}
-                  className="text-xs"
-                />
-                <p className="text-xs text-muted-foreground italic">
-                  Use o código especial para registrar-se como administrador
-                </p>
-              </div>
-            )}
+
 
             <Button
               type="submit"

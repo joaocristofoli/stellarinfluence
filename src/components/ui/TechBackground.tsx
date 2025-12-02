@@ -27,11 +27,11 @@ export const TechBackground = ({ theme, overlay = false, position = 'fixed' }: T
     // Scroll hooks for dynamic effects
     const { scrollYProgress } = useScroll();
 
-    // Default colors (Global Site Theme)
-    const defaultPrimary = '#D4AF37';   // Gold
-    const defaultSecondary = '#C0C0C0'; // Silver
-    const defaultBg = '#050505';        // Deep Black
-    const defaultText = '#ffffff';      // White
+    // Default colors (Global Site Theme) - Using CSS variables for adaptability
+    const defaultPrimary = 'hsl(var(--primary))';
+    const defaultSecondary = 'hsl(var(--secondary))';
+    const defaultBg = 'hsl(var(--background))';
+    const defaultText = 'hsl(var(--foreground))';
 
     const primaryColor = theme?.primaryColor || defaultPrimary;
     const secondaryColor = theme?.secondaryColor || defaultSecondary;

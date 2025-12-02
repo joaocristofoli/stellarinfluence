@@ -67,6 +67,21 @@ export default function EditLanding() {
                     if (parsedTheme.textColor) existingTheme.textColor = parsedTheme.textColor;
                     if (parsedTheme.fontFamily) existingTheme.fontFamily = parsedTheme.fontFamily;
                     if (parsedTheme.layout) existingTheme.layout = parsedTheme.layout;
+                    if (parsedTheme.backgroundImage) existingTheme.backgroundImage = parsedTheme.backgroundImage;
+
+                    // Background Image
+                    if ((data as any).background_image_url) {
+                        existingTheme.backgroundImage = (data as any).background_image_url;
+                    }
+
+                    if (parsedTheme.enableAnimatedBackground !== undefined) existingTheme.enableAnimatedBackground = parsedTheme.enableAnimatedBackground;
+                    if (parsedTheme.backgroundBlur !== undefined) existingTheme.backgroundBlur = parsedTheme.backgroundBlur;
+                    if (parsedTheme.backgroundOpacity !== undefined) existingTheme.backgroundOpacity = parsedTheme.backgroundOpacity;
+
+                    // Sync Bio to About Section
+                    if (data.bio) {
+                        existingTheme.sections.about.config.content = data.bio;
+                    }
 
                     // Merge sections carefully if needed, or just rely on default structure + config overrides
                     // For now, we keep default sections structure to ensure new features appear, 
@@ -111,7 +126,10 @@ export default function EditLanding() {
         try {
             const { error } = await supabase
                 .from("creators")
-                .update({ landing_theme: newTheme as unknown as any })
+                .update({
+                    landing_theme: newTheme as unknown as any,
+                    background_image_url: newTheme.backgroundImage
+                })
                 .eq("id", id);
 
             if (error) throw error;

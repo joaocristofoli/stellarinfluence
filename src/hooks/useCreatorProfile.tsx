@@ -44,31 +44,43 @@ export function useCreatorProfile() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const fetchCreatorProfile = async () => {
-        if (!user) {
-            setLoading(false);
-            return;
-        }
-
-        try {
-            // First, try to find creator by user_id
-            const { data, error: fetchError } = await supabase
-                .from("creators")
-                .select("*")
-                .eq("user_id", user.id)
-                .maybeSingle();
-
-            if (fetchError) throw fetchError;
-
-            setCreator(data as unknown as Creator);
-        } catch (err: any) {
-            setError(err.message);
-        } finally {
-            setLoading(false);
-        }
-    };
-
     useEffect(() => {
+        const fetchCreatorProfile = async () => {
+            console.log("🔍 useCreatorProfile: Starting fetch, user:", user?.id);
+
+            if (!user) {
+                console.log("🔍 useCreatorProfile: No user, setting loading=false");
+                setLoading(false);
+                return;
+            }
+
+            setLoading(true);
+            console.log("🔍 useCreatorProfile: Fetching creator for user_id:", user.id);
+
+            try {
+                // First, try to find creator by user_id
+                const { data, error: fetchError } = await supabase
+                    .from("creators")
+                    .select("*")
+                    .eq("user_id", user.id)
+                    .maybeSingle();
+
+                if (fetchError) {
+                    console.error("🔍 useCreatorProfile: Fetch error:", fetchError);
+                    throw fetchError;
+                }
+
+                console.log("🔍 useCreatorProfile: Found creator:", data ? data.name : "null");
+                setCreator(data as unknown as Creator);
+            } catch (err: any) {
+                console.error("🔍 useCreatorProfile: Error:", err.message);
+                setError(err.message);
+            } finally {
+                console.log("🔍 useCreatorProfile: Setting loading=false");
+                setLoading(false);
+            }
+        };
+
         fetchCreatorProfile();
     }, [user]);
 
@@ -112,12 +124,32 @@ export function useCreatorProfile() {
         }
     };
 
+    const refetchProfile = async () => {
+        if (!user) return;
+
+        setLoading(true);
+        try {
+            const { data, error: fetchError } = await supabase
+                .from("creators")
+                .select("*")
+                .eq("user_id", user.id)
+                .maybeSingle();
+
+            if (fetchError) throw fetchError;
+            setCreator(data as unknown as Creator);
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return {
         creator,
         loading,
         error,
         updateProfile,
         linkUserToCreator,
-        refetch: fetchCreatorProfile,
+        refetch: refetchProfile,
     };
 }

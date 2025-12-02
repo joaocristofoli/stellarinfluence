@@ -116,7 +116,7 @@ export function FilterBar({ onFilterChange, categories }: FilterBarProps) {
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="all">Todas</SelectItem>
-                                        {categories.map((cat) => (
+                                        {categories.filter(cat => cat && cat.trim() !== '').map((cat) => (
                                             <SelectItem key={cat} value={cat}>
                                                 {cat}
                                             </SelectItem>

@@ -1,111 +1,90 @@
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useRef } from "react";
+import { LandingTheme } from "@/types/landingTheme";
 
 interface RockBackgroundProps {
-    primaryColor?: string;
-    secondaryColor?: string;
+    theme: LandingTheme;
+    position?: 'fixed' | 'absolute';
 }
 
-export const RockBackground = ({ primaryColor = "#FF4500", secondaryColor = "#8B0000" }: RockBackgroundProps) => {
+export const RockBackground = ({ theme, position = 'fixed' }: RockBackgroundProps) => {
     const ref = useRef(null);
     const { scrollYProgress } = useScroll({
         target: ref,
         offset: ["start start", "end start"]
     });
 
-    const y = useTransform(scrollYProgress, [0, 1], [0, 300]);
-    const rotate = useTransform(scrollYProgress, [0, 1], [0, 360]);
+    const primaryColor = theme.primaryColor || "#FF4500";
+    const secondaryColor = theme.secondaryColor || "#8B0000";
 
     return (
-        <div ref={ref} className="absolute inset-0 overflow-hidden bg-black">
-            {/* Dark Grunge Texture */}
-            <div
-                className="absolute inset-0 opacity-30"
-                style={{
-                    backgroundImage: `radial-gradient(circle, ${primaryColor}20 1px, transparent 1px)`,
-                    backgroundSize: '20px 20px'
-                }}
-            />
+        <div ref={ref} className={`${position} inset-0 overflow-hidden bg-black z-[-1]`}>
+            {/* Heat Distortion Filter */}
+            <svg style={{ position: 'absolute', width: 0, height: 0 }}>
+                <filter id="heat">
+                    <feTurbulence type="fractalNoise" baseFrequency="0.01 0.02" numOctaves="3" result="noise" />
+                    <feDisplacementMap in="SourceGraphic" in2="noise" scale="20" />
+                </filter>
+            </svg>
 
-            {/* Fire/Lava Gradient */}
+            {/* Base Dark Layer */}
+            <div className="absolute inset-0 bg-neutral-950" />
+
+            {/* Magma Gradient Bottom */}
             <motion.div
-                className="absolute inset-0 opacity-40"
+                className="absolute bottom-0 left-0 right-0 h-[60vh] opacity-60"
                 style={{
-                    background: `linear-gradient(180deg, ${secondaryColor}80, ${primaryColor}60, #000000)`,
+                    background: `linear-gradient(to top, ${secondaryColor}, ${primaryColor}40, transparent)`,
+                    filter: 'url(#heat)',
                 }}
                 animate={{
-                    opacity: [0.3, 0.5, 0.3]
+                    opacity: [0.5, 0.7, 0.5],
+                    scaleY: [1, 1.1, 1]
                 }}
                 transition={{
-                    duration: 4,
+                    duration: 5,
                     repeat: Infinity,
                     ease: "easeInOut"
                 }}
             />
 
-            {/* Fiery Sparks/Embers */}
-            {[...Array(40)].map((_, i) => (
+            {/* Rising Embers */}
+            {[...Array(30)].map((_, i) => (
                 <motion.div
                     key={`ember-${i}`}
-                    className="absolute rounded-full"
+                    className="absolute rounded-full mix-blend-screen"
                     style={{
-                        width: 2 + Math.random() * 4,
-                        height: 2 + Math.random() * 4,
-                        background: i % 3 === 0 ? primaryColor : secondaryColor,
+                        width: Math.random() * 4 + 2,
+                        height: Math.random() * 4 + 2,
+                        background: i % 2 === 0 ? '#FFD700' : primaryColor,
                         left: `${Math.random() * 100}%`,
-                        bottom: `${Math.random() * 100}%`,
-                        boxShadow: `0 0 ${4 + Math.random() * 6}px ${i % 3 === 0 ? primaryColor : secondaryColor}`
+                        bottom: '-10%',
+                        boxShadow: `0 0 10px ${primaryColor}`
                     }}
                     animate={{
-                        y: [-100, -400 - Math.random() * 300],
-                        x: [(Math.random() - 0.5) * 100, (Math.random() - 0.5) * 200],
-                        opacity: [1, 0.8, 0],
-                        scale: [1, 1.5, 0]
+                        y: [-100, -window.innerHeight * 1.2],
+                        x: [0, (Math.random() - 0.5) * 200],
+                        opacity: [0, 1, 0],
+                        scale: [1, 0]
                     }}
                     transition={{
-                        duration: 3 + Math.random() * 4,
+                        duration: 5 + Math.random() * 5,
                         repeat: Infinity,
-                        delay: Math.random() * 3,
+                        delay: Math.random() * 5,
                         ease: "easeOut"
                     }}
                 />
             ))}
 
-            {/* Jagged Lightning/Cracks */}
-            {[...Array(6)].map((_, i) => (
-                <motion.div
-                    key={`crack-${i}`}
-                    className="absolute h-[2px] origin-left opacity-30"
-                    style={{
-                        width: '50%',
-                        background: `linear-gradient(90deg, ${primaryColor}, transparent)`,
-                        top: `${15 + i * 15}%`,
-                        left: `${i % 2 === 0 ? '0%' : '50%'}`,
-                        transform: `rotate(${(Math.random() - 0.5) * 20}deg)`,
-                        boxShadow: `0 0 10px ${primaryColor}`
-                    }}
-                    animate={{
-                        opacity: [0.1, 0.4, 0.1],
-                        scaleX: [0.8, 1.2, 0.8]
-                    }}
-                    transition={{
-                        duration: 2 + i * 0.5,
-                        repeat: Infinity,
-                        ease: "easeInOut"
-                    }}
-                />
-            ))}
-
-            {/* Smoke/Fog Effect */}
+            {/* Smoke Layers */}
             <motion.div
-                className="absolute w-full h-64 bottom-0 opacity-20"
+                className="absolute inset-0 opacity-30 mix-blend-overlay"
                 style={{
-                    background: `linear-gradient(to top, ${secondaryColor}80, transparent)`,
-                    filter: 'blur(60px)',
-                    y
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.6' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
+                    backgroundSize: 'cover'
                 }}
                 animate={{
-                    opacity: [0.15, 0.3, 0.15]
+                    opacity: [0.2, 0.4, 0.2]
                 }}
                 transition={{
                     duration: 8,
@@ -114,30 +93,9 @@ export const RockBackground = ({ primaryColor = "#FF4500", secondaryColor = "#8B
                 }}
             />
 
-            {/* Intense Radial Glow */}
-            <motion.div
-                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1000px] h-[1000px] opacity-30"
-                style={{
-                    background: `radial-gradient(circle, ${primaryColor}60 0%, ${secondaryColor}40 40%, transparent 70%)`,
-                    filter: 'blur(80px)',
-                    rotate
-                }}
-            />
-
-            {/* Pulsing Vignette */}
-            <motion.div
-                className="absolute inset-0"
-                style={{
-                    background: 'radial-gradient(ellipse at center, transparent 30%, #00000080 100%)'
-                }}
-                animate={{
-                    opacity: [0.5, 0.7, 0.5]
-                }}
-                transition={{
-                    duration: 5,
-                    repeat: Infinity,
-                    ease: "easeInOut"
-                }}
+            {/* Vignette */}
+            <div className="absolute inset-0 bg-radial-gradient from-transparent to-black opacity-90"
+                style={{ background: 'radial-gradient(circle, transparent 20%, black 100%)' }}
             />
         </div>
     );

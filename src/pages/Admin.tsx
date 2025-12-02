@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,9 @@ import { BookingsManager } from "@/components/admin/BookingsManager";
 import { PlatformSettingsManager } from "@/components/admin/PlatformSettingsManager";
 import { AgencyBrandingManager } from "@/components/admin/AgencyBrandingManager";
 import { UserManagement } from "@/components/admin/UserManagement";
-import { Users, DollarSign, Megaphone, Calendar, BarChart3, LogOut, Plus, Image as ImageIcon, Settings, UserCog } from "lucide-react";
+import { ThemeConfigManager } from "@/components/admin/ThemeConfigManager";
+import { HomepageEditor } from "@/components/admin/HomepageEditor";
+import { Users, DollarSign, Megaphone, Calendar, BarChart3, LogOut, Plus, Image as ImageIcon, Settings, UserCog, Palette, Loader2, Save } from "lucide-react";
 import { motion } from "framer-motion";
 
 export default function Admin() {
@@ -100,7 +102,7 @@ export default function Admin() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           {/* Tabs Navigation */}
-          <TabsList className="grid w-full grid-cols-3 md:grid-cols-6 gap-2 bg-muted/50 p-1 h-auto">
+          <TabsList className="grid w-full grid-cols-3 md:grid-cols-7 gap-2 bg-muted/50 p-1 h-auto">
             <TabsTrigger
               value="creators"
               className="flex items-center gap-2 data-[state=active]:bg-accent data-[state=active]:text-white py-2"
@@ -143,6 +145,13 @@ export default function Admin() {
             >
               <Settings className="w-4 h-4" />
               <span className="hidden sm:inline">Config</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="themes"
+              className="flex items-center gap-2 data-[state=active]:bg-accent data-[state=active]:text-white py-2"
+            >
+              <Palette className="w-4 h-4" />
+              <span className="hidden sm:inline">Temas</span>
             </TabsTrigger>
           </TabsList>
 
@@ -239,13 +248,63 @@ export default function Admin() {
             </motion.div>
           </TabsContent>
 
+          {/* Themes Tab */}
+          <TabsContent value="themes" className="space-y-4">
+            <ThemeConfigManager />
+          </TabsContent>
+
           {/* Settings Tab */}
           <TabsContent value="settings" className="space-y-4">
-            <AgencyBrandingManager />
-            <PlatformSettingsManager />
+            <SettingsTabContent />
           </TabsContent>
         </Tabs>
       </main>
+    </div>
+  );
+}
+
+
+
+function SettingsTabContent() {
+  const homepageRef = useRef<any>(null);
+  const brandingRef = useRef<any>(null);
+  const platformRef = useRef<any>(null);
+  const [saving, setSaving] = useState(false);
+
+  const handleSaveAll = async () => {
+    setSaving(true);
+    try {
+      // Trigger all saves in parallel
+      await Promise.all([
+        homepageRef.current?.save(),
+        brandingRef.current?.save(),
+        platformRef.current?.save()
+      ]);
+    } catch (error) {
+      console.error("Error saving settings:", error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between bg-muted/30 p-4 rounded-xl border border-border/50">
+        <div>
+          <h2 className="text-xl font-semibold">Configurações Gerais</h2>
+          <p className="text-sm text-muted-foreground">
+            Gerencie a aparência e integrações do site
+          </p>
+        </div>
+        <Button onClick={handleSaveAll} disabled={saving} size="lg" className="bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl transition-all">
+          {saving ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Save className="w-5 h-5 mr-2" />}
+          Salvar Todas as Alterações
+        </Button>
+      </div>
+
+      <HomepageEditor ref={homepageRef} />
+      <AgencyBrandingManager ref={brandingRef} />
+      <PlatformSettingsManager ref={platformRef} />
     </div>
   );
 }

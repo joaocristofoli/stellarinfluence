@@ -7,6 +7,7 @@ import { motion, useScroll, useTransform, useSpring, useMotionTemplate, AnimateP
 import { ThemeBackground } from "@/components/ui/ThemeBackground";
 import { ScrollIndicator } from "@/components/landing/ScrollIndicator";
 import { LuxuryOverlay } from "@/components/ui/LuxuryOverlay";
+import { TouchRippleEffect } from "@/components/landing/TouchRippleEffect";
 import { MagneticButton } from "@/components/ui/MagneticButton";
 import { Counter } from "@/components/ui/Counter";
 import { Instagram, Youtube, Video, Twitter, ArrowRight, ExternalLink, Crown } from "lucide-react";
@@ -49,17 +50,9 @@ const ParallaxText = ({ children, speed = 1 }: { children: React.ReactNode; spee
 import useEmblaCarousel from 'embla-carousel-react';
 
 const CyclingStats = ({ creatorData, theme, platformSettings = [] }: { creatorData: any, theme: LandingTheme, platformSettings?: PlatformSetting[] }) => {
-    const [emblaRef, emblaApi] = useEmblaCarousel({
-        loop: true,
-        align: 'center',
-        skipSnaps: false,
-        dragFree: false
-    });
-    const [selectedIndex, setSelectedIndex] = React.useState(0);
-
     // Base platforms list
     const platforms = [
-        { key: 'instagram', label: 'Instagram', color: '#E1306C', value: creatorData?.instagram_followers, icon: Instagram, url: creatorData?.instagram_url },
+        { key: 'instagram', label: 'Instagram', color: '#E1306C', value: creatorData?.instagram_followers, icon: Instagram, url: creatorData?.instagram_url, secondaryValue: creatorData?.stories_views, secondaryLabel: 'Stories' },
         { key: 'youtube', label: 'YouTube', color: '#FF0000', value: creatorData?.youtube_subscribers, icon: Youtube, url: creatorData?.youtube_url },
         { key: 'tiktok', label: 'TikTok', color: '#00F2EA', value: creatorData?.tiktok_followers, icon: Video, url: creatorData?.tiktok_url },
         { key: 'twitter', label: 'Twitter', color: '#1DA1F2', value: creatorData?.twitter_followers, icon: Twitter, url: creatorData?.twitter_url },
@@ -68,11 +61,22 @@ const CyclingStats = ({ creatorData, theme, platformSettings = [] }: { creatorDa
         const isActive = creatorData?.[`${p.key}_active`];
         return p.value && isActive !== false;
     }).sort((a, b) => {
-        // Keep primary first
         if (creatorData?.primary_platform === a.key) return -1;
         if (creatorData?.primary_platform === b.key) return 1;
         return 0;
     });
+
+    const isSingle = platforms.length === 1;
+    const [emblaRef, emblaApi] = useEmblaCarousel({
+        loop: platforms.length > 1,
+        align: 'center',
+        skipSnaps: false,
+        dragFree: false,
+        containScroll: 'trimSnaps'
+    });
+
+    const [selectedIndex, setSelectedIndex] = React.useState(0);
+    const [hoveredIndex, setHoveredIndex] = React.useState<number | null>(null);
 
     const onSelect = React.useCallback(() => {
         if (!emblaApi) return;
@@ -92,26 +96,25 @@ const CyclingStats = ({ creatorData, theme, platformSettings = [] }: { creatorDa
 
     if (platforms.length === 0) return null;
 
+    // Theme detection
+    const isDarkTheme = theme.textColor === '#ffffff' || theme.textColor === '#fff' || theme.textColor.toLowerCase() === '#f8fafc';
+
     return (
-        <div className="w-full relative py-12 overflow-visible">
-            {/* Increased py-12 and overflow-visible to prevent shadow clipping */}
-            <div className="overflow-visible" ref={emblaRef}>
-                <div className="flex touch-pan-y gap-6">
-                    {/* Removed pl-4, increased gap to 6 */}
+        <div className="w-full relative py-16 overflow-visible">
+            <div className={`overflow-visible ${isSingle ? 'flex justify-center' : ''}`} ref={isSingle ? undefined : emblaRef}>
+                <div className={`flex touch-pan-y gap-8 ${isSingle ? 'justify-center w-full' : ''}`}>
                     {platforms.map((current, index) => {
-                        const isActive = selectedIndex === index;
+                        const isActive = isSingle ? true : selectedIndex === index;
+                        const isHovered = hoveredIndex === index;
                         const isPrimary = creatorData?.primary_platform === current.key;
                         const setting = platformSettings.find(s => s.platform === current.key);
+                        const isInstagram = current.key === 'instagram';
 
                         // Styles
                         const isTransparent = setting?.is_transparent;
                         const useThemeColor = setting?.use_theme_color ?? true;
-
-                        // Use theme colors more strictly
                         const bubbleBg = isTransparent ? 'transparent' :
-                            useThemeColor ? theme.textColor :
-                                (setting?.bg_color || 'transparent');
-
+                            useThemeColor ? theme.textColor : (setting?.bg_color || 'transparent');
                         const iconColor = isTransparent ? current.color :
                             useThemeColor ? theme.backgroundColor : '#ffffff';
 
@@ -119,102 +122,293 @@ const CyclingStats = ({ creatorData, theme, platformSettings = [] }: { creatorDa
                         let handle = '@perfil';
                         if (current.url) {
                             try {
-                                const urlObj = new URL(current.url.startsWith('http') ? current.url : `https://${current.url}`);
-                                const pathParts = urlObj.pathname.split('/').filter(Boolean);
-                                if (pathParts.length > 0) handle = `@${pathParts[pathParts.length - 1]}`;
+                                let cleanUrl = current.url.replace(/(^\w+:|^)\/\//, '');
+                                if (cleanUrl.endsWith('/')) cleanUrl = cleanUrl.slice(0, -1);
+                                const parts = cleanUrl.split('/');
+                                const lastPart = parts[parts.length - 1];
+                                if (lastPart) handle = '@' + lastPart.replace(/^@/, '');
                             } catch (e) { handle = '@perfil'; }
                         }
 
-                        // Dynamic colors based on theme for better visibility
-                        const handleBg = theme.textColor === '#ffffff' || theme.textColor === '#fff'
-                            ? 'rgba(255, 255, 255, 0.1)' // White text (Dark theme) -> White glass
-                            : 'rgba(0, 0, 0, 0.05)';     // Black text (Light theme) -> Black glass
+                        // Dynamic colors for theme
+                        const cardBorder = isDarkTheme ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.1)';
+                        const cardBorderActive = isDarkTheme ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.2)';
+                        const glassOverlay = isDarkTheme ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.8)';
+                        const innerGlass = isDarkTheme ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.03)';
 
-                        const cardBorder = theme.textColor === '#ffffff' || theme.textColor === '#fff'
-                            ? 'rgba(255, 255, 255, 0.1)'
-                            : 'rgba(0, 0, 0, 0.1)';
+                        // Dimensions
+                        const cardDimensions = isInstagram
+                            ? "w-[300px] h-[380px] md:w-[360px] md:h-[440px]"
+                            : "w-[280px] h-[320px] md:w-[320px] md:h-[360px]";
 
                         return (
-                            <div className="flex-[0_0_auto] min-w-0" key={current.key}>
-                                {/* Wrapper with fixed maximum size to prevent layout thrashing */}
-                                <div className="w-[280px] h-[340px] md:w-[320px] md:h-[400px] flex items-center justify-center transition-all duration-500">
-                                    <a
+                            <motion.div
+                                className="flex-[0_0_auto] min-w-0"
+                                key={current.key}
+                                initial={{ opacity: 0, y: 30, scale: 0.9 }}
+                                whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                                transition={{
+                                    type: "spring",
+                                    stiffness: 200,
+                                    damping: 20,
+                                    delay: index * 0.1
+                                }}
+                            >
+                                <div className={`${cardDimensions} flex items-center justify-center`}>
+                                    <motion.a
                                         href={current.url || '#'}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className={`relative w-full h-full flex flex-col items-center justify-between p-6 rounded-[2rem] cursor-pointer overflow-hidden transition-all duration-500 ease-out
-                                            ${isActive ? 'scale-100 opacity-100 grayscale-0 blur-0 z-20' : 'scale-90 opacity-50 grayscale-[0.8] blur-[1px] z-10'}
-                                        `}
+                                        className="relative w-full h-full flex flex-col items-center justify-between p-7 rounded-[2rem] cursor-pointer overflow-hidden group"
+                                        onMouseEnter={() => setHoveredIndex(index)}
+                                        onMouseLeave={() => setHoveredIndex(null)}
+                                        animate={{
+                                            scale: isActive ? 1 : 0.92,
+                                            opacity: isActive ? 1 : 0.6,
+                                            filter: isActive ? 'grayscale(0%) blur(0px)' : 'grayscale(50%) blur(0.5px)',
+                                            rotateY: isHovered && isActive ? 2 : 0,
+                                            rotateX: isHovered && isActive ? -2 : 0,
+                                        }}
+                                        whileHover={isActive ? {
+                                            scale: 1.02,
+                                            transition: { type: "spring", stiffness: 400, damping: 25 }
+                                        } : {}}
+                                        transition={{
+                                            duration: 0.4,
+                                            ease: [0.25, 0.1, 0.25, 1]
+                                        }}
                                         style={{
-                                            backgroundColor: isActive ? `${theme.secondaryColor}40` : 'rgba(255,255,255,0.05)',
-                                            backdropFilter: 'blur(20px)',
-                                            border: `1px solid ${isActive ? current.color : cardBorder}`,
-                                            boxShadow: isActive ? `0 20px 50px -10px ${current.color}40` : 'none',
+                                            transformStyle: 'preserve-3d',
+                                            perspective: '1000px',
+                                            zIndex: isActive ? 30 : isHovered ? 20 : 10,
                                         }}
                                     >
-                                        {/* Glow Effect */}
-                                        {isActive && (
+                                        {/* Multi-layer Glass Background */}
+                                        <div
+                                            className="absolute inset-0 rounded-[2rem] overflow-hidden"
+                                            style={{
+                                                background: `linear-gradient(135deg, ${glassOverlay} 0%, ${innerGlass} 100%)`,
+                                                backdropFilter: 'blur(30px) saturate(150%)',
+                                                WebkitBackdropFilter: 'blur(30px) saturate(150%)',
+                                            }}
+                                        >
+                                            {/* Gradient Border */}
                                             <div
-                                                className="absolute inset-0 opacity-20 pointer-events-none"
-                                                style={{ background: `radial-gradient(circle at center, ${current.color}, transparent 70%)` }}
+                                                className="absolute inset-0 rounded-[2rem]"
+                                                style={{
+                                                    padding: '1px',
+                                                    background: isActive
+                                                        ? `linear-gradient(135deg, ${current.color}, ${current.color}80, ${current.color})`
+                                                        : `linear-gradient(135deg, ${cardBorder}, ${cardBorderActive})`,
+                                                    mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+                                                    WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+                                                    maskComposite: 'exclude',
+                                                    WebkitMaskComposite: 'xor',
+                                                }}
+                                            />
+                                        </div>
+
+                                        {/* Ambient Glow */}
+                                        {isActive && (
+                                            <motion.div
+                                                className="absolute inset-0 rounded-[2rem] pointer-events-none"
+                                                initial={{ opacity: 0 }}
+                                                animate={{ opacity: isHovered ? 0.3 : 0.2 }}
+                                                transition={{ duration: 0.3 }}
+                                                style={{
+                                                    background: `radial-gradient(circle at 50% 50%, ${current.color}40, transparent 70%)`,
+                                                    filter: 'blur(20px)',
+                                                }}
                                             />
                                         )}
 
+                                        {/* Luxury Shadow Layers */}
+                                        <div
+                                            className="absolute inset-0 rounded-[2rem] pointer-events-none"
+                                            style={{
+                                                boxShadow: isActive
+                                                    ? `0 8px 32px -8px ${current.color}30, 0 20px 60px -10px ${current.color}20, inset 0 1px 2px ${isDarkTheme ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.8)'}`
+                                                    : `0 4px 12px -4px rgba(0,0,0,0.1), inset 0 1px 1px ${isDarkTheme ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.5)'}`,
+                                            }}
+                                        />
+
                                         {/* Crown for Primary */}
                                         {isPrimary && (
-                                            <div className="absolute -top-1 -right-1 z-30">
-                                                <div className="relative">
-                                                    <div className="absolute inset-0 bg-yellow-500 blur-md opacity-50" />
-                                                    <div className="relative bg-gradient-to-br from-yellow-300 to-yellow-600 p-2 rounded-bl-2xl rounded-tr-2xl shadow-lg border border-yellow-200/50">
-                                                        <Crown className="w-5 h-5 text-white fill-white" />
-                                                    </div>
+                                            <motion.div
+                                                className="absolute -top-2 -right-2 z-40"
+                                                animate={{
+                                                    rotate: [0, -5, 5, -5, 0],
+                                                    scale: isHovered ? 1.1 : 1,
+                                                }}
+                                                transition={{
+                                                    rotate: { repeat: Infinity, duration: 3, ease: "easeInOut" },
+                                                    scale: { duration: 0.2 }
+                                                }}
+                                            >
+                                                <div className="relative bg-gradient-to-br from-yellow-300 to-yellow-600 p-2.5 rounded-2xl shadow-xl border border-yellow-200/50">
+                                                    <div className="absolute inset-0 bg-yellow-500 blur-lg opacity-50 rounded-2xl" />
+                                                    <Crown className="w-5 h-5 text-white fill-white relative z-10" />
                                                 </div>
-                                            </div>
+                                            </motion.div>
                                         )}
 
-                                        {/* Top: Icon */}
-                                        <div className="relative z-10 mt-4">
-                                            <div
-                                                className={`rounded-full flex items-center justify-center transition-all duration-500 ${isActive ? 'w-20 h-20 md:w-24 md:h-24 shadow-lg' : 'w-16 h-16 md:w-20 md:h-20'}`}
-                                                style={{ backgroundColor: bubbleBg }}
-                                            >
-                                                {setting?.icon_url ? (
-                                                    <img src={setting.icon_url} alt={current.label} className={`${isActive ? 'w-10 h-10 md:w-12 md:h-12' : 'w-8 h-8 md:w-10 md:h-10'} object-contain`} />
-                                                ) : (
-                                                    <current.icon className={`${isActive ? 'w-10 h-10 md:w-12 md:h-12' : 'w-8 h-8 md:w-10 md:h-10'}`} style={{ color: iconColor }} />
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        {/* Middle: Count */}
-                                        <div className="relative z-10 flex flex-col items-center justify-center flex-1">
-                                            <h3
-                                                className={`font-black tracking-tighter transition-all duration-500 ${isActive ? 'text-5xl md:text-7xl' : 'text-4xl md:text-5xl'}`}
-                                                style={{ color: isActive ? current.color : theme.textColor }}
-                                            >
-                                                {current.value}
-                                            </h3>
-                                            <p className="uppercase tracking-[0.2em] text-[10px] font-bold mt-2 opacity-80" style={{ color: theme.textColor }}>
-                                                Seguidores
-                                            </p>
-                                        </div>
-
-                                        {/* Bottom: Handle */}
-                                        <div
-                                            className="relative z-10 mb-4 px-4 py-2 rounded-full border transition-all duration-500"
-                                            style={{
-                                                backgroundColor: handleBg,
-                                                borderColor: cardBorder,
-                                                opacity: isActive ? 1 : 0.7
+                                        {/* Platform Icon */}
+                                        <motion.div
+                                            className="relative z-20 mb-6"
+                                            animate={{
+                                                y: isActive && isHovered ? [-2, 2, -2] : 0,
+                                                scale: isActive ? 1 : 0.9,
+                                            }}
+                                            transition={{
+                                                y: { repeat: Infinity, duration: 3, ease: "easeInOut" },
+                                                scale: { duration: 0.3 }
                                             }}
                                         >
-                                            <p className="text-sm md:text-base font-medium" style={{ color: theme.textColor }}>
+                                            <div
+                                                className="rounded-full flex items-center justify-center transition-all duration-500 relative"
+                                                style={{
+                                                    width: isActive ? '84px' : '68px',
+                                                    height: isActive ? '84px' : '68px',
+                                                    backgroundColor: bubbleBg,
+                                                    boxShadow: isActive
+                                                        ? `0 8px 24px -4px ${current.color}40, inset 0 2px 4px rgba(255,255,255,0.2)`
+                                                        : `0 4px 12px -2px rgba(0,0,0,0.1), inset 0 1px 2px rgba(255,255,255,0.1)`,
+                                                }}
+                                            >
+                                                {/* Icon Glow */}
+                                                {isActive && (
+                                                    <div
+                                                        className="absolute inset-0 rounded-full blur-md opacity-40"
+                                                        style={{ backgroundColor: current.color }}
+                                                    />
+                                                )}
+                                                {setting?.icon_url ? (
+                                                    <img
+                                                        src={setting.icon_url}
+                                                        alt={current.label}
+                                                        className="object-contain relative z-10"
+                                                        style={{
+                                                            width: isActive ? '44px' : '36px',
+                                                            height: isActive ? '44px' : '36px',
+                                                        }}
+                                                    />
+                                                ) : (
+                                                    <current.icon
+                                                        className="relative z-10"
+                                                        style={{
+                                                            color: iconColor,
+                                                            width: isActive ? '44px' : '36px',
+                                                            height: isActive ? '44px' : '36px',
+                                                        }}
+                                                    />
+                                                )}
+                                            </div>
+                                        </motion.div>
+
+                                        {/* Stats Container */}
+                                        <div className="relative z-20 flex flex-col items-center justify-center flex-1 w-full">
+                                            {isInstagram ? (
+                                                // Instagram: Followers + Stories
+                                                <div className={`grid grid-cols-2 gap-4 w-full items-center text-center relative`}>
+                                                    {/* Elegant Divider */}
+                                                    <div
+                                                        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[1px] h-16 rounded-full"
+                                                        style={{
+                                                            background: `linear-gradient(to bottom, transparent, ${isDarkTheme ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)'}, transparent)`,
+                                                        }}
+                                                    />
+
+                                                    <div className="flex flex-col items-center gap-1 px-2">
+                                                        <motion.h3
+                                                            className="font-black tracking-tighter"
+                                                            style={{
+                                                                color: isActive ? current.color : theme.textColor,
+                                                                fontSize: isActive ? '2rem' : '1.75rem',
+                                                                textShadow: isActive ? `0 2px 8px ${current.color}30` : 'none',
+                                                            }}
+                                                            animate={{ scale: isActive && isHovered ? 1.05 : 1 }}
+                                                        >
+                                                            {current.value || '0'}
+                                                        </motion.h3>
+                                                        <p
+                                                            className="uppercase tracking-widest text-[9px] font-bold opacity-70"
+                                                            style={{ color: theme.textColor, letterSpacing: '0.15em' }}
+                                                        >
+                                                            Seguidores
+                                                        </p>
+                                                    </div>
+
+                                                    <div className="flex flex-col items-center gap-1 px-2">
+                                                        <motion.h3
+                                                            className="font-black tracking-tighter"
+                                                            style={{
+                                                                color: theme.textColor,
+                                                                fontSize: isActive ? '2rem' : '1.75rem',
+                                                            }}
+                                                            animate={{ scale: isActive && isHovered ? 1.05 : 1 }}
+                                                        >
+                                                            {current.secondaryValue || '-'}
+                                                        </motion.h3>
+                                                        <p
+                                                            className="uppercase tracking-widest text-[9px] font-bold opacity-70"
+                                                            style={{ color: theme.textColor, letterSpacing: '0.15em' }}
+                                                        >
+                                                            Stories
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                // Other Platforms: Single Stat
+                                                <div className="flex flex-col items-center gap-2">
+                                                    <motion.h3
+                                                        className="font-black tracking-tighter leading-none"
+                                                        style={{
+                                                            color: isActive ? current.color : theme.textColor,
+                                                            fontSize: isActive ? '3.5rem' : '3rem',
+                                                            textShadow: isActive ? `0 4px 16px ${current.color}30` : 'none',
+                                                        }}
+                                                        animate={{ scale: isActive && isHovered ? 1.08 : 1 }}
+                                                        transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                                                    >
+                                                        {current.value}
+                                                    </motion.h3>
+                                                    <p
+                                                        className="uppercase tracking-widest text-[10px] font-bold opacity-70"
+                                                        style={{ color: theme.textColor, letterSpacing: '0.2em' }}
+                                                    >
+                                                        {current.key === 'youtube' ? 'Inscritos' : 'Seguidores'}
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Handle Badge */}
+                                        <motion.div
+                                            className="relative z-20 mt-6 px-7 py-2.5 rounded-full overflow-hidden"
+                                            animate={{
+                                                opacity: isActive ? 1 : 0.7,
+                                                scale: isActive && isHovered ? 1.05 : 1,
+                                            }}
+                                            transition={{ duration: 0.2 }}
+                                            style={{
+                                                background: isDarkTheme
+                                                    ? 'linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05))'
+                                                    : 'linear-gradient(135deg, rgba(0,0,0,0.08), rgba(0,0,0,0.04))',
+                                                backdropFilter: 'blur(10px)',
+                                                border: `1px solid ${isDarkTheme ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)'}`,
+                                                boxShadow: `0 2px 8px -2px ${isDarkTheme ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.1)'}`,
+                                            }}
+                                        >
+                                            <p
+                                                className="text-sm font-semibold tracking-wide"
+                                                style={{ color: theme.textColor }}
+                                            >
                                                 {handle}
                                             </p>
-                                        </div>
-                                    </a>
+                                        </motion.div>
+                                    </motion.a>
                                 </div>
-                            </div>
+                            </motion.div>
                         );
                     })}
                 </div>
@@ -299,6 +493,7 @@ export function LandingPagePreview({ theme, creatorData, isEditor = false }: Lan
             }}
         >
             <LuxuryOverlay />
+            <TouchRippleEffect />
             <div className="fixed inset-0 z-0">
                 <ThemeBackground theme={theme} overlay={false} />
             </div>
@@ -362,8 +557,8 @@ function renderSection(
                             </div>
                         </div>
 
-                        {/* Scroll Indicator - Mobile Only */}
-                        <div className="md:hidden absolute bottom-20 left-1/2 -translate-x-1/2 z-20">
+                        {/* Scroll Indicator - Mobile Only - At the very bottom */}
+                        <div className="md:hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-50">
                             <ScrollIndicator accentColor={theme.primaryColor} />
                         </div>
                         {config.showScrollIndicator && (
@@ -484,60 +679,33 @@ function renderSection(
                             {/* Cycling Social Followers */}
                             <CyclingStats creatorData={creatorData} theme={theme} platformSettings={platformSettings} />
 
-                            {[
-                                { label: 'Engajamento', value: creatorData?.engagement_rate || "4.8%" },
-                                { label: 'Stories Views', value: creatorData?.stories_views || "500K" }
-                            ].map((stat, i) => (
-                                <motion.div
-                                    key={i}
-                                    className="w-full md:w-auto min-w-[150px] md:min-w-[200px] space-y-1 md:space-y-2 p-4 rounded-2xl glass flex flex-col justify-center items-center"
-                                    initial={{ opacity: 0, y: 20, scale: 0.9 }}
-                                    whileInView={{ opacity: 1, y: 0, scale: 1 }}
-                                    whileHover={{ scale: 1.05, backgroundColor: `${theme.primaryColor}10` }}
-                                    transition={{ delay: (i + 1) * 0.1 }}
-                                >
-                                    <h3
-                                        className="text-xl sm:text-3xl md:text-5xl font-bold"
-                                        style={{ color: theme.textColor }}
-                                    >
-                                        <Counter value={stat.value} delay={(i + 1) * 0.2} />
+                            {/* Gallery Section - Only if urls exist */}
+                            {creatorData?.gallery_urls && creatorData.gallery_urls.length > 0 && (
+                                <div className="mb-12">
+                                    <h3 className={`text-2xl font-bold mb-6 text-center ${theme.textColor === '#ffffff' ? 'text-white' : 'text-gray-900'}`}>
+                                        Galeria
                                     </h3>
-                                    <p
-                                        className="text-xs sm:text-sm md:text-base uppercase tracking-wider font-medium"
-                                        style={{ color: theme.textColor, opacity: 0.7 }}
-                                    >
-                                        {stat.label}
-                                    </p>
-                                </motion.div>
-                            ))}
-                        </div>
-
-                        {/* Gallery Section - Only if urls exist */}
-                        {creatorData?.gallery_urls && creatorData.gallery_urls.length > 0 && (
-                            <div className="mb-12">
-                                <h3 className={`text-2xl font-bold mb-6 text-center ${theme.textColor === '#ffffff' ? 'text-white' : 'text-gray-900'}`}>
-                                    Galeria
-                                </h3>
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                    {creatorData.gallery_urls.map((url: string, index: number) => (
-                                        <motion.div
-                                            key={index}
-                                            className="aspect-square rounded-xl overflow-hidden shadow-lg"
-                                            initial={{ borderRadius: "50%", scale: 0.5, opacity: 0 }}
-                                            whileInView={{ borderRadius: "1rem", scale: 1, opacity: 1 }}
-                                            whileHover={{ scale: 1.05, rotate: index % 2 === 0 ? 2 : -2 }}
-                                            transition={{ type: "spring", bounce: 0.4, delay: index * 0.1 }}
-                                        >
-                                            <img
-                                                src={url}
-                                                alt={`Gallery ${index + 1}`}
-                                                className="w-full h-full object-cover"
-                                            />
-                                        </motion.div>
-                                    ))}
+                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                        {creatorData.gallery_urls.map((url: string, index: number) => (
+                                            <motion.div
+                                                key={index}
+                                                className="aspect-square rounded-xl overflow-hidden shadow-lg"
+                                                initial={{ borderRadius: "50%", scale: 0.5, opacity: 0 }}
+                                                whileInView={{ borderRadius: "1rem", scale: 1, opacity: 1 }}
+                                                whileHover={{ scale: 1.05, rotate: index % 2 === 0 ? 2 : -2 }}
+                                                transition={{ type: "spring", bounce: 0.4, delay: index * 0.1 }}
+                                            >
+                                                <img
+                                                    src={url}
+                                                    alt={`Gallery ${index + 1}`}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            </motion.div>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
-                        )}
+                            )}
+                        </div>
                     </div>
                 </div>
             );

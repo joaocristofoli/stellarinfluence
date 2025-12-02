@@ -1,6 +1,5 @@
-import { motion, useScroll, useTransform } from "framer-motion";
-import { useRef } from "react";
-
+import { motion, useScroll, useTransform, useMotionValue, useSpring } from "framer-motion";
+import { useEffect } from "react";
 import { LandingTheme } from "@/types/landingTheme";
 
 interface ElegantBackgroundProps {
@@ -9,116 +8,88 @@ interface ElegantBackgroundProps {
 }
 
 export const ElegantBackground = ({ theme, position = 'fixed' }: ElegantBackgroundProps) => {
-    const ref = useRef(null);
-    const { scrollYProgress } = useScroll({
-        target: ref,
-        offset: ["start start", "end start"]
-    });
+    const mouseX = useMotionValue(0);
+    const mouseY = useMotionValue(0);
 
-    const y = useTransform(scrollYProgress, [0, 1], [0, 200]);
-    const opacity = useTransform(scrollYProgress, [0, 0.5, 1], [1, 0.5, 0.2]);
-    const scale = useTransform(scrollYProgress, [0, 1], [1, 1.2]);
+    const springConfig = { damping: 30, stiffness: 200 };
+    const springX = useSpring(mouseX, springConfig);
+    const springY = useSpring(mouseY, springConfig);
 
-    const primaryColor = theme.primaryColor || "#FFD700";
-    const secondaryColor = theme.secondaryColor || "#1A1A2E";
-    const backgroundColor = theme.backgroundColor || "#0F0F1E";
+    useEffect(() => {
+        const handleMouseMove = (e: MouseEvent) => {
+            mouseX.set(e.clientX);
+            mouseY.set(e.clientY);
+        };
+        window.addEventListener('mousemove', handleMouseMove);
+        return () => window.removeEventListener('mousemove', handleMouseMove);
+    }, [mouseX, mouseY]);
+
+    const primaryColor = theme.primaryColor || "#C9A961";
+    const backgroundColor = theme.backgroundColor || "#F5F5F0";
 
     return (
-        <div ref={ref} className={`${position} inset-0 overflow-hidden z-[-1]`}>
-            {/*  Dark Base Background */}
-            <div
-                className="absolute inset-0"
-                style={{ background: backgroundColor }}
-            />
-
-            {/* Animated Gradient Background */}
-            <motion.div
-                className="absolute inset-0"
-                style={{
-                    background: `radial-gradient(circle at 50% 50%, ${primaryColor}10, ${secondaryColor}30)`,
-                    scale
-                }}
-            />
-
-            {/* Floating Ornamental Circles */}
-            {[...Array(8)].map((_, i) => (
-                <motion.div
-                    key={i}
-                    className="absolute rounded-full border opacity-20"
+        <div className={`${position} inset-0 overflow-hidden z-[-1]`} style={{ background: backgroundColor }}>
+            {/* Silk Waves using SVG */}
+            <svg className="absolute inset-0 w-full h-full opacity-30" preserveAspectRatio="none">
+                <motion.path
+                    d="M0,50 C150,150 350,0 500,50 C650,100 850,0 1000,50 L1000,100 L0,100 Z"
+                    fill={`url(#gradient1)`}
                     style={{
-                        width: 200 + i * 80,
-                        height: 200 + i * 80,
-                        borderColor: i % 2 === 0 ? primaryColor : 'white',
-                        borderWidth: '1px',
-                        left: `${20 + (i % 3) * 30}%`,
-                        top: `${10 + (i % 4) * 25}%`,
-                        y
-                    }}
-                    animate={{
-                        scale: [1, 1.05, 1],
-                        rotate: [0, i % 2 === 0 ? 360 : -360],
-                    }}
-                    transition={{
-                        duration: 20 + i * 3,
-                        repeat: Infinity,
-                        ease: "linear"
+                        scaleY: useTransform(springY, [0, 1000], [0.8, 1.2]),
+                        y: useTransform(springY, [0, 1000], [-20, 20])
                     }}
                 />
-            ))}
+                <defs>
+                    <linearGradient id="gradient1" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stopColor={primaryColor} stopOpacity="0" />
+                        <stop offset="50%" stopColor={primaryColor} stopOpacity="0.5" />
+                        <stop offset="100%" stopColor={primaryColor} stopOpacity="0" />
+                    </linearGradient>
+                </defs>
+            </svg>
 
-            {/* Elegant Light Rays */}
-            {[...Array(5)].map((_, i) => (
+            {/* Floating Gold Dust */}
+            {[...Array(15)].map((_, i) => (
                 <motion.div
-                    key={`ray-${i}`}
-                    className="absolute h-full w-[2px] origin-top opacity-10"
+                    key={i}
+                    className="absolute rounded-full"
                     style={{
-                        left: `${15 + i * 20}%`,
-                        top: 0,
-                        background: `linear-gradient(to bottom, ${primaryColor}, transparent)`,
-                        transform: `rotate(${5 + i * 3}deg)`
+                        width: Math.random() * 4 + 1,
+                        height: Math.random() * 4 + 1,
+                        background: primaryColor,
+                        left: `${Math.random() * 100}%`,
+                        top: `${Math.random() * 100}%`,
+                        boxShadow: `0 0 10px ${primaryColor}`
                     }}
                     animate={{
-                        opacity: [0.05, 0.15, 0.05],
-                        scaleY: [0.8, 1, 0.8]
+                        y: [0, -100, 0],
+                        opacity: [0, 0.8, 0],
+                        scale: [0, 1, 0]
                     }}
                     transition={{
-                        duration: 8 + i * 2,
+                        duration: 10 + Math.random() * 10,
                         repeat: Infinity,
+                        delay: Math.random() * 5,
                         ease: "easeInOut"
                     }}
                 />
             ))}
 
-            {/* Subtle Shimmer Particles */}
-            {[...Array(25)].map((_, i) => (
-                <motion.div
-                    key={`shimmer-${i}`}
-                    className="absolute w-1 h-1 rounded-full bg-white"
-                    style={{
-                        left: `${Math.random() * 100}%`,
-                        top: `${Math.random() * 100}%`,
-                    }}
-                    animate={{
-                        opacity: [0, 0.8, 0],
-                        scale: [0, 1.5, 0],
-                        y: [-50, -150]
-                    }}
-                    transition={{
-                        duration: 6 + Math.random() * 4,
-                        repeat: Infinity,
-                        delay: Math.random() * 5,
-                        ease: "easeOut"
-                    }}
-                />
-            ))}
-
-            {/* Soft Glow Overlay */}
-            <div
-                className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[800px] opacity-20"
+            {/* Radial Sheen following mouse */}
+            <motion.div
+                className="absolute w-[800px] h-[800px] rounded-full opacity-10 pointer-events-none"
                 style={{
-                    background: `radial-gradient(circle, ${primaryColor}60 0%, transparent 70%)`,
-                    filter: 'blur(80px)'
+                    background: `radial-gradient(circle, ${primaryColor}, transparent 70%)`,
+                    x: springX,
+                    y: springY,
+                    translateX: '-50%',
+                    translateY: '-50%',
                 }}
+            />
+
+            {/* Texture Overlay */}
+            <div className="absolute inset-0 opacity-[0.03]"
+                style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")` }}
             />
         </div>
     );

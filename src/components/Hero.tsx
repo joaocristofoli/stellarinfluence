@@ -3,6 +3,7 @@ import { motion, useScroll, useTransform, useSpring } from "framer-motion";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState, useRef } from "react";
+import { InteractiveParticles } from "@/components/effects/InteractiveParticles";
 
 export function Hero() {
     const sectionRef = useRef<HTMLDivElement>(null);
@@ -18,23 +19,37 @@ export function Hero() {
     const y2 = useTransform(scrollYProgress, [0, 1], [0, -60]);
     const heroOpacity = useTransform(scrollYProgress, [0, 0.8], [1, 0]);
 
-    // Mouse tracking
+    // Mouse tracking with throttling for smooth performance
     useEffect(() => {
+        let frameId: number;
+        let lastUpdate = 0;
+        const throttleMs = 100;
+
         const handleMouseMove = (e: MouseEvent) => {
-            setMousePosition({ x: e.clientX, y: e.clientY });
+            const now = Date.now();
+            if (now - lastUpdate < throttleMs) return;
+
+            lastUpdate = now;
+            frameId = requestAnimationFrame(() => {
+                setMousePosition({ x: e.clientX, y: e.clientY });
+            });
         };
+
         window.addEventListener("mousemove", handleMouseMove);
-        return () => window.removeEventListener("mousemove", handleMouseMove);
+        return () => {
+            window.removeEventListener("mousemove", handleMouseMove);
+            if (frameId) cancelAnimationFrame(frameId);
+        };
     }, []);
 
     const gradientX = useSpring((mousePosition.x / window.innerWidth) * 100, {
-        stiffness: 100,
-        damping: 30,
+        stiffness: 30,
+        damping: 80,
     });
 
     const gradientY = useSpring((mousePosition.y / window.innerHeight) * 100, {
-        stiffness: 100,
-        damping: 30,
+        stiffness: 30,
+        damping: 80,
     });
 
     return (
@@ -42,11 +57,11 @@ export function Hero() {
             ref={sectionRef}
             className="relative min-h-screen flex items-center justify-center overflow-hidden bg-black"
         >
-            {/* Holographic Background */}
+            {/* Holographic Background - 120px */}
             <motion.div
                 className="absolute inset-0 opacity-40"
                 style={{
-                    background: `radial-gradient(circle at ${gradientX}% ${gradientY}%, rgba(255,107,53,0.3) 0%, rgba(147,51,234,0.2) 50%, transparent 100%)`,
+                    background: `radial-gradient(circle 120px at ${gradientX}% ${gradientY}%, rgba(255,107,53,0.3) 0%, rgba(147,51,234,0.2) 50%, transparent 100%)`,
                 }}
             />
 
@@ -81,30 +96,9 @@ export function Hero() {
                 />
             </div>
 
-            {/* Floating Particles - Reduced count for performance */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                {[...Array(8)].map((_, i) => (
-                    <motion.div
-                        key={i}
-                        className="absolute w-1 h-1 rounded-full bg-accent"
-                        style={{
-                            left: `${Math.random() * 100}%`,
-                            top: `${Math.random() * 100}%`,
-                            willChange: "transform, opacity"
-                        }}
-                        animate={{
-                            y: [-20, 20],
-                            opacity: [0, 1, 0],
-                            scale: [0, 1, 0],
-                        }}
-                        transition={{
-                            duration: 3 + Math.random() * 2,
-                            repeat: Infinity,
-                            delay: Math.random() * 5,
-                        }}
-                    />
-                ))}
-            </div>
+
+            {/* Interactive Particles with Physics - Canvas */}
+            <InteractiveParticles />
 
             {/* Main Content */}
             <motion.div

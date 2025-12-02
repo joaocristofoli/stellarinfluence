@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, forwardRef, useImperativeHandle } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { ImageUpload } from "@/components/ImageUpload";
-import { ImageIcon, Loader2, Save, Scissors, Trash2 } from "lucide-react";
+import { ImageIcon, Loader2, Scissors, Trash2 } from "lucide-react";
 import type { AgencyBranding } from "@/integrations/supabase/types";
 import { ImageCropper } from "@/components/admin/ImageCropper";
 import { Slider } from "@/components/ui/slider";
@@ -14,7 +14,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 
-export const AgencyBrandingManager = () => {
+export const AgencyBrandingManager = forwardRef((props, ref) => {
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [branding, setBranding] = useState<AgencyBranding>({
@@ -35,6 +35,10 @@ export const AgencyBrandingManager = () => {
     useEffect(() => {
         fetchBranding();
     }, []);
+
+    useImperativeHandle(ref, () => ({
+        save: handleSave
+    }));
 
     const fetchBranding = async () => {
         setLoading(true);
@@ -323,20 +327,7 @@ export const AgencyBrandingManager = () => {
                     </div>
                 </div>
 
-                {/* Save Button */}
-                <Button onClick={handleSave} disabled={saving} className="w-full" size="lg">
-                    {saving ? (
-                        <>
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Salvando...
-                        </>
-                    ) : (
-                        <>
-                            <Save className="w-4 h-4 mr-2" />
-                            Salvar Configurações
-                        </>
-                    )}
-                </Button>
+                {/* Save Button Removed - Controlled by Parent */}
             </CardContent>
 
             <ImageCropper
@@ -347,4 +338,4 @@ export const AgencyBrandingManager = () => {
             />
         </Card>
     );
-};
+});

@@ -1,5 +1,5 @@
 // Landing Page Theme Types
-export type LayoutType = 'minimal' | 'bold' | 'elegant' | 'gaming' | 'lifestyle' | 'rock';
+export type LayoutType = 'minimal' | 'bold' | 'elegant' | 'gaming' | 'lifestyle' | 'rock' | 'magnetic' | 'liquid' | 'cosmic' | 'neon' | 'glitch' | 'luxury' | 'cyber' | 'nature';
 export type HeaderStyle = 'centered' | 'left' | 'split';
 
 export interface SectionConfig {
@@ -100,6 +100,7 @@ export const defaultLandingTheme: LandingTheme = {
     fontFamily: 'Inter',
     backgroundBlur: 0,
     backgroundOpacity: 1,
+    enableAnimatedBackground: false,
 
     layout: 'minimal',
     headerStyle: 'centered',
@@ -190,7 +191,7 @@ export function getOrderedSections(theme: LandingTheme) {
         .map(([key, section]) => ({ key, ...section }));
 }
 
-// Layout presets
+// Layout presets - Premium themes with fixed aesthetics (don't change with light/dark mode)
 export const LAYOUT_PRESETS: Record<LayoutType, Partial<LandingTheme>> = {
     minimal: {
         primaryColor: '#000000',
@@ -200,38 +201,94 @@ export const LAYOUT_PRESETS: Record<LayoutType, Partial<LandingTheme>> = {
         fontFamily: 'Inter',
     },
     bold: {
-        primaryColor: '#FF0080',
-        secondaryColor: '#8000FF',
-        backgroundColor: '#0A0A0A',
+        primaryColor: '#FF0080', // Hot Pink
+        secondaryColor: '#8000FF', // Electric Purple
+        backgroundColor: '#0A0A0A', // Almost Black
         textColor: '#FFFFFF',
         fontFamily: 'Poppins',
     },
     rock: {
         primaryColor: '#FF4500', // Orange Red
-        secondaryColor: '#8B0000', // Dark Red
-        backgroundColor: '#110505', // Very Dark Red/Black
+        secondaryColor: '#DC143C', // Crimson
+        backgroundColor: '#0D0000', // Very Dark Red/Black
         textColor: '#FFFFFF',
-        fontFamily: 'Oswald', // Strong, condensed font often used in rock/metal
+        fontFamily: 'Oswald',
     },
     elegant: {
-        primaryColor: '#C9A961',
-        secondaryColor: '#2C2C2C',
-        backgroundColor: '#F5F5F0',
-        textColor: '#2C2C2C',
+        primaryColor: '#D4AF37', // Gold
+        secondaryColor: '#8B7355', // Burlywood
+        backgroundColor: '#1C1917', // Warm Black
+        textColor: '#F5F5DC', // Light Beige
         fontFamily: 'Playfair Display',
     },
     gaming: {
-        primaryColor: '#00FF88',
-        secondaryColor: '#FF0044',
-        backgroundColor: '#0D0D0D',
-        textColor: '#FFFFFF',
+        primaryColor: '#00FF88', // Neon Green
+        secondaryColor: '#FF0044', // Neon Pink
+        backgroundColor: '#0D0D0D', // Almost Black
+        textColor: '#00FF88',
         fontFamily: 'Rajdhani',
     },
     lifestyle: {
-        primaryColor: '#FF9B9B',
-        secondaryColor: '#A8D8EA',
-        backgroundColor: '#FFF5F5',
-        textColor: '#4A4A4A',
+        primaryColor: '#FF6B9D', // Soft Pink
+        secondaryColor: '#C9A0DC', // Lavender
+        backgroundColor: '#FFFAF0', // Floral White
+        textColor: '#2D3748', // Gray 800
         fontFamily: 'Quicksand',
+    },
+    magnetic: {
+        primaryColor: '#3B82F6', // Blue
+        secondaryColor: '#8B5CF6', // Violet
+        backgroundColor: '#0F172A', // Slate 900
+        textColor: '#F8FAFC', // Slate 50
+        fontFamily: 'Inter',
+    },
+    liquid: {
+        primaryColor: '#EC4899', // Pink
+        secondaryColor: '#06B6D4', // Cyan
+        backgroundColor: '#1F2937', // Gray 800
+        textColor: '#F3F4F6', // Gray 100
+        fontFamily: 'Outfit',
+    },
+    cosmic: {
+        primaryColor: '#A855F7', // Purple
+        secondaryColor: '#6366F1', // Indigo
+        backgroundColor: '#000000', // Pure Black
+        textColor: '#FFFFFF',
+        fontFamily: 'Space Grotesk',
+    },
+    neon: {
+        primaryColor: '#39FF14', // Neon Green
+        secondaryColor: '#FF10F0', // Neon Magenta
+        backgroundColor: '#000000', // Pure Black
+        textColor: '#39FF14',
+        fontFamily: 'Orbitron',
+    },
+    glitch: {
+        primaryColor: '#00FFFF', // Cyan
+        secondaryColor: '#FF1493', // Deep Pink
+        backgroundColor: '#050014', // Very Dark Blue
+        textColor: '#00FFFF',
+        fontFamily: 'Share Tech Mono',
+    },
+    luxury: {
+        primaryColor: '#FFD700', // Gold
+        secondaryColor: '#C0C0C0', // Silver
+        backgroundColor: '#000000', // Pure Black
+        textColor: '#FFD700',
+        fontFamily: 'Cinzel',
+    },
+    cyber: {
+        primaryColor: '#F72585', // Cyberpunk Pink
+        secondaryColor: '#4CC9F0', // Cyberpunk Blue
+        backgroundColor: '#03045E', // Dark Navy
+        textColor: '#F72585',
+        fontFamily: 'Blender Pro',
+    },
+    nature: {
+        primaryColor: '#2E8B57', // Sea Green
+        secondaryColor: '#CD853F', // Peru (earthy)
+        backgroundColor: '#F0F8EF', // Mint Cream
+        textColor: '#1A4D2E', // Dark Forest Green
+        fontFamily: 'Lora',
     },
 };

@@ -126,9 +126,9 @@ export default function BannerGenerator() {
                     .maybeSingle();
 
                 if (error) throw error;
-                const settings = data as any;
-                if (settings?.value) {
-                    setBranding(settings.value as AgencyBranding);
+
+                if (data?.value) {
+                    setBranding(data.value as AgencyBranding);
                 }
             } catch (error) {
                 console.error("Error fetching branding:", error);
@@ -439,7 +439,7 @@ export default function BannerGenerator() {
                                         <div className="space-y-4 border-t pt-4">
                                             <Label>Tema do Banner</Label>
                                             <ThemeSelector
-                                                selectedTheme={selectedTheme}
+                                                currentLayout={selectedTheme}
                                                 onSelectTheme={setSelectedTheme}
                                             />
                                             {/* Custom Colors if needed */}

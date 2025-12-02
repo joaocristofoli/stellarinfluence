@@ -36,6 +36,7 @@ export default function CreatorForm() {
     category: "",
     bio: "",
     image_url: "",
+    background_image_url: "",
     instagram_url: "",
     youtube_url: "",
     tiktok_url: "",
@@ -56,25 +57,113 @@ export default function CreatorForm() {
     kwai_followers: "",
     engagement_rate: "",
     stories_views: "",
-    gallery_urls: "",
+    gallery_urls: [] as string[],
     phone: "",
     primary_platform: "",
+    // Admin-only metadata
+    admin_metadata: {
+      sexual_orientation: "",
+      promoted_betting: false,
+      age: "",
+      male_audience_percent: "",
+      female_audience_percent: "",
+      audience_age_ranges: "",
+      ideology: "",
+    },
   });
 
+  const [currentEditingId, setCurrentEditingId] = useState<string | null>(null);
+  const [platformSettings, setPlatformSettings] = useState<any[]>([]);
+
+  // ALL HOOKS MUST BE DECLARED BEFORE ANY CONDITIONAL RETURNS
+  // This follows React's Rules of Hooks
+
   useEffect(() => {
-    if (!authLoading && !user) navigate("/auth");
+    if (!authLoading && !user) {
+      navigate("/auth");
+    }
     // Allow if admin OR if user is authenticated (for self-setup)
   }, [user, authLoading, navigate]);
 
   useEffect(() => {
+    // Admin editing a specific creator
     if (isAdmin && id) {
-      fetchCreator(id);
-    } else if (!isAdmin && user) {
+      // Only fetch if this is a different creator than currently loaded
+      if (currentEditingId !== id) {
+        console.log("🔄 Admin editing creator, ID changed from", currentEditingId, "to", id);
+        setLoading(true);
+        setCurrentEditingId(id);
+        // Reset form to avoid showing stale data
+        setFormData({
+          name: "",
+          slug: "",
+          category: "",
+          bio: "",
+          image_url: "",
+          background_image_url: "",
+          instagram_url: "",
+          youtube_url: "",
+          tiktok_url: "",
+          twitter_url: "",
+          kwai_url: "",
+          instagram_active: false,
+          youtube_active: false,
+          tiktok_active: false,
+          twitter_active: false,
+          kwai_active: false,
+          primaryColor: "#FF6B35",
+          secondaryColor: "#004E89",
+          layout: "default",
+          instagram_followers: "",
+          tiktok_followers: "",
+          youtube_subscribers: "",
+          twitter_followers: "",
+          kwai_followers: "",
+          engagement_rate: "",
+          stories_views: "",
+          gallery_urls: [],
+          phone: "",
+          primary_platform: "",
+          admin_metadata: {
+            sexual_orientation: "",
+            promoted_betting: false,
+            age: "",
+            male_audience_percent: "",
+            female_audience_percent: "",
+            audience_age_ranges: "",
+            ideology: "",
+          },
+        });
+        fetchCreator(id);
+      }
+    }
+    // Non-admin user setting up their own profile
+    else if (!isAdmin && user && !id) {
+      console.log("👤 Non-admin user setting up profile");
       fetchCreatorByUserId(user.id);
     }
-  }, [isAdmin, id, user]);
+  }, [isAdmin, id]); // Removed 'user' from dependencies to prevent unwanted re-fetches
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      const { data } = await supabase.from('platform_settings').select('*');
+      if (data) setPlatformSettings(data);
+    };
+    fetchSettings();
+  }, []);
+
+  // NOW we can have conditional returns AFTER all hooks
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    );
+  }
 
   const fetchCreator = async (creatorId: string) => {
+    console.log("🔄 Fetching creator with ID:", creatorId);
+    setLoading(true);
     try {
       const { data, error } = await supabase
         .from("creators")
@@ -83,10 +172,16 @@ export default function CreatorForm() {
         .single();
 
       if (error) throw error;
-      if (data) populateForm(data);
+      if (data) {
+        console.log("✅ Loaded creator data:", data.name, "ID:", data.id);
+        populateForm(data);
+      }
     } catch (error: any) {
+      console.error("❌ Error fetching creator:", error);
       toast({ title: "Erro ao carregar", description: error.message, variant: "destructive" });
       navigate("/admin");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -106,17 +201,8 @@ export default function CreatorForm() {
     }
   };
 
-  const [platformSettings, setPlatformSettings] = useState<any[]>([]);
-
-  useEffect(() => {
-    const fetchSettings = async () => {
-      const { data } = await supabase.from('platform_settings').select('*');
-      if (data) setPlatformSettings(data);
-    };
-    fetchSettings();
-  }, []);
-
   const populateForm = (creator: any) => {
+    console.log("📸 Creator image_url from DB:", creator.image_url);
     const theme = creator.landing_theme as any;
     setFormData({
       name: creator.name || "",
@@ -124,6 +210,7 @@ export default function CreatorForm() {
       category: creator.category || "",
       bio: creator.bio || "",
       image_url: creator.image_url || "",
+      background_image_url: creator.background_image_url || "",
       instagram_url: creator.instagram_url || "",
       youtube_url: creator.youtube_url || "",
       tiktok_url: creator.tiktok_url || "",
@@ -136,18 +223,28 @@ export default function CreatorForm() {
       kwai_active: creator.kwai_active || false,
       primaryColor: theme?.primaryColor || "#FF6B35",
       secondaryColor: theme?.secondaryColor || "#004E89",
-      layout: theme?.layout || "default",
-      instagram_followers: creator.instagram_followers?.toString() || creator.total_followers?.toString() || "",
-      tiktok_followers: creator.tiktok_followers?.toString() || "",
-      youtube_subscribers: creator.youtube_subscribers?.toString() || "",
-      twitter_followers: creator.twitter_followers?.toString() || "",
-      kwai_followers: creator.kwai_followers?.toString() || "",
+      layout: (theme?.layout as LayoutType) || "minimal",
+      instagram_followers: creator.instagram_followers || "",
+      tiktok_followers: creator.tiktok_followers || "",
+      youtube_subscribers: creator.youtube_subscribers || "",
+      twitter_followers: creator.twitter_followers || "",
+      kwai_followers: creator.kwai_followers || "",
       engagement_rate: creator.engagement_rate || "",
       stories_views: creator.stories_views || "",
-      gallery_urls: Array.isArray(creator.gallery_urls) ? creator.gallery_urls.join('\n') : "",
+      gallery_urls: creator.gallery_urls || [],
       phone: creator.phone || "",
       primary_platform: creator.primary_platform || "",
+      admin_metadata: {
+        sexual_orientation: creator.admin_metadata?.sexual_orientation || "",
+        promoted_betting: creator.admin_metadata?.promoted_betting || false,
+        age: creator.admin_metadata?.age || "",
+        male_audience_percent: creator.admin_metadata?.male_audience_percent || "",
+        female_audience_percent: creator.admin_metadata?.female_audience_percent || "",
+        audience_age_ranges: creator.admin_metadata?.audience_age_ranges || "",
+        ideology: creator.admin_metadata?.ideology || "",
+      },
     });
+    console.log("📸 Set formData.image_url to:", creator.image_url || "");
   };
 
   const handleSlugChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -200,9 +297,11 @@ export default function CreatorForm() {
         kwai_followers: parseNumber(formData.kwai_followers),
         engagement_rate: formData.engagement_rate,
         stories_views: formData.stories_views,
-        gallery_urls: formData.gallery_urls.split('\n').filter(url => url.trim() !== ''),
+        background_image_url: formData.background_image_url,
+        gallery_urls: formData.gallery_urls,
         phone: formData.phone,
         primary_platform: formData.primary_platform,
+        admin_metadata: formData.admin_metadata,
         landing_theme: {
           primaryColor: formData.primaryColor,
           secondaryColor: formData.secondaryColor,
@@ -248,13 +347,25 @@ export default function CreatorForm() {
   const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, 3));
   const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 1));
 
-  if (authLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin" /></div>;
-  if (!user) return null;
+  if (authLoading) return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="animate-spin" /></div>;
+  if (!user) return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="animate-spin" /></div>;
+
+  // Show loading spinner while fetching specific creator data (admin editing)
+  if (loading && isAdmin && id) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin text-accent mx-auto mb-4" />
+          <p className="text-muted-foreground">Carregando perfil do criador...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background pb-20">
       <header className="sticky top-0 z-50 glass border-b border-white/10 px-4 md:px-6 py-4 flex items-center justify-between">
-        <Button variant="ghost" size="sm" onClick={() => navigate("/admin")}>
+        <Button variant="ghost" size="sm" onClick={() => navigate(isAdmin ? "/admin" : "/creator/dashboard")}>
           <ArrowLeft className="w-4 h-4 mr-2" /> Voltar
         </Button>
         <div className="flex gap-2">
@@ -295,8 +406,14 @@ export default function CreatorForm() {
                     <Input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="Ex: João Silva" />
                   </div>
                   <div className="space-y-2">
-                    <Label>Slug (URL)</Label>
-                    <Input value={formData.slug} onChange={handleSlugChange} placeholder="ex: joao-silva" />
+                    <Label>Link Personalizado do seu Perfil</Label>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground whitespace-nowrap">seu-site.com/</span>
+                      <Input value={formData.slug} onChange={handleSlugChange} placeholder="ex: joao-silva" className="flex-1" />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Este será o link único do seu perfil. Use apenas letras minúsculas e hífens.
+                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label>Categoria</Label>
@@ -394,22 +511,16 @@ export default function CreatorForm() {
                               value={(formData as any)[social.id === 'youtube' ? 'youtube_subscribers' : `${social.id}_followers`]}
                               onChange={e => {
                                 const field = social.id === 'youtube' ? 'youtube_subscribers' : `${social.id}_followers`;
-                                // Allow typing freely, we format on blur or display
-                                setFormData({ ...formData, [field]: e.target.value })
+                                const rawValue = e.target.value.replace(/\./g, ''); // Remove dots
+
+                                // Only allow numbers
+                                if (rawValue && !/^\d+$/.test(rawValue)) return;
+
+                                // Format with dots while typing
+                                const formatted = rawValue ? parseInt(rawValue).toLocaleString('pt-BR') : '';
+                                setFormData({ ...formData, [field]: formatted });
                               }}
-                              onBlur={e => {
-                                const field = social.id === 'youtube' ? 'youtube_subscribers' : `${social.id}_followers`;
-                                const val = e.target.value;
-                                // Simple auto-format if user types raw number like 1500 -> 1.5K
-                                if (val && !isNaN(Number(val))) {
-                                  const num = Number(val);
-                                  if (num >= 1000) {
-                                    const formatted = formatNumber(num);
-                                    setFormData(prev => ({ ...prev, [field]: formatted }));
-                                  }
-                                }
-                              }}
-                              placeholder="Ex: 10K, 1.5M"
+                              placeholder="Ex: 10.000, 1.500.000"
                               className="bg-black/20 font-mono"
                             />
                             <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">
@@ -417,6 +528,34 @@ export default function CreatorForm() {
                             </div>
                           </div>
                         </div>
+
+                        {social.id === 'instagram' && (
+                          <div className="space-y-2 md:col-span-2">
+                            <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                              Visualizações nos Stories
+                            </Label>
+                            <div className="relative">
+                              <Input
+                                value={formData.stories_views}
+                                onChange={e => {
+                                  const rawValue = e.target.value.replace(/\./g, ''); // Remove dots
+
+                                  // Only allow numbers
+                                  if (rawValue && !/^\d+$/.test(rawValue)) return;
+
+                                  // Format with dots while typing
+                                  const formatted = rawValue ? parseInt(rawValue).toLocaleString('pt-BR') : '';
+                                  setFormData({ ...formData, stories_views: formatted });
+                                }}
+                                placeholder="Ex: 50.000"
+                                className="bg-black/20 font-mono"
+                              />
+                              <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">
+                                Views
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </motion.div>
                     )}
                   </div>
@@ -441,16 +580,7 @@ export default function CreatorForm() {
                     <p className="text-xs text-muted-foreground">Esta rede terá destaque na apresentação dos números.</p>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Engajamento (%)</Label>
-                      <Input value={formData.engagement_rate} onChange={e => setFormData({ ...formData, engagement_rate: e.target.value })} placeholder="4.5%" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Views Stories</Label>
-                      <Input value={formData.stories_views} onChange={e => setFormData({ ...formData, stories_views: e.target.value })} placeholder="50K" />
-                    </div>
-                  </div>
+
                 </div>
               </div>
             )}
@@ -524,18 +654,220 @@ export default function CreatorForm() {
                 </div>
 
                 <div className="space-y-4 p-4 md:p-6 glass rounded-xl">
-                  <h3 className="font-medium mb-4">Galeria de Fotos</h3>
-                  <div className="space-y-2">
-                    <Label>Links das Imagens (um por linha)</Label>
-                    <Textarea
-                      value={formData.gallery_urls}
-                      onChange={e => setFormData({ ...formData, gallery_urls: e.target.value })}
-                      rows={6}
-                      placeholder="https://..."
-                      className="font-mono text-sm"
-                    />
-                  </div>
+                  <h3 className="font-medium mb-4">Imagem de Fundo do Perfil</h3>
+                  <ImageUpload
+                    currentImage={formData.background_image_url}
+                    onImageUploaded={(url) => setFormData({ ...formData, background_image_url: url as string })}
+                    label="Imagem de Fundo"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Esta imagem aparecerá como fundo na sua página de perfil.
+                  </p>
                 </div>
+
+                <div className="space-y-4 p-4 md:p-6 glass rounded-xl">
+                  <h3 className="font-medium mb-4">Galeria de Fotos</h3>
+                  <ImageUpload
+                    currentImage={formData.gallery_urls.join(',')}
+                    onImageUploaded={(urls) => {
+                      const urlArray = Array.isArray(urls) ? urls : [urls];
+                      setFormData({ ...formData, gallery_urls: urlArray });
+                    }}
+                    label="Fotos da Galeria (até 6)"
+                    multiple={true}
+                    maxFiles={6}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Selecione até 6 fotos para a galeria do seu perfil.
+                  </p>
+                  {formData.gallery_urls.length > 0 && (
+                    <div className="mt-4">
+                      <Label className="text-xs">Fotos Selecionadas ({formData.gallery_urls.length}/6)</Label>
+                      <div className="grid grid-cols-3 gap-2 mt-2">
+                        {formData.gallery_urls.map((url, idx) => (
+                          <div key={idx} className="relative group">
+                            <img src={url} alt={`Gallery ${idx + 1}`} className="w-full h-24 object-cover rounded-lg" />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newUrls = formData.gallery_urls.filter((_, i) => i !== idx);
+                                setFormData({ ...formData, gallery_urls: newUrls });
+                              }}
+                              className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Admin-Only Metadata Section */}
+                {isAdmin && (
+                  <div className="mt-8 p-6 rounded-lg border-2 border-orange-500/30 bg-orange-500/5">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
+                      <h3 className="font-bold text-orange-500 uppercase tracking-wider text-sm">
+                        Informações Privadas (Apenas Admin)
+                      </h3>
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-6">
+                      Estes campos são completament invisíveis para o criador e servem apenas para filtros internos.
+                    </p>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Sexual Orientation */}
+                      <div className="space-y-2">
+                        <Label className="text-xs">Orientação Sexual</Label>
+                        <select
+                          value={formData.admin_metadata.sexual_orientation}
+                          onChange={(e) => setFormData({
+                            ...formData,
+                            admin_metadata: {
+                              ...formData.admin_metadata,
+                              sexual_orientation: e.target.value
+                            }
+                          })}
+                          className="w-full px-3 py-2 bg-black/20 border border-white/10 rounded-lg text-sm"
+                        >
+                          <option value="">Não informado</option>
+                          <option value="heterossexual">Heterossexual</option>
+                          <option value="homossexual">Homossexual</option>
+                          <option value="bissexual">Bissexual</option>
+                          <option value="outro">Outro</option>
+                          <option value="prefere_nao_informar">Prefere não informar</option>
+                        </select>
+                      </div>
+
+                      {/* Age */}
+                      <div className="space-y-2">
+                        <Label className="text-xs">Idade</Label>
+                        <Input
+                          type="number"
+                          value={formData.admin_metadata.age}
+                          onChange={(e) => setFormData({
+                            ...formData,
+                            admin_metadata: {
+                              ...formData.admin_metadata,
+                              age: e.target.value
+                            }
+                          })}
+                          placeholder="Ex: 25"
+                          className="bg-black/20"
+                        />
+                      </div>
+
+                      {/* Promoted Betting */}
+                      <div className="space-y-2">
+                        <Label className="text-xs flex items-center gap-2">
+                          <span>Divulgou Aposta</span>
+                        </Label>
+                        <div className="flex items-center gap-2 px-3 py-2 bg-black/20 border border-white/10 rounded-lg">
+                          <Switch
+                            checked={formData.admin_metadata.promoted_betting}
+                            onCheckedChange={(checked) => setFormData({
+                              ...formData,
+                              admin_metadata: {
+                                ...formData.admin_metadata,
+                                promoted_betting: checked
+                              }
+                            })}
+                          />
+                          <span className="text-sm">
+                            {formData.admin_metadata.promoted_betting ? "Sim" : "Não"}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Ideology */}
+                      <div className="space-y-2">
+                        <Label className="text-xs">Ideologia</Label>
+                        <select
+                          value={formData.admin_metadata.ideology}
+                          onChange={(e) => setFormData({
+                            ...formData,
+                            admin_metadata: {
+                              ...formData.admin_metadata,
+                              ideology: e.target.value
+                            }
+                          })}
+                          className="w-full px-3 py-2 bg-black/20 border border-white/10 rounded-lg text-sm"
+                        >
+                          <option value="">Não informado</option>
+                          <option value="esquerda">Esquerda</option>
+                          <option value="centro-esquerda">Centro-Esquerda</option>
+                          <option value="centro">Centro</option>
+                          <option value="centro-direita">Centro-Direita</option>
+                          <option value="direita">Direita</option>
+                          <option value="outro">Outro</option>
+                          <option value="nao_se_aplica">Não se aplica</option>
+                        </select>
+                      </div>
+
+                      {/* Male Audience % */}
+                      <div className="space-y-2">
+                        <Label className="text-xs">Público Masculino (%)</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={formData.admin_metadata.male_audience_percent}
+                          onChange={(e) => setFormData({
+                            ...formData,
+                            admin_metadata: {
+                              ...formData.admin_metadata,
+                              male_audience_percent: e.target.value
+                            }
+                          })}
+                          placeholder="Ex: 65"
+                          className="bg-black/20"
+                        />
+                      </div>
+
+                      {/* Female Audience % */}
+                      <div className="space-y-2">
+                        <Label className="text-xs">Público Feminino (%)</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={formData.admin_metadata.female_audience_percent}
+                          onChange={(e) => setFormData({
+                            ...formData,
+                            admin_metadata: {
+                              ...formData.admin_metadata,
+                              female_audience_percent: e.target.value
+                            }
+                          })}
+                          placeholder="Ex: 35"
+                          className="bg-black/20"
+                        />
+                      </div>
+
+                      {/* Audience Age Ranges */}
+                      <div className="space-y-2 md:col-span-2">
+                        <Label className="text-xs">Faixas Etárias do Público</Label>
+                        <Input
+                          value={formData.admin_metadata.audience_age_ranges}
+                          onChange={(e) => setFormData({
+                            ...formData,
+                            admin_metadata: {
+                              ...formData.admin_metadata,
+                              audience_age_ranges: e.target.value
+                            }
+                          })}
+                          placeholder="Ex: 13-17, 18-24, 25-34"
+                          className="bg-black/20"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Separe as faixas por vírgula. Ex: 13-17, 18-24, 25-34, 35-44, 45+
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </motion.div>

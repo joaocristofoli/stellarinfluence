@@ -260,10 +260,10 @@ export function CreatorsGrid() {
         </motion.div>
 
         {/* Creator Cards Grid with Stagger and 3D */}
-        {/* Mobile: Horizontal Scroll with Snap */}
-        <div className="flex md:hidden overflow-x-auto snap-x snap-mandatory gap-4 pb-8 -mx-4 px-4 scrollbar-hide">
+        {/* Mobile: Horizontal Scroll with Snap - Adjusted for Peek Effect */}
+        <div className="flex md:hidden overflow-x-auto snap-x snap-mandatory gap-4 pb-8 px-4 scrollbar-hide">
           {creators.map((creator, i) => (
-            <div key={creator.id} className="min-w-[280px] snap-center">
+            <div key={creator.id} className="min-w-[85vw] sm:min-w-[350px] snap-center">
               <CreatorCard creator={creator} index={i} scrollYProgress={scrollYProgress} />
             </div>
           ))}
