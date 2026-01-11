@@ -18,6 +18,7 @@ import BannerGenerator from "./pages/admin/BannerGenerator";
 import ThemeManager from "./pages/admin/ThemeManager";
 import ToledoAdmin from "./pages/admin/ToledoAdmin";
 import MarketingPlanner from "./pages/marketing/MarketingPlanner";
+import ProjectsDashboard from "./pages/admin/ProjectsDashboard";
 
 
 const queryClient = new QueryClient();
@@ -44,6 +45,7 @@ const App = () => (
           <Route path="/admin/themes" element={<ThemeManager />} />
           <Route path="/admin/toledo" element={<ToledoAdmin />} />
           <Route path="/admin/marketing" element={<MarketingPlanner />} />
+          <Route path="/admin/dashboard" element={<ProjectsDashboard />} />
           <Route path="/preview" element={<Preview />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
