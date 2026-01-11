@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Instagram, Youtube, Twitter, Music } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { formatNumber } from "@/utils/formatters";
 
 interface Creator {
   id: string;
@@ -83,7 +84,7 @@ function CreatorCard({ creator, index, scrollYProgress }: { creator: Creator; in
           <div className="flex items-center gap-4 text-sm text-white/60 mb-4">
             {creator.instagram_followers > 0 && (
               <div className="flex items-center gap-1">
-                <span className="font-semibold text-accent">{creator.instagram_followers.toLocaleString()}</span>
+                <span className="font-semibold text-accent">{formatNumber(creator.instagram_followers)}</span>
                 seguidores
               </div>
             )}

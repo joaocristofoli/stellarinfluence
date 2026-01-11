@@ -29,6 +29,7 @@ type Booking = {
     phone: string | null;
     campaign_brief: string;
     budget_min: number | null;
+    budget_range: string | null;
     budget_max: number | null;
     timeline_start: string | null;
     timeline_end: string | null;
@@ -113,7 +114,11 @@ export function BookingsManager() {
         return colors[status] || "default";
     };
 
-    const formatBudget = (min: number | null, max: number | null) => {
+    const formatBudget = (booking: Booking) => {
+        if (booking.budget_range) return booking.budget_range;
+
+        const min = booking.budget_min;
+        const max = booking.budget_max;
         if (!min && !max) return "Não especificado";
 
         const minFormatted = min
@@ -184,7 +189,7 @@ export function BookingsManager() {
                                     </div>
                                 </TableCell>
                                 <TableCell className="text-sm">
-                                    {formatBudget(booking.budget_min, booking.budget_max)}
+                                    {formatBudget(booking)}
                                 </TableCell>
                                 <TableCell>
                                     <Badge variant={getStatusColor(booking.status)}>

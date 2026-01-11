@@ -1,6 +1,7 @@
 import * as React from "react";
 import { LandingTheme, getOrderedSections } from "@/types/landingTheme";
 import { motion, useScroll, useTransform, useSpring, useMotionTemplate, AnimatePresence } from "framer-motion";
+import { formatNumber } from "@/utils/formatters";
 
 // --- Helper Components ---
 
@@ -328,7 +329,7 @@ const CyclingStats = ({ creatorData, theme, platformSettings = [] }: { creatorDa
                                                             }}
                                                             animate={{ scale: isActive && isHovered ? 1.05 : 1 }}
                                                         >
-                                                            {current.value || '0'}
+                                                            {formatNumber(current.value)}
                                                         </motion.h3>
                                                         <p
                                                             className="uppercase tracking-widest text-[9px] font-bold opacity-70"
@@ -347,7 +348,7 @@ const CyclingStats = ({ creatorData, theme, platformSettings = [] }: { creatorDa
                                                             }}
                                                             animate={{ scale: isActive && isHovered ? 1.05 : 1 }}
                                                         >
-                                                            {current.secondaryValue || '-'}
+                                                            {formatNumber(current.secondaryValue)}
                                                         </motion.h3>
                                                         <p
                                                             className="uppercase tracking-widest text-[9px] font-bold opacity-70"
@@ -370,7 +371,7 @@ const CyclingStats = ({ creatorData, theme, platformSettings = [] }: { creatorDa
                                                         animate={{ scale: isActive && isHovered ? 1.08 : 1 }}
                                                         transition={{ type: "spring", stiffness: 300, damping: 20 }}
                                                     >
-                                                        {current.value}
+                                                        {formatNumber(current.value)}
                                                     </motion.h3>
                                                     <p
                                                         className="uppercase tracking-widest text-[10px] font-bold opacity-70"

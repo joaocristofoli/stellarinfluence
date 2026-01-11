@@ -215,11 +215,18 @@ export default function Admin() {
                 <Megaphone className="w-12 h-12 text-accent mx-auto mb-4" />
                 <h3 className="text-xl font-semibold mb-2">Gerenciamento de Campanhas</h3>
                 <p className="text-muted-foreground mb-4">
-                  Crie e gerencie campanhas de marketing
+                  Crie e gerencie campanhas de marketing para seus clientes
                 </p>
-                <p className="text-sm text-muted-foreground">
-                  💡 Vincule criadores às campanhas e acompanhe resultados
+                <p className="text-sm text-muted-foreground mb-6">
+                  💡 Planeje estratégias por canal, defina orçamentos e acompanhe resultados
                 </p>
+                <Button
+                  onClick={() => navigate("/admin/marketing")}
+                  className="bg-accent hover:bg-accent/90 gap-2"
+                >
+                  <Megaphone className="w-4 h-4" />
+                  Abrir Planejador de Marketing
+                </Button>
               </div>
             </motion.div>
           </TabsContent>

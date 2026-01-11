@@ -36,6 +36,7 @@ export function BookingForm() {
     });
 
     const budgetRanges = [
+        "R$ 500 - R$ 1.500",
         "R$ 1.500 - R$ 5.000",
         "R$ 5.000 - R$ 10.000",
         "R$ 10.000 - R$ 20.000",
