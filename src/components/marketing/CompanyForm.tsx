@@ -35,6 +35,10 @@ export function CompanyForm({
         logoUrl: '',
         city: '',
         state: '',
+        cnpj: '',
+        address: '',
+        representativeName: '',
+        representativeRole: '',
     });
 
     useEffect(() => {
@@ -47,6 +51,10 @@ export function CompanyForm({
                 logoUrl: editingCompany.logoUrl || '',
                 city: editingCompany.city || '',
                 state: editingCompany.state || '',
+                cnpj: editingCompany.cnpj || '',
+                address: editingCompany.address || '',
+                representativeName: editingCompany.representativeName || '',
+                representativeRole: editingCompany.representativeRole || '',
             });
         } else {
             setFormData({
@@ -57,6 +65,10 @@ export function CompanyForm({
                 logoUrl: '',
                 city: '',
                 state: '',
+                cnpj: '',
+                address: '',
+                representativeName: '',
+                representativeRole: '',
             });
         }
     }, [editingCompany, open]);
@@ -71,21 +83,25 @@ export function CompanyForm({
             logoUrl: formData.logoUrl || null,
             city: formData.city || null,
             state: formData.state || null,
+            cnpj: formData.cnpj || null,
+            address: formData.address || null,
+            representativeName: formData.representativeName || null,
+            representativeRole: formData.representativeRole || null,
         });
         onClose();
     };
 
     return (
         <Dialog open={open} onOpenChange={onClose}>
-            <DialogContent className="max-w-lg">
+            <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle className="font-display text-xl">
                         {editingCompany ? 'Editar Empresa' : 'Nova Empresa'}
                     </DialogTitle>
                     <DialogDescription>
                         {editingCompany
-                            ? 'Atualize as informações da empresa.'
-                            : 'Cadastre uma nova empresa para criar planejamentos de marketing.'}
+                            ? 'Atualize as informações da empresa e dados para contrato.'
+                            : 'Cadastre uma nova empresa e seus dados fiscais.'}
                     </DialogDescription>
                 </DialogHeader>
 
@@ -135,42 +151,93 @@ export function CompanyForm({
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="primaryColor">Cor Principal</Label>
-                            <div className="flex gap-2">
-                                <Input
-                                    id="primaryColor"
-                                    type="color"
-                                    value={formData.primaryColor}
-                                    onChange={e => setFormData(prev => ({ ...prev, primaryColor: e.target.value }))}
-                                    className="w-12 h-10 p-1 cursor-pointer"
-                                />
-                                <Input
-                                    value={formData.primaryColor}
-                                    onChange={e => setFormData(prev => ({ ...prev, primaryColor: e.target.value }))}
-                                    placeholder="#7c3aed"
-                                    className="flex-1"
-                                />
+                    {/* Dados Fiscais/Contrato */}
+                    <div className="border-t border-border pt-4 mt-2">
+                        <h3 className="font-medium text-sm mb-3 text-muted-foreground">Dados para Contrato</h3>
+                        <div className="space-y-3">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="cnpj">CNPJ</Label>
+                                    <Input
+                                        id="cnpj"
+                                        value={formData.cnpj}
+                                        onChange={e => setFormData(prev => ({ ...prev, cnpj: e.target.value }))}
+                                        placeholder="00.000.000/0000-00"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="address">Endereço Completo</Label>
+                                    <Input
+                                        id="address"
+                                        value={formData.address}
+                                        onChange={e => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                                        placeholder="Rua, Número, Bairro"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="representativeName">Nome do Representante</Label>
+                                    <Input
+                                        id="representativeName"
+                                        value={formData.representativeName}
+                                        onChange={e => setFormData(prev => ({ ...prev, representativeName: e.target.value }))}
+                                        placeholder="Nome Completo"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="representativeRole">Cargo do Representante</Label>
+                                    <Input
+                                        id="representativeRole"
+                                        value={formData.representativeRole}
+                                        onChange={e => setFormData(prev => ({ ...prev, representativeRole: e.target.value }))}
+                                        placeholder="Ex: Sócio-Administrador"
+                                    />
+                                </div>
                             </div>
                         </div>
+                    </div>
 
-                        <div className="space-y-2">
-                            <Label htmlFor="secondaryColor">Cor Secundária</Label>
-                            <div className="flex gap-2">
-                                <Input
-                                    id="secondaryColor"
-                                    type="color"
-                                    value={formData.secondaryColor}
-                                    onChange={e => setFormData(prev => ({ ...prev, secondaryColor: e.target.value }))}
-                                    className="w-12 h-10 p-1 cursor-pointer"
-                                />
-                                <Input
-                                    value={formData.secondaryColor}
-                                    onChange={e => setFormData(prev => ({ ...prev, secondaryColor: e.target.value }))}
-                                    placeholder="#f97316"
-                                    className="flex-1"
-                                />
+                    <div className="border-t border-border pt-4 mt-2">
+                        <h3 className="font-medium text-sm mb-3 text-muted-foreground">Identidade Visual</h3>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="primaryColor">Cor Principal</Label>
+                                <div className="flex gap-2">
+                                    <Input
+                                        id="primaryColor"
+                                        type="color"
+                                        value={formData.primaryColor}
+                                        onChange={e => setFormData(prev => ({ ...prev, primaryColor: e.target.value }))}
+                                        className="w-12 h-10 p-1 cursor-pointer"
+                                    />
+                                    <Input
+                                        value={formData.primaryColor}
+                                        onChange={e => setFormData(prev => ({ ...prev, primaryColor: e.target.value }))}
+                                        placeholder="#7c3aed"
+                                        className="flex-1"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="secondaryColor">Cor Secundária</Label>
+                                <div className="flex gap-2">
+                                    <Input
+                                        id="secondaryColor"
+                                        type="color"
+                                        value={formData.secondaryColor}
+                                        onChange={e => setFormData(prev => ({ ...prev, secondaryColor: e.target.value }))}
+                                        className="w-12 h-10 p-1 cursor-pointer"
+                                    />
+                                    <Input
+                                        value={formData.secondaryColor}
+                                        onChange={e => setFormData(prev => ({ ...prev, secondaryColor: e.target.value }))}
+                                        placeholder="#f97316"
+                                        className="flex-1"
+                                    />
+                                </div>
                             </div>
                         </div>
                     </div>

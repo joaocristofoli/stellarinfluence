@@ -20,6 +20,10 @@ export interface Company {
     logoUrl: string | null;
     city: string | null;
     state: string | null;
+    cnpj?: string | null;
+    address?: string | null;
+    representativeName?: string | null;
+    representativeRole?: string | null;
     createdAt: Date;
     updatedAt: Date;
 }

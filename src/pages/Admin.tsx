@@ -1,8 +1,8 @@
-import { useEffect, useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { CreatorsTable } from "@/components/admin/CreatorsTable";
 import { PricingManager } from "@/components/admin/PricingManager";
 import { BookingsManager } from "@/components/admin/BookingsManager";
@@ -11,32 +11,103 @@ import { AgencyBrandingManager } from "@/components/admin/AgencyBrandingManager"
 import { UserManagement } from "@/components/admin/UserManagement";
 import { ThemeConfigManager } from "@/components/admin/ThemeConfigManager";
 import { HomepageEditor } from "@/components/admin/HomepageEditor";
-import { Users, DollarSign, Megaphone, Calendar, BarChart3, LogOut, Plus, Image as ImageIcon, Settings, UserCog, Palette, Loader2, Save } from "lucide-react";
-import { motion } from "framer-motion";
+import { CalendarIntegration } from "@/components/admin/CalendarIntegration";
+import {
+  Users, DollarSign, Megaphone, Calendar, LogOut, Plus,
+  Image as ImageIcon, Settings, UserCog, Palette, LayoutDashboard,
+  Building2, Landmark, ChevronRight, Menu, X, Home, FileText
+} from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
+
+// Menu items with hierarchical structure
+const menuItems = [
+  {
+    id: "dashboard",
+    label: "Dashboard",
+    icon: LayoutDashboard,
+    path: "/admin/dashboard",
+    external: true,
+  },
+  {
+    id: "influencers",
+    label: "Influenciadores",
+    icon: Users,
+    children: [
+      { id: "creators-list", label: "Lista de Criadores", content: "creators" },
+      { id: "creators-new", label: "Novo Criador", path: "/admin/creators/new", external: true },
+      { id: "banners", label: "Gerador de Banners", path: "/admin/banners", external: true },
+    ],
+  },
+  {
+    id: "marketing",
+    label: "Marketing & Empresas",
+    icon: Building2,
+    children: [
+      { id: "planner", label: "Planejador de Marketing", path: "/admin/marketing", external: true },
+    ],
+  },
+  {
+    id: "toledo",
+    label: "Prefeitura Toledo",
+    icon: Landmark,
+    path: "/admin/toledo",
+    external: true,
+  },
+  {
+    id: "bookings",
+    label: "Reservas",
+    icon: Calendar,
+    content: "bookings",
+  },
+  {
+    id: "users",
+    label: "Usuários",
+    icon: UserCog,
+    content: "users",
+  },
+  {
+    id: "settings",
+    label: "Configurações",
+    icon: Settings,
+    children: [
+      { id: "homepage", label: "Homepage", content: "homepage" },
+      { id: "branding", label: "Branding", content: "branding" },
+      { id: "platforms", label: "Plataformas", content: "platforms" },
+      { id: "themes", label: "🎬 Animações", content: "themes" },
+      { id: "theme-colors", label: "🎨 Cores & Fontes", path: "/admin/themes", external: true },
+      { id: "calendar", label: "📅 Calendário (Apple/Google)", content: "calendar" },
+    ],
+  },
+  {
+    id: "pricing",
+    label: "Preços",
+    icon: DollarSign,
+    content: "pricing",
+  },
+];
 
 export default function Admin() {
   const { user, loading, isAdmin, isCreator, signOut } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("creators");
+  const location = useLocation();
+  const [activeSection, setActiveSection] = useState("creators");
+  const [expandedMenus, setExpandedMenus] = useState<string[]>(["influencers"]);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    // Only redirect after loading is complete
     if (loading) return;
-
     if (!user) {
       navigate("/auth");
       return;
     }
-
-    // If not admin, check if they're a creator and redirect appropriately
     if (!isAdmin) {
       if (isCreator) {
         navigate("/creator/dashboard");
       } else {
-        // No role assigned - this shouldn't happen in production
         navigate("/");
       }
-      return;
     }
   }, [user, loading, isAdmin, isCreator, navigate]);
 
@@ -45,273 +116,255 @@ export default function Admin() {
     navigate("/");
   };
 
+  const toggleMenu = (menuId: string) => {
+    setExpandedMenus(prev =>
+      prev.includes(menuId)
+        ? prev.filter(id => id !== menuId)
+        : [...prev, menuId]
+    );
+  };
+
+  const handleMenuClick = (item: any) => {
+    if (item.external && item.path) {
+      navigate(item.path);
+    } else if (item.content) {
+      setActiveSection(item.content);
+      setMobileMenuOpen(false);
+    } else if (item.children) {
+      toggleMenu(item.id);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-lg text-muted-foreground">Carregando...</div>
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin" />
+          <p className="text-muted-foreground">Carregando painel...</p>
+        </div>
       </div>
     );
   }
 
-  if (!user || !isAdmin) {
-    return null;
-  }
+  if (!user || !isAdmin) return null;
 
-  return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <motion.header
-        initial={{ y: -20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        className="glass border-b border-border/50 sticky top-0 z-50"
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold">
-                <span className="text-gradient">Painel Admin</span>
-              </h1>
-              <p className="text-sm text-muted-foreground mt-1">
-                Gerencie toda a plataforma em um só lugar
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate("/")}
-                className="hidden sm:flex"
-              >
-                Ver Site
-              </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={handleSignOut}
-                className="flex items-center gap-2"
-              >
-                <LogOut className="w-4 h-4" />
-                <span className="hidden sm:inline">Sair</span>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </motion.header>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          {/* Tabs Navigation */}
-          <TabsList className="grid w-full grid-cols-3 md:grid-cols-7 gap-2 bg-muted/50 p-1 h-auto">
-            <TabsTrigger
-              value="creators"
-              className="flex items-center gap-2 data-[state=active]:bg-accent data-[state=active]:text-white py-2"
-            >
-              <Users className="w-4 h-4" />
-              <span className="hidden sm:inline">Criadores</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="users"
-              className="flex items-center gap-2 data-[state=active]:bg-accent data-[state=active]:text-white py-2"
-            >
-              <UserCog className="w-4 h-4" />
-              <span className="hidden sm:inline">Usuários</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="pricing"
-              className="flex items-center gap-2 data-[state=active]:bg-accent data-[state=active]:text-white py-2"
-            >
-              <DollarSign className="w-4 h-4" />
-              <span className="hidden sm:inline">Preços</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="campaigns"
-              className="flex items-center gap-2 data-[state=active]:bg-accent data-[state=active]:text-white py-2"
-            >
-              <Megaphone className="w-4 h-4" />
-              <span className="hidden sm:inline">Campanhas</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="bookings"
-              className="flex items-center gap-2 data-[state=active]:bg-accent data-[state=active]:text-white py-2"
-            >
-              <Calendar className="w-4 h-4" />
-              <span className="hidden sm:inline">Reservas</span>
-            </TabsTrigger>
-            {/* Analytics Tab Removed for space or moved? Keeping it but adjusting grid */}
-            <TabsTrigger
-              value="settings"
-              className="flex items-center gap-2 data-[state=active]:bg-accent data-[state=active]:text-white py-2"
-            >
-              <Settings className="w-4 h-4" />
-              <span className="hidden sm:inline">Config</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="themes"
-              className="flex items-center gap-2 data-[state=active]:bg-accent data-[state=active]:text-white py-2"
-            >
-              <Palette className="w-4 h-4" />
-              <span className="hidden sm:inline">Temas</span>
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Creators Tab */}
-          <TabsContent value="creators" className="space-y-4">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex items-center justify-between"
-            >
+  const renderContent = () => {
+    switch (activeSection) {
+      case "creators":
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-semibold">Gerenciar Criadores</h2>
-                <p className="text-sm text-muted-foreground">
-                  Adicione, edite ou remova criadores de conteúdo
-                </p>
+                <h2 className="text-2xl font-bold">Gerenciar Influenciadores</h2>
+                <p className="text-muted-foreground">Adicione, edite ou remova criadores de conteúdo</p>
               </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => navigate("/admin/banners")}
-                  className="hidden md:flex"
-                >
-                  <ImageIcon className="w-4 h-4 mr-2" />
-                  Gerador de Banners
-                </Button>
-                <Button
-                  onClick={() => navigate("/admin/creators/new")}
-                  className="bg-accent hover:bg-accent/90"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Novo Criador
-                </Button>
-              </div>
-            </motion.div>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.1 }}
-            >
-              <CreatorsTable />
-            </motion.div>
-          </TabsContent>
-
-          {/* Users Tab */}
-          <TabsContent value="users" className="space-y-4">
-            <UserManagement />
-          </TabsContent>
-
-          {/* Pricing Tab */}
-          <TabsContent value="pricing" className="space-y-4">
-            <PricingManager />
-          </TabsContent>
-
-          {/* Campaigns Tab */}
-          <TabsContent value="campaigns" className="space-y-4">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
-              <div className="glass rounded-3xl p-8 text-center">
-                <Megaphone className="w-12 h-12 text-accent mx-auto mb-4" />
-                <h3 className="text-xl font-semibold mb-2">Gerenciamento de Campanhas</h3>
-                <p className="text-muted-foreground mb-4">
-                  Crie e gerencie campanhas de marketing para seus clientes
-                </p>
-                <p className="text-sm text-muted-foreground mb-6">
-                  💡 Planeje estratégias por canal, defina orçamentos e acompanhe resultados
-                </p>
-                <Button
-                  onClick={() => navigate("/admin/marketing")}
-                  className="bg-accent hover:bg-accent/90 gap-2"
-                >
-                  <Megaphone className="w-4 h-4" />
-                  Abrir Planejador de Marketing
-                </Button>
-              </div>
-            </motion.div>
-          </TabsContent>
-
-          {/* Bookings Tab */}
-          <TabsContent value="bookings" className="space-y-4">
-            <BookingsManager />
-          </TabsContent>
-
-          {/* Analytics Tab */}
-          <TabsContent value="analytics" className="space-y-4">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
-              <div className="glass rounded-3xl p-6 md:p-8 text-center">
-                <BarChart3 className="w-12 h-12 text-accent mx-auto mb-4" />
-                <h3 className="text-xl font-semibold mb-2">Analytics & Relatórios</h3>
-                <p className="text-muted-foreground mb-4">
-                  Visualize métricas e gere relatórios de desempenho
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  💡 Acompanhe KPIs de criadores e campanhas
-                </p>
-              </div>
-            </motion.div>
-          </TabsContent>
-
-          {/* Themes Tab */}
-          <TabsContent value="themes" className="space-y-4">
-            <ThemeConfigManager />
-          </TabsContent>
-
-          {/* Settings Tab */}
-          <TabsContent value="settings" className="space-y-4">
-            <SettingsTabContent />
-          </TabsContent>
-        </Tabs>
-      </main>
-    </div>
-  );
-}
-
-
-
-function SettingsTabContent() {
-  const homepageRef = useRef<any>(null);
-  const brandingRef = useRef<any>(null);
-  const platformRef = useRef<any>(null);
-  const [saving, setSaving] = useState(false);
-
-  const handleSaveAll = async () => {
-    setSaving(true);
-    try {
-      // Trigger all saves in parallel
-      await Promise.all([
-        homepageRef.current?.save(),
-        brandingRef.current?.save(),
-        platformRef.current?.save()
-      ]);
-    } catch (error) {
-      console.error("Error saving settings:", error);
-    } finally {
-      setSaving(false);
+              <Button onClick={() => navigate("/admin/creators/new")} className="bg-accent hover:bg-accent/90">
+                <Plus className="w-4 h-4 mr-2" />
+                Novo Criador
+              </Button>
+            </div>
+            <CreatorsTable />
+          </div>
+        );
+      case "bookings":
+        return <BookingsManager />;
+      case "users":
+        return <UserManagement />;
+      case "pricing":
+        return <PricingManager />;
+      case "homepage":
+        return <HomepageEditor />;
+      case "branding":
+        return <AgencyBrandingManager />;
+      case "platforms":
+        return <PlatformSettingsManager />;
+      case "themes":
+        return <ThemeConfigManager />;
+      case "calendar":
+        return <CalendarIntegration />;
+      default:
+        return (
+          <div className="flex items-center justify-center h-64 text-muted-foreground">
+            Selecione uma opção no menu
+          </div>
+        );
     }
   };
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between bg-muted/30 p-4 rounded-xl border border-border/50">
-        <div>
-          <h2 className="text-xl font-semibold">Configurações Gerais</h2>
-          <p className="text-sm text-muted-foreground">
-            Gerencie a aparência e integrações do site
-          </p>
-        </div>
-        <Button onClick={handleSaveAll} disabled={saving} size="lg" className="bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl transition-all">
-          {saving ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Save className="w-5 h-5 mr-2" />}
-          Salvar Todas as Alterações
-        </Button>
+  const SidebarContent = () => (
+    <div className="flex flex-col h-full">
+      {/* Logo */}
+      <div className="p-6 border-b border-border/50">
+        <h1 className="text-xl font-bold text-gradient">Stellar Admin</h1>
+        <p className="text-xs text-muted-foreground mt-1">Painel de Controle</p>
       </div>
 
-      <HomepageEditor ref={homepageRef} />
-      <AgencyBrandingManager ref={brandingRef} />
-      <PlatformSettingsManager ref={platformRef} />
+      {/* Menu */}
+      <ScrollArea className="flex-1 py-4">
+        <nav className="px-3 space-y-1">
+          {menuItems.map((item) => (
+            <div key={item.id}>
+              <button
+                onClick={() => handleMenuClick(item)}
+                className={cn(
+                  "w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
+                  "hover:bg-accent/10 hover:text-accent",
+                  (item.content === activeSection || item.children?.some(c => c.content === activeSection))
+                    ? "bg-accent/10 text-accent"
+                    : "text-muted-foreground"
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  <item.icon className="w-5 h-5" />
+                  <span>{item.label}</span>
+                </div>
+                {item.children && (
+                  <ChevronRight className={cn(
+                    "w-4 h-4 transition-transform",
+                    expandedMenus.includes(item.id) && "rotate-90"
+                  )} />
+                )}
+                {item.external && !item.children && (
+                  <span className="text-xs bg-accent/20 text-accent px-2 py-0.5 rounded">Abrir</span>
+                )}
+              </button>
+
+              {/* Submenu */}
+              <AnimatePresence>
+                {item.children && expandedMenus.includes(item.id) && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="overflow-hidden ml-4 mt-1 space-y-1"
+                  >
+                    {item.children.map((child) => (
+                      <button
+                        key={child.id}
+                        onClick={() => handleMenuClick(child)}
+                        className={cn(
+                          "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all",
+                          "hover:bg-accent/10 hover:text-accent",
+                          child.content === activeSection
+                            ? "bg-accent/10 text-accent"
+                            : "text-muted-foreground"
+                        )}
+                      >
+                        <div className="w-1.5 h-1.5 rounded-full bg-current" />
+                        <span>{child.label}</span>
+                        {child.external && (
+                          <span className="ml-auto text-xs bg-accent/20 text-accent px-1.5 py-0.5 rounded">→</span>
+                        )}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          ))}
+        </nav>
+      </ScrollArea>
+
+      {/* Footer */}
+      <div className="p-4 border-t border-border/50 space-y-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => navigate("/")}
+          className="w-full justify-start"
+        >
+          <Home className="w-4 h-4 mr-2" />
+          Ver Site
+        </Button>
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={handleSignOut}
+          className="w-full justify-start"
+        >
+          <LogOut className="w-4 h-4 mr-2" />
+          Sair
+        </Button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-background flex">
+      {/* Desktop Sidebar */}
+      <aside className={cn(
+        "hidden lg:flex flex-col w-64 border-r border-border/50 bg-card/50 backdrop-blur-sm fixed h-screen",
+        !sidebarOpen && "lg:w-16"
+      )}>
+        <SidebarContent />
+      </aside>
+
+      {/* Mobile Menu Button */}
+      <button
+        onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-card rounded-lg border border-border/50 shadow-lg"
+      >
+        {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+      </button>
+
+      {/* Mobile Sidebar */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setMobileMenuOpen(false)}
+              className="lg:hidden fixed inset-0 bg-background/80 backdrop-blur-sm z-40"
+            />
+            <motion.aside
+              initial={{ x: -280 }}
+              animate={{ x: 0 }}
+              exit={{ x: -280 }}
+              className="lg:hidden fixed left-0 top-0 bottom-0 w-72 bg-card border-r border-border/50 z-50"
+            >
+              <SidebarContent />
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Main Content */}
+      <main className={cn(
+        "flex-1 min-h-screen",
+        sidebarOpen ? "lg:ml-64" : "lg:ml-16"
+      )}>
+        {/* Top Bar */}
+        <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-sm border-b border-border/50 px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="lg:hidden" /> {/* Spacer for mobile menu button */}
+            <h1 className="text-lg font-semibold hidden lg:block">
+              {menuItems.find(m => m.content === activeSection || m.children?.some(c => c.content === activeSection))?.label || "Dashboard"}
+            </h1>
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-muted-foreground hidden sm:block">
+                {user?.email}
+              </span>
+              <span className="px-2 py-1 text-xs bg-accent/20 text-accent rounded-full">
+                Admin
+              </span>
+            </div>
+          </div>
+        </header>
+
+        {/* Page Content */}
+        <div className="p-6">
+          <motion.div
+            key={activeSection}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            {renderContent()}
+          </motion.div>
+        </div>
+      </main>
     </div>
   );
 }

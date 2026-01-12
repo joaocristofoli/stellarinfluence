@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Plus, Loader2, FileDown, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
@@ -8,11 +8,13 @@ import { ChannelFilter } from '@/components/marketing/ChannelFilter';
 import { StatsOverview } from '@/components/marketing/StatsOverview';
 import { CompanySelector } from '@/components/marketing/CompanySelector';
 import { CompanyForm } from '@/components/marketing/CompanyForm';
+import { ContractPreviewDialog } from '@/components/marketing/ContractPreviewDialog';
 import { MarketingStrategy, ChannelType, Company } from '@/types/marketing';
 import { exportToPdf } from '@/utils/exportPdf';
 import { useToast } from '@/hooks/use-toast';
 import { useCompanies, useCreateCompany, useUpdateCompany, useDeleteCompany } from '@/hooks/useCompanies';
 import { useStrategies, useCreateStrategy, useUpdateStrategy, useDeleteStrategy } from '@/hooks/useStrategies';
+import { exportContract } from '@/utils/exportContract';
 
 const MarketingPlanner = () => {
     const { toast } = useToast();
@@ -20,6 +22,7 @@ const MarketingPlanner = () => {
     const [companyFormOpen, setCompanyFormOpen] = useState(false);
     const [editingCompanyMode, setEditingCompanyMode] = useState(false);
     const [formOpen, setFormOpen] = useState(false);
+    const [contractPreviewOpen, setContractPreviewOpen] = useState(false);
     const [editingStrategy, setEditingStrategy] = useState<MarketingStrategy | null>(null);
     const [selectedChannels, setSelectedChannels] = useState<ChannelType[]>([]);
 
@@ -47,6 +50,21 @@ const MarketingPlanner = () => {
     const filteredStrategies = selectedChannels.length > 0
         ? strategies.filter(s => selectedChannels.includes(s.channelType))
         : strategies;
+
+    // Dynamic theme based on company colors
+    const companyTheme = useMemo(() => {
+        if (!selectedCompany) return {};
+        const primary = selectedCompany.primaryColor || '#7c3aed';
+        const secondary = selectedCompany.secondaryColor || '#f97316';
+        return {
+            '--company-primary': primary,
+            '--company-secondary': secondary,
+            '--company-primary-light': `${primary}20`,
+            '--company-primary-medium': `${primary}40`,
+            '--company-gradient': `linear-gradient(135deg, ${primary}, ${secondary})`,
+        } as React.CSSProperties;
+    }, [selectedCompany]);
+
 
     const handleSaveStrategy = async (data: Omit<MarketingStrategy, 'id' | 'createdAt' | 'updatedAt'>) => {
         try {
@@ -123,6 +141,28 @@ const MarketingPlanner = () => {
             title: 'Exportando PDF',
             description: 'O documento será aberto para impressão.',
         });
+    };
+
+    const handleExportContract = () => {
+        if (!selectedCompany) return;
+        if (strategies.length === 0) {
+            toast({
+                title: 'Sem estratégias',
+                description: 'Adicione estratégias para gerar o contrato.',
+                variant: 'destructive',
+            });
+            return;
+        }
+
+        if (!selectedCompany.cnpj && !selectedCompany.address) {
+            toast({
+                title: 'Dados incompletos',
+                description: 'Recomendamos adicionar CNPJ e Endereço da empresa para um contrato completo.',
+                variant: 'default',
+            });
+        }
+
+        setContractPreviewOpen(true);
     };
 
     const handleCloseForm = () => {
@@ -204,7 +244,14 @@ const MarketingPlanner = () => {
     }
 
     return (
-        <div className="min-h-screen bg-background">
+        <div className="min-h-screen bg-background transition-all duration-300" style={companyTheme}>
+            {/* Dynamic Theme Accent Bar */}
+            {selectedCompany && (
+                <div
+                    className="h-1 w-full"
+                    style={{ background: `var(--company-gradient)` }}
+                />
+            )}
             {/* Header */}
             <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-lg">
                 <div className="container mx-auto px-4">
@@ -215,8 +262,22 @@ const MarketingPlanner = () => {
                                     <ArrowLeft className="w-5 h-5" />
                                 </Button>
                             </Link>
+                            {selectedCompany?.logoUrl && (
+                                <img
+                                    src={selectedCompany.logoUrl}
+                                    alt={selectedCompany.name}
+                                    className="h-10 w-10 rounded-lg object-cover border-2"
+                                    style={{ borderColor: 'var(--company-primary)' }}
+                                />
+                            )}
                             <div>
-                                <h1 className="font-display font-bold text-xl">📋 Planejamento de Marketing</h1>
+                                <h1 className="font-display font-bold text-xl flex items-center gap-2">
+                                    <span
+                                        className="w-3 h-3 rounded-full"
+                                        style={{ background: 'var(--company-gradient)' }}
+                                    />
+                                    Planejamento de Marketing
+                                </h1>
                                 {selectedCompany && (
                                     <p className="text-sm text-muted-foreground">
                                         {selectedCompany.name} • {strategies.length} estratégias • {formatCurrency(totalBudget)}
@@ -224,9 +285,27 @@ const MarketingPlanner = () => {
                                 )}
                             </div>
                         </div>
-                        <Button onClick={handleExport} variant="outline" className="gap-2">
+                    </div>
+                    <div className="flex gap-2">
+                        <Button
+                            onClick={handleExportContract}
+                            variant="outline"
+                            className="gap-2"
+                        >
                             <FileDown className="w-4 h-4" />
-                            Exportar PDF
+                            Gerar Contrato
+                        </Button>
+                        <Button
+                            onClick={handleExport}
+                            className="gap-2 shadow-lg font-semibold"
+                            style={{
+                                background: 'var(--company-gradient)',
+                                color: 'white',
+                                textShadow: '0 1px 3px rgba(0,0,0,0.5)',
+                            }}
+                        >
+                            <FileDown className="w-4 h-4" />
+                            Exportar Planejamento
                         </Button>
                     </div>
                 </div>
@@ -259,7 +338,12 @@ const MarketingPlanner = () => {
                             </h2>
                             <Button
                                 onClick={() => setFormOpen(true)}
-                                className="gap-2 gradient-primary shadow-glow hover:opacity-90 transition-opacity"
+                                className="gap-2 shadow-lg hover:opacity-90 transition-all font-semibold"
+                                style={{
+                                    background: 'var(--company-gradient)',
+                                    color: 'white',
+                                    textShadow: '0 1px 3px rgba(0,0,0,0.5)',
+                                }}
                             >
                                 <Plus className="w-4 h-4" />
                                 Nova Estratégia
@@ -333,16 +417,26 @@ const MarketingPlanner = () => {
                 )}
             </main>
 
-            {selectedCompany && (
-                <StrategyForm
-                    open={formOpen}
-                    onClose={handleCloseForm}
-                    onSave={handleSaveStrategy}
-                    editingStrategy={editingStrategy}
-                    existingStrategies={strategies}
-                    companyId={selectedCompany.id}
-                />
-            )}
+            {
+                selectedCompany && (
+                    <>
+                        <StrategyForm
+                            open={formOpen}
+                            onClose={handleCloseForm}
+                            onSave={handleSaveStrategy}
+                            editingStrategy={editingStrategy}
+                            existingStrategies={strategies}
+                            companyId={selectedCompany.id}
+                        />
+                        <ContractPreviewDialog
+                            open={contractPreviewOpen}
+                            onClose={() => setContractPreviewOpen(false)}
+                            company={selectedCompany}
+                            strategies={strategies}
+                        />
+                    </>
+                )
+            }
 
             <CompanyForm
                 open={companyFormOpen}
@@ -354,7 +448,7 @@ const MarketingPlanner = () => {
                 onDelete={editingCompanyMode ? handleDeleteCompany : undefined}
                 editingCompany={editingCompanyMode ? selectedCompany : null}
             />
-        </div>
+        </div >
     );
 };
 

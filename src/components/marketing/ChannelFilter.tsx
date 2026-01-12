@@ -28,24 +28,37 @@ export function ChannelFilter({ selectedChannels, onToggleChannel, onClearFilter
             <div className="flex items-center justify-between">
                 <h3 className="text-sm font-medium text-muted-foreground">Filtrar por canal</h3>
                 {selectedChannels.length > 0 && (
-                    <Button variant="ghost" size="sm" onClick={onClearFilters} className="h-7 text-xs">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={onClearFilters}
+                        className="h-7 text-xs"
+                        style={{ color: 'var(--company-primary)' }}
+                    >
                         <X className="w-3 h-3 mr-1" />
                         Limpar filtros
                     </Button>
                 )}
             </div>
             <div className="flex flex-wrap gap-2">
-                {channelTypes.map(channel => (
-                    <Button
-                        key={channel}
-                        variant={selectedChannels.includes(channel) ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => onToggleChannel(channel)}
-                        className="text-xs h-8"
-                    >
-                        {channelTypeIcons[channel]} {channelTypeLabels[channel]}
-                    </Button>
-                ))}
+                {channelTypes.map(channel => {
+                    const isSelected = selectedChannels.includes(channel);
+                    return (
+                        <Button
+                            key={channel}
+                            variant={isSelected ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => onToggleChannel(channel)}
+                            className="text-xs h-8"
+                            style={isSelected ? {
+                                background: 'var(--company-primary)',
+                                color: '#1f1f1f', // Dark text for readability
+                            } : undefined}
+                        >
+                            {channelTypeIcons[channel]} {channelTypeLabels[channel]}
+                        </Button>
+                    );
+                })}
             </div>
         </div>
     );

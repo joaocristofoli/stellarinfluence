@@ -26,34 +26,35 @@ export function StatsOverview({ strategies }: StatsOverviewProps) {
         }).format(value);
     };
 
+    // Stats using CSS variables from company theme
     const stats = [
         {
             label: 'Total de Estratégias',
             value: strategies.length,
             icon: Target,
-            color: 'text-primary',
-            bgColor: 'bg-primary/10',
+            useTheme: true,
+            opacity: 1,
         },
         {
             label: 'Orçamento Total',
             value: formatCurrency(totalBudget),
             icon: DollarSign,
-            color: 'text-green-500',
-            bgColor: 'bg-green-500/10',
+            useTheme: true,
+            opacity: 0.85,
         },
         {
             label: 'Em Andamento',
             value: inProgressCount,
             icon: TrendingUp,
-            color: 'text-yellow-500',
-            bgColor: 'bg-yellow-500/10',
+            useTheme: true,
+            opacity: 0.7,
         },
         {
             label: 'Concluídas',
             value: completedCount,
             icon: CheckCircle2,
-            color: 'text-emerald-500',
-            bgColor: 'bg-emerald-500/10',
+            useTheme: true,
+            opacity: 0.55,
         },
     ];
 
@@ -61,15 +62,40 @@ export function StatsOverview({ strategies }: StatsOverviewProps) {
         <div className="space-y-6">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {stats.map((stat, index) => (
-                    <Card key={index} className="card-hover">
+                    <Card
+                        key={index}
+                        className="card-hover overflow-hidden relative"
+                        style={{
+                            borderColor: 'var(--company-primary-medium)',
+                        }}
+                    >
+                        {/* Subtle gradient accent */}
+                        <div
+                            className="absolute top-0 left-0 right-0 h-1"
+                            style={{
+                                background: 'var(--company-gradient)',
+                                opacity: stat.opacity
+                            }}
+                        />
                         <CardContent className="p-4">
                             <div className="flex items-center gap-3">
-                                <div className={`w-10 h-10 rounded-lg ${stat.bgColor} flex items-center justify-center`}>
-                                    <stat.icon className={`w-5 h-5 ${stat.color}`} />
+                                <div
+                                    className="w-10 h-10 rounded-lg flex items-center justify-center"
+                                    style={{
+                                        background: 'var(--company-primary-light)',
+                                    }}
+                                >
+                                    <stat.icon
+                                        className="w-5 h-5"
+                                        style={{ color: 'var(--company-primary)' }}
+                                    />
                                 </div>
                                 <div>
                                     <p className="text-xs text-muted-foreground">{stat.label}</p>
-                                    <p className={`font-display font-bold text-lg ${stat.color}`}>
+                                    <p
+                                        className="font-display font-bold text-lg"
+                                        style={{ color: 'var(--company-primary)' }}
+                                    >
                                         {stat.value}
                                     </p>
                                 </div>
@@ -80,7 +106,13 @@ export function StatsOverview({ strategies }: StatsOverviewProps) {
             </div>
 
             {topChannel && (
-                <Card className="border-primary/20 bg-primary/5">
+                <Card
+                    className="overflow-hidden"
+                    style={{
+                        borderColor: 'var(--company-primary-medium)',
+                        background: 'var(--company-primary-light)',
+                    }}
+                >
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                             <div>
@@ -89,7 +121,10 @@ export function StatsOverview({ strategies }: StatsOverviewProps) {
                                     {channelTypeLabels[topChannel[0] as keyof typeof channelTypeLabels]}
                                 </p>
                             </div>
-                            <p className="font-display font-bold text-xl text-primary">
+                            <p
+                                className="font-display font-bold text-xl"
+                                style={{ color: 'var(--company-primary)' }}
+                            >
                                 {formatCurrency(topChannel[1])}
                             </p>
                         </div>
