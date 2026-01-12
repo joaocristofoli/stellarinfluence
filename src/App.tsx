@@ -19,6 +19,7 @@ import ThemeManager from "./pages/admin/ThemeManager";
 import ToledoAdmin from "./pages/admin/ToledoAdmin";
 import MarketingPlanner from "./pages/marketing/MarketingPlanner";
 import ProjectsDashboard from "./pages/admin/ProjectsDashboard";
+import SharedPlan from "./pages/public/SharedPlan";
 
 
 const queryClient = new QueryClient();
@@ -46,6 +47,7 @@ const App = () => (
           <Route path="/admin/toledo" element={<ToledoAdmin />} />
           <Route path="/admin/marketing" element={<MarketingPlanner />} />
           <Route path="/admin/dashboard" element={<ProjectsDashboard />} />
+          <Route path="/view/plan/:id" element={<SharedPlan />} />
           <Route path="/preview" element={<Preview />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

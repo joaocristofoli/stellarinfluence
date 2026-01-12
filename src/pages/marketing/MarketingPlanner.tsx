@@ -1,7 +1,15 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Loader2, FileDown, ArrowLeft } from 'lucide-react';
+import { Plus, Loader2, FileDown, ArrowLeft, Link2, Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
+import { Input } from '@/components/ui/input';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+} from '@/components/ui/dialog';
 import { StrategyCard } from '@/components/marketing/StrategyCard';
 import { StrategyForm } from '@/components/marketing/StrategyForm';
 import { ChannelFilter } from '@/components/marketing/ChannelFilter';
@@ -9,11 +17,16 @@ import { StatsOverview } from '@/components/marketing/StatsOverview';
 import { CompanySelector } from '@/components/marketing/CompanySelector';
 import { CompanyForm } from '@/components/marketing/CompanyForm';
 import { ContractPreviewDialog } from '@/components/marketing/ContractPreviewDialog';
-import { MarketingStrategy, ChannelType, Company } from '@/types/marketing';
+import { CampaignSelector } from '@/components/marketing/CampaignSelector';
+import { CampaignForm } from '@/components/marketing/CampaignForm';
+import { CampaignStats } from '@/components/marketing/CampaignStats';
+import { MarketingStrategy, MarketingCampaign, ChannelType, Company } from '@/types/marketing';
 import { exportToPdf } from '@/utils/exportPdf';
+import { createShareableLink, getShareableUrl } from '@/utils/shareableLink';
 import { useToast } from '@/hooks/use-toast';
 import { useCompanies, useCreateCompany, useUpdateCompany, useDeleteCompany } from '@/hooks/useCompanies';
 import { useStrategies, useCreateStrategy, useUpdateStrategy, useDeleteStrategy } from '@/hooks/useStrategies';
+import { useCampaigns, useCreateCampaign, useUpdateCampaign, useDeleteCampaign } from '@/hooks/useCampaigns';
 import { exportContract } from '@/utils/exportContract';
 
 const MarketingPlanner = () => {
@@ -26,9 +39,21 @@ const MarketingPlanner = () => {
     const [editingStrategy, setEditingStrategy] = useState<MarketingStrategy | null>(null);
     const [selectedChannels, setSelectedChannels] = useState<ChannelType[]>([]);
 
+    // Campaign state
+    const [selectedCampaign, setSelectedCampaign] = useState<MarketingCampaign | 'all' | 'none'>('all');
+    const [campaignFormOpen, setCampaignFormOpen] = useState(false);
+    const [editingCampaignMode, setEditingCampaignMode] = useState(false);
+
+    // Share state
+    const [shareDialogOpen, setShareDialogOpen] = useState(false);
+    const [shareLink, setShareLink] = useState('');
+    const [shareLoading, setShareLoading] = useState(false);
+    const [copied, setCopied] = useState(false);
+
     // Queries
     const { data: companies = [], isLoading: loadingCompanies } = useCompanies();
     const { data: strategies = [], isLoading: loadingStrategies } = useStrategies(selectedCompany?.id || null);
+    const { data: campaigns = [], isLoading: loadingCampaigns } = useCampaigns(selectedCompany?.id || null);
 
     // Mutations
     const createCompany = useCreateCompany();
@@ -37,6 +62,9 @@ const MarketingPlanner = () => {
     const createStrategy = useCreateStrategy();
     const updateStrategy = useUpdateStrategy();
     const deleteStrategy = useDeleteStrategy();
+    const createCampaign = useCreateCampaign();
+    const updateCampaign = useUpdateCampaign();
+    const deleteCampaign = useDeleteCampaign();
 
     // Auto-select first company
     useEffect(() => {
@@ -45,11 +73,34 @@ const MarketingPlanner = () => {
         }
     }, [companies, selectedCompany]);
 
+    // Reset campaign selection when company changes
+    useEffect(() => {
+        setSelectedCampaign('all');
+    }, [selectedCompany?.id]);
+
     const totalBudget = strategies.reduce((sum, s) => sum + s.budget, 0);
 
-    const filteredStrategies = selectedChannels.length > 0
-        ? strategies.filter(s => selectedChannels.includes(s.channelType))
-        : strategies;
+    // Filter strategies by channel and campaign
+    const filteredStrategies = useMemo(() => {
+        let filtered = strategies;
+
+        // Filter by campaign
+        if (selectedCampaign === 'none') {
+            filtered = filtered.filter(s => !s.campaignId);
+        } else if (selectedCampaign !== 'all' && selectedCampaign) {
+            filtered = filtered.filter(s => s.campaignId === selectedCampaign.id);
+        }
+
+        // Filter by channel
+        if (selectedChannels.length > 0) {
+            filtered = filtered.filter(s => selectedChannels.includes(s.channelType));
+        }
+
+        return filtered;
+    }, [strategies, selectedCampaign, selectedChannels]);
+
+    // Get the actual campaign object for stats
+    const activeCampaign = selectedCampaign !== 'all' && selectedCampaign !== 'none' ? selectedCampaign : null;
 
     // Dynamic theme based on company colors
     const companyTheme = useMemo(() => {
@@ -228,11 +279,110 @@ const MarketingPlanner = () => {
         setCompanyFormOpen(true);
     };
 
+    // Campaign handlers
+    const handleSaveCampaign = async (data: Omit<MarketingCampaign, 'id' | 'createdAt' | 'updatedAt'>) => {
+        try {
+            if (editingCampaignMode && selectedCampaign !== 'all' && selectedCampaign !== 'none') {
+                const updated = await updateCampaign.mutateAsync({ id: selectedCampaign.id, ...data });
+                setSelectedCampaign(updated);
+                toast({
+                    title: 'Campanha atualizada!',
+                    description: `"${data.name}" foi atualizada com sucesso.`,
+                });
+            } else {
+                const newCampaign = await createCampaign.mutateAsync(data);
+                setSelectedCampaign(newCampaign);
+                toast({
+                    title: 'Campanha criada!',
+                    description: `"${data.name}" foi criada. Comece a adicionar estratégias!`,
+                });
+            }
+            setEditingCampaignMode(false);
+        } catch (error) {
+            toast({
+                title: 'Erro',
+                description: 'Não foi possível salvar a campanha.',
+                variant: 'destructive',
+            });
+        }
+    };
+
+    const handleDeleteCampaign = async () => {
+        if (selectedCampaign === 'all' || selectedCampaign === 'none' || !selectedCampaign) return;
+
+        try {
+            await deleteCampaign.mutateAsync({ id: selectedCampaign.id, companyId: selectedCompany!.id });
+            setSelectedCampaign('all');
+            setCampaignFormOpen(false);
+            setEditingCampaignMode(false);
+            toast({
+                title: 'Campanha removida',
+                description: `"${selectedCampaign.name}" foi removida. Estratégias foram desvinculadas.`,
+            });
+        } catch (error) {
+            toast({
+                title: 'Erro',
+                description: 'Não foi possível remover a campanha.',
+                variant: 'destructive',
+            });
+        }
+    };
+
+    const handleNewCampaign = () => {
+        setEditingCampaignMode(false);
+        setCampaignFormOpen(true);
+    };
+
+    const handleEditCampaign = () => {
+        setEditingCampaignMode(true);
+        setCampaignFormOpen(true);
+    };
+
     const formatCurrency = (value: number) => {
         return new Intl.NumberFormat('pt-BR', {
             style: 'currency',
             currency: 'BRL',
         }).format(value);
+    };
+
+    // Share handler
+    const handleShare = async () => {
+        if (!selectedCompany) return;
+
+        setShareLoading(true);
+        try {
+            const shareId = await createShareableLink(selectedCompany, strategies);
+            const url = getShareableUrl(shareId);
+            setShareLink(url);
+            setShareDialogOpen(true);
+        } catch (error) {
+            console.error('Error creating share link:', error);
+            toast({
+                title: 'Erro ao compartilhar',
+                description: 'Não foi possível gerar o link de compartilhamento.',
+                variant: 'destructive',
+            });
+        } finally {
+            setShareLoading(false);
+        }
+    };
+
+    const handleCopyLink = async () => {
+        try {
+            await navigator.clipboard.writeText(shareLink);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+            toast({
+                title: 'Link copiado!',
+                description: 'O link foi copiado para a área de transferência.',
+            });
+        } catch (error) {
+            toast({
+                title: 'Erro ao copiar',
+                description: 'Não foi possível copiar o link.',
+                variant: 'destructive',
+            });
+        }
     };
 
     if (loadingCompanies) {
@@ -288,6 +438,19 @@ const MarketingPlanner = () => {
                     </div>
                     <div className="flex gap-2">
                         <Button
+                            onClick={handleShare}
+                            variant="outline"
+                            className="gap-2"
+                            disabled={shareLoading || strategies.length === 0}
+                        >
+                            {shareLoading ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                                <Link2 className="w-4 h-4" />
+                            )}
+                            Compartilhar
+                        </Button>
+                        <Button
                             onClick={handleExportContract}
                             variant="outline"
                             className="gap-2"
@@ -324,6 +487,24 @@ const MarketingPlanner = () => {
 
                 {selectedCompany ? (
                     <>
+                        {/* Campaign Selector Row */}
+                        <div className="flex items-center gap-4 flex-wrap">
+                            <CampaignSelector
+                                campaigns={campaigns}
+                                selectedCampaign={selectedCampaign}
+                                onSelectCampaign={setSelectedCampaign}
+                                onNewCampaign={handleNewCampaign}
+                                onEditCampaign={handleEditCampaign}
+                                disabled={loadingCampaigns}
+                            />
+                        </div>
+
+                        {/* Campaign Stats - shows when viewing specific campaign or all */}
+                        <CampaignStats
+                            strategies={filteredStrategies}
+                            campaign={activeCampaign}
+                        />
+
                         <StatsOverview strategies={strategies} />
 
                         <ChannelFilter
@@ -427,12 +608,25 @@ const MarketingPlanner = () => {
                             editingStrategy={editingStrategy}
                             existingStrategies={strategies}
                             companyId={selectedCompany.id}
+                            campaigns={campaigns}
+                            defaultCampaignId={activeCampaign?.id || null}
                         />
                         <ContractPreviewDialog
                             open={contractPreviewOpen}
                             onClose={() => setContractPreviewOpen(false)}
                             company={selectedCompany}
                             strategies={strategies}
+                        />
+                        <CampaignForm
+                            open={campaignFormOpen}
+                            onClose={() => {
+                                setCampaignFormOpen(false);
+                                setEditingCampaignMode(false);
+                            }}
+                            onSave={handleSaveCampaign}
+                            onDelete={editingCampaignMode ? handleDeleteCampaign : undefined}
+                            editingCampaign={editingCampaignMode && selectedCampaign !== 'all' && selectedCampaign !== 'none' ? selectedCampaign : null}
+                            companyId={selectedCompany.id}
                         />
                     </>
                 )
@@ -448,8 +642,49 @@ const MarketingPlanner = () => {
                 onDelete={editingCompanyMode ? handleDeleteCompany : undefined}
                 editingCompany={editingCompanyMode ? selectedCompany : null}
             />
+
+            {/* Share Dialog */}
+            <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Link2 className="w-5 h-5 text-purple-600" />
+                            Compartilhar Planejamento
+                        </DialogTitle>
+                        <DialogDescription>
+                            Qualquer pessoa com este link pode visualizar o planejamento.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="flex items-center gap-2">
+                            <Input
+                                value={shareLink}
+                                readOnly
+                                className="flex-1 text-sm bg-muted"
+                            />
+                            <Button
+                                onClick={handleCopyLink}
+                                variant="outline"
+                                size="icon"
+                                className="shrink-0"
+                            >
+                                {copied ? (
+                                    <Check className="w-4 h-4 text-green-600" />
+                                ) : (
+                                    <Copy className="w-4 h-4" />
+                                )}
+                            </Button>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-amber-600 bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg">
+                            <span className="text-lg">⏰</span>
+                            <span>Este link expira em <strong>24 horas</strong></span>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div >
     );
 };
 
 export default MarketingPlanner;
+

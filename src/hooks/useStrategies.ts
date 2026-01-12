@@ -5,6 +5,7 @@ import { MarketingStrategy, ChannelType } from '@/types/marketing';
 const mapDbToStrategy = (row: any): MarketingStrategy => ({
     id: row.id,
     companyId: row.company_id,
+    campaignId: row.campaign_id || null,
     name: row.name,
     channelType: row.channel_type as ChannelType,
     budget: Number(row.budget),
@@ -47,6 +48,7 @@ export function useCreateStrategy() {
                 .from('strategies')
                 .insert({
                     company_id: strategy.companyId,
+                    campaign_id: strategy.campaignId || null,
                     name: strategy.name,
                     channel_type: strategy.channelType,
                     budget: strategy.budget,
@@ -78,6 +80,7 @@ export function useUpdateStrategy() {
             const { data, error } = await supabase
                 .from('strategies')
                 .update({
+                    campaign_id: strategy.campaignId !== undefined ? (strategy.campaignId || null) : undefined,
                     name: strategy.name,
                     channel_type: strategy.channelType,
                     budget: strategy.budget,

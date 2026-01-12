@@ -28,9 +28,22 @@ export interface Company {
     updatedAt: Date;
 }
 
+export interface MarketingCampaign {
+    id: string;
+    companyId: string;
+    name: string;
+    description: string | null;
+    startDate: Date | null;
+    endDate: Date | null;
+    status: 'planned' | 'in_progress' | 'completed';
+    createdAt: Date;
+    updatedAt: Date;
+}
+
 export interface MarketingStrategy {
     id: string;
     companyId: string;
+    campaignId: string | null;
     name: string;
     channelType: ChannelType;
     budget: number;

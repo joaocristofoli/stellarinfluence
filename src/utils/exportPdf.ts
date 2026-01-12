@@ -1,6 +1,10 @@
 import { MarketingStrategy, Company, channelTypeLabels, channelTypeIcons } from '@/types/marketing';
 
-export function exportToPdf(strategies: MarketingStrategy[], company?: Company | null) {
+/**
+ * Generates the HTML content for a marketing plan.
+ * This is used both for export/print and for shareable links.
+ */
+export function generatePlanHtml(strategies: MarketingStrategy[], company?: Company | null): string {
   const companyName = company?.name || 'Planejamento de Marketing';
   const companyLocation = company?.city && company?.state
     ? `${company.city}, ${company.state}`
@@ -70,11 +74,12 @@ export function exportToPdf(strategies: MarketingStrategy[], company?: Company |
     budget: strats.reduce((sum, s) => sum + s.budget, 0),
   })).sort((a, b) => b.budget - a.budget);
 
-  let content = `
+  return `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Planejamento de Marketing - ${companyName}</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -444,6 +449,15 @@ export function exportToPdf(strategies: MarketingStrategy[], company?: Company |
       .cover { page-break-after: always; }
       .strategy { page-break-inside: avoid; }
     }
+    
+    @media (max-width: 768px) {
+      .cover { padding: 30px; }
+      .cover h1 { font-size: 32px; }
+      .cover-stats { flex-direction: column; gap: 16px; }
+      .page { padding: 20px; }
+      .channel-grid { grid-template-columns: 1fr; }
+      .strategy-sections { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
@@ -615,6 +629,13 @@ export function exportToPdf(strategies: MarketingStrategy[], company?: Company |
 </body>
 </html>
   `;
+}
+
+/**
+ * Opens a new window with the marketing plan HTML and triggers print.
+ */
+export function exportToPdf(strategies: MarketingStrategy[], company?: Company | null) {
+  const content = generatePlanHtml(strategies, company);
 
   const printWindow = window.open('', '_blank');
   if (printWindow) {
@@ -625,3 +646,4 @@ export function exportToPdf(strategies: MarketingStrategy[], company?: Company |
     };
   }
 }
+

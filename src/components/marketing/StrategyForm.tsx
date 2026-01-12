@@ -19,15 +19,17 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import {
     MarketingStrategy,
+    MarketingCampaign,
     ChannelType,
     channelTypeLabels,
     channelTypeIcons
 } from '@/types/marketing';
 import { generateMarketingIdeas, AIStrategySuggestion } from '@/utils/aiGenerator';
-import { Sparkles, Loader2, Lightbulb, Link as LinkIcon, Users } from 'lucide-react';
+import { Sparkles, Loader2, Lightbulb, Link as LinkIcon, Users, FolderKanban } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from "@/integrations/supabase/client";
 import { Creator } from '@/types/creator';
+import { CurrencyInput } from '@/components/ui/CurrencyInput';
 
 interface StrategyFormProps {
     open: boolean;
@@ -36,6 +38,8 @@ interface StrategyFormProps {
     editingStrategy?: MarketingStrategy | null;
     existingStrategies: MarketingStrategy[];
     companyId: string;
+    campaigns?: MarketingCampaign[];
+    defaultCampaignId?: string | null;
 }
 
 const channelTypes: ChannelType[] = [
@@ -59,6 +63,8 @@ export function StrategyForm({
     editingStrategy,
     existingStrategies,
     companyId,
+    campaigns = [],
+    defaultCampaignId = null,
 }: StrategyFormProps) {
     const [formData, setFormData] = useState({
         name: '',
@@ -71,6 +77,7 @@ export function StrategyForm({
         whyToDo: '',
         connections: [] as string[],
         status: 'planned' as 'planned' | 'in_progress' | 'completed',
+        campaignId: null as string | null,
     });
 
     const { toast } = useToast();
@@ -188,6 +195,7 @@ export function StrategyForm({
                 whyToDo: editingStrategy.whyToDo,
                 connections: editingStrategy.connections,
                 status: editingStrategy.status,
+                campaignId: editingStrategy.campaignId,
             });
         } else {
             setFormData({
@@ -201,9 +209,10 @@ export function StrategyForm({
                 whyToDo: '',
                 connections: [],
                 status: 'planned',
+                campaignId: defaultCampaignId,
             });
         }
-    }, [editingStrategy, open]);
+    }, [editingStrategy, open, defaultCampaignId]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -319,14 +328,11 @@ export function StrategyForm({
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="budget">Orçamento (R$)</Label>
-                                <Input
+                                <CurrencyInput
                                     id="budget"
-                                    type="number"
-                                    min={0}
-                                    step={0.01}
                                     value={formData.budget}
-                                    onChange={e => setFormData(prev => ({ ...prev, budget: Number(e.target.value) }))}
-                                    placeholder="0,00"
+                                    onChange={(value) => setFormData(prev => ({ ...prev, budget: value }))}
+                                    placeholder="R$ 0,00"
                                     required
                                 />
                             </div>
@@ -361,6 +367,33 @@ export function StrategyForm({
                                 </SelectContent>
                             </Select>
                         </div>
+
+                        {campaigns.length > 0 && (
+                            <div className="space-y-2 p-3 bg-purple-50 dark:bg-purple-900/10 rounded-lg border border-purple-100 dark:border-purple-800">
+                                <Label className="flex items-center gap-2 text-purple-700 dark:text-purple-300">
+                                    <FolderKanban className="w-4 h-4" />
+                                    Vincular a Campanha
+                                </Label>
+                                <Select
+                                    value={formData.campaignId || 'none'}
+                                    onValueChange={(value) =>
+                                        setFormData(prev => ({ ...prev, campaignId: value === 'none' ? null : value }))
+                                    }
+                                >
+                                    <SelectTrigger className="bg-white dark:bg-black/20">
+                                        <SelectValue placeholder="Selecione uma campanha..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="none">📂 Sem Campanha</SelectItem>
+                                        {campaigns.map(campaign => (
+                                            <SelectItem key={campaign.id} value={campaign.id}>
+                                                {campaign.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
 
                         <div className="space-y-2">
                             <Label htmlFor="description">Descrição</Label>
