@@ -1,8 +1,19 @@
-import { useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
-export function useAuth() {
+interface AuthContextType {
+  user: User | null;
+  session: Session | null;
+  loading: boolean;
+  isAdmin: boolean;
+  isCreator: boolean;
+  signOut: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
@@ -57,7 +68,8 @@ export function useAuth() {
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          await checkUserRoles(session.user.id);
+          // Use setTimeout to avoid Supabase deadlocks
+          setTimeout(() => checkUserRoles(session.user.id), 0);
         } else {
           setIsAdmin(false);
           setIsCreator(false);
@@ -86,5 +98,17 @@ export function useAuth() {
     await supabase.auth.signOut();
   };
 
-  return { user, session, loading, isAdmin, isCreator, signOut };
+  return (
+    <AuthContext.Provider value={{ user, session, loading, isAdmin, isCreator, signOut }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
 }
