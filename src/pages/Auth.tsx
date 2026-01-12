@@ -36,6 +36,9 @@ export default function Auth() {
 
   const redirectUser = async (userId: string) => {
     try {
+      // Small delay to ensure auth state has propagated to all listeners
+      await new Promise(resolve => setTimeout(resolve, 100));
+
       // Check if admin using RPC (more reliable)
       const { data: isAdminData, error: adminError } = await supabase
         .rpc('is_user_admin' as any, { check_user_id: userId });
@@ -43,6 +46,7 @@ export default function Auth() {
       if (adminError) {
         console.error("Error checking admin status:", adminError);
       } else if (isAdminData) {
+        console.log("✅ User is admin, redirecting to /admin");
         navigate("/admin");
         return;
       }
@@ -57,12 +61,13 @@ export default function Auth() {
       if (creatorError) {
         console.error("Error checking creator status:", creatorError);
       } else if (creatorData) {
+        console.log("✅ User is creator, redirecting to /creator/dashboard");
         navigate("/creator/dashboard");
         return;
       }
 
       // No role assigned - redirect to creator dashboard to setup profile
-      // This assumes new signups are potential creators
+      console.log("✅ No role found, redirecting to /creator/dashboard for setup");
       navigate("/creator/dashboard");
     } catch (error) {
       console.error("Unexpected error in redirectUser:", error);
