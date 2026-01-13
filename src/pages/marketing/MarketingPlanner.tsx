@@ -435,41 +435,41 @@ const MarketingPlanner = () => {
                                 )}
                             </div>
                         </div>
-                    </div>
-                    <div className="flex gap-2">
-                        <Button
-                            onClick={handleShare}
-                            variant="outline"
-                            className="gap-2"
-                            disabled={shareLoading || strategies.length === 0}
-                        >
-                            {shareLoading ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                                <Link2 className="w-4 h-4" />
-                            )}
-                            Compartilhar
-                        </Button>
-                        <Button
-                            onClick={handleExportContract}
-                            variant="outline"
-                            className="gap-2"
-                        >
-                            <FileDown className="w-4 h-4" />
-                            Gerar Contrato
-                        </Button>
-                        <Button
-                            onClick={handleExport}
-                            className="gap-2 shadow-lg font-semibold"
-                            style={{
-                                background: 'var(--company-gradient)',
-                                color: 'white',
-                                textShadow: '0 1px 3px rgba(0,0,0,0.5)',
-                            }}
-                        >
-                            <FileDown className="w-4 h-4" />
-                            Exportar Planejamento
-                        </Button>
+                        <div className="flex gap-2">
+                            <Button
+                                onClick={handleShare}
+                                variant="outline"
+                                className="gap-2"
+                                disabled={shareLoading || strategies.length === 0}
+                            >
+                                {shareLoading ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                    <Link2 className="w-4 h-4" />
+                                )}
+                                Compartilhar
+                            </Button>
+                            <Button
+                                onClick={handleExportContract}
+                                variant="outline"
+                                className="gap-2"
+                            >
+                                <FileDown className="w-4 h-4" />
+                                Gerar Contrato
+                            </Button>
+                            <Button
+                                onClick={handleExport}
+                                className="gap-2 shadow-lg font-semibold"
+                                style={{
+                                    background: 'var(--company-gradient)',
+                                    color: 'white',
+                                    textShadow: '0 1px 3px rgba(0,0,0,0.5)',
+                                }}
+                            >
+                                <FileDown className="w-4 h-4" />
+                                Exportar Planejamento
+                            </Button>
+                        </div>
                     </div>
                 </div>
             </header>
