@@ -35,43 +35,63 @@ export default function Auth() {
   }, [navigate]);
 
   const redirectUser = async (userId: string) => {
+    // Create a timeout promise
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("Timeout")), 5000)
+    );
+
     try {
       // Small delay to ensure auth state has propagated to all listeners
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Check if admin using RPC (more reliable)
-      const { data: isAdminData, error: adminError } = await supabase
-        .rpc('is_user_admin' as any, { check_user_id: userId });
+      // Race between role check and timeout
+      await Promise.race([
+        (async () => {
+          // Check if admin using RPC (more reliable)
+          console.log("🔍 Checking admin status...");
+          const { data: isAdminData, error: adminError } = await supabase
+            .rpc('is_user_admin' as any, { check_user_id: userId });
 
-      if (adminError) {
-        console.error("Error checking admin status:", adminError);
-      } else if (isAdminData) {
-        console.log("✅ User is admin, redirecting to /admin");
-        navigate("/admin");
-        return;
+          if (adminError) {
+            console.error("Error checking admin status:", adminError);
+          } else if (isAdminData) {
+            console.log("✅ User is admin, redirecting to /admin");
+            navigate("/admin");
+            return;
+          }
+
+          // Check if creator
+          console.log("🔍 Checking creator status...");
+          const { data: creatorData, error: creatorError } = await supabase
+            .from("creators")
+            .select("id")
+            .eq("user_id", userId)
+            .maybeSingle();
+
+          if (creatorError) {
+            console.error("Error checking creator status:", creatorError);
+          } else if (creatorData) {
+            console.log("✅ User is creator, redirecting to /creator/dashboard");
+            navigate("/creator/dashboard");
+            return;
+          }
+
+          // No role assigned - redirect to creator dashboard to setup profile
+          console.log("✅ No role found, redirecting to /creator/dashboard for setup");
+          navigate("/creator/dashboard");
+        })(),
+        timeoutPromise
+      ]);
+    } catch (error: any) {
+      if (error?.message === "Timeout") {
+        console.warn("⏰ Role check timed out, redirecting to home");
+        navigate("/");
+      } else {
+        console.error("Unexpected error in redirectUser:", error);
+        navigate("/");
       }
-
-      // Check if creator
-      const { data: creatorData, error: creatorError } = await supabase
-        .from("creators")
-        .select("id")
-        .eq("user_id", userId)
-        .maybeSingle();
-
-      if (creatorError) {
-        console.error("Error checking creator status:", creatorError);
-      } else if (creatorData) {
-        console.log("✅ User is creator, redirecting to /creator/dashboard");
-        navigate("/creator/dashboard");
-        return;
-      }
-
-      // No role assigned - redirect to creator dashboard to setup profile
-      console.log("✅ No role found, redirecting to /creator/dashboard for setup");
-      navigate("/creator/dashboard");
-    } catch (error) {
-      console.error("Unexpected error in redirectUser:", error);
-      navigate("/");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -122,9 +142,32 @@ export default function Auth() {
         }, 1500); // Wait 1.5s to show the toast message
       }
     } catch (error: any) {
+      // Translate common Supabase auth errors to Portuguese
+      let errorMessage = error.message;
+      let errorTitle = "Erro";
+
+      if (error.message?.includes("Invalid login credentials")) {
+        errorTitle = "Credenciais inválidas";
+        errorMessage = "Email ou senha incorretos. Verifique se você já possui uma conta cadastrada.";
+      } else if (error.message?.includes("Email not confirmed")) {
+        errorTitle = "Email não confirmado";
+        errorMessage = "Por favor, verifique seu email e clique no link de confirmação.";
+      } else if (error.message?.includes("User already registered")) {
+        errorTitle = "Usuário já existe";
+        errorMessage = "Este email já está cadastrado. Tente fazer login.";
+      } else if (error.message?.includes("Invalid email")) {
+        errorTitle = "Email inválido";
+        errorMessage = "Por favor, insira um email válido.";
+      } else if (error.message?.includes("Password")) {
+        errorTitle = "Senha inválida";
+        errorMessage = "A senha deve ter pelo menos 6 caracteres.";
+      }
+
+      console.error("Auth error:", error.message, error);
+
       toast({
-        title: "Erro",
-        description: error.message,
+        title: errorTitle,
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
