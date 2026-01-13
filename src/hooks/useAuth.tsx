@@ -21,21 +21,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isCreator, setIsCreator] = useState(false);
 
   useEffect(() => {
+    let isMounted = true;
+
     const checkUserRoles = async (userId: string) => {
+      console.log("🔍 Starting role check for:", userId);
+
+      // Always ensure loading completes, even if RPC fails
+      const timeout = setTimeout(() => {
+        if (isMounted) {
+          console.warn("⏰ Role check timeout - forcing loading complete");
+          setLoading(false);
+        }
+      }, 5000); // 5 second timeout
+
       try {
         // Check if user is admin using RPC function (bypasses RLS)
+        console.log("📡 Calling is_user_admin RPC...");
         const { data: isAdminData, error: adminError } = await supabase
           .rpc('is_user_admin' as any, { check_user_id: userId });
 
         if (adminError) {
           console.error("❌ Error checking admin role:", adminError);
-          setIsAdmin(false);
+          if (isMounted) setIsAdmin(false);
         } else {
-          console.log("👨‍💼 Admin check (RPC):", { isAdminData, userId });
-          setIsAdmin(!!isAdminData);
+          console.log("👨‍💼 Admin check result:", { isAdminData, userId });
+          if (isMounted) setIsAdmin(!!isAdminData);
         }
 
         // Check if user is a creator
+        console.log("📡 Checking creator status...");
         const { data: creatorData, error: creatorError } = await supabase
           .from("creators")
           .select("id")
@@ -44,19 +58,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (creatorError) {
           console.error("❌ Error checking creator role:", creatorError);
-          setIsCreator(false);
+          if (isMounted) setIsCreator(false);
         } else {
-          console.log("🎨 Creator check:", { creatorData, userId });
-          setIsCreator(!!creatorData);
+          console.log("🎨 Creator check result:", { creatorData, userId });
+          if (isMounted) setIsCreator(!!creatorData);
         }
 
-        console.log("✅ Auth complete:", { isAdmin: !!isAdminData, isCreator: !!creatorData });
+        console.log("✅ Role check complete:", { isAdmin: !!isAdminData, isCreator: !!creatorData });
       } catch (error) {
         console.error("❌ Unexpected error in role check:", error);
-        setIsAdmin(false);
-        setIsCreator(false);
+        if (isMounted) {
+          setIsAdmin(false);
+          setIsCreator(false);
+        }
       } finally {
-        setLoading(false);
+        clearTimeout(timeout);
+        if (isMounted) {
+          console.log("🏁 Setting loading to false");
+          setLoading(false);
+        }
       }
     };
 
@@ -64,34 +84,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log("🔐 Auth state changed:", event, session?.user?.email);
-        setSession(session);
-        setUser(session?.user ?? null);
+
+        if (isMounted) {
+          setSession(session);
+          setUser(session?.user ?? null);
+        }
 
         if (session?.user) {
-          // Use setTimeout to avoid Supabase deadlocks
-          setTimeout(() => checkUserRoles(session.user.id), 0);
+          // Call checkUserRoles directly, not via setTimeout
+          checkUserRoles(session.user.id);
         } else {
-          setIsAdmin(false);
-          setIsCreator(false);
-          setLoading(false);
+          if (isMounted) {
+            setIsAdmin(false);
+            setIsCreator(false);
+            setLoading(false);
+          }
         }
       }
     );
 
     // Check for existing session
+    console.log("📱 Checking for existing session...");
     supabase.auth.getSession().then(async ({ data: { session } }) => {
-      console.log("📱 Initial session:", session?.user?.email);
-      setSession(session);
-      setUser(session?.user ?? null);
+      console.log("📱 Initial session:", session?.user?.email ?? "none");
+
+      if (isMounted) {
+        setSession(session);
+        setUser(session?.user ?? null);
+      }
 
       if (session?.user) {
         await checkUserRoles(session.user.id);
       } else {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signOut = async () => {
