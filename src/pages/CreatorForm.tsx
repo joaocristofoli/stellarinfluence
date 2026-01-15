@@ -50,6 +50,66 @@ const handleCurrencyChange = (
   setter(formatted);
 };
 
+// Format phone number as (00) 00000-0000 or (00) 0000-0000
+const formatPhone = (value: string): string => {
+  // Remove everything except digits
+  const digits = value.replace(/\D/g, '');
+
+  if (!digits) return '';
+
+  // Limit to 11 digits (with 9) or 10 digits (without)
+  const limited = digits.slice(0, 11);
+
+  // Format based on length
+  if (limited.length <= 2) {
+    return `(${limited}`;
+  } else if (limited.length <= 6) {
+    return `(${limited.slice(0, 2)}) ${limited.slice(2)}`;
+  } else if (limited.length <= 10) {
+    return `(${limited.slice(0, 2)}) ${limited.slice(2, 6)}-${limited.slice(6)}`;
+  } else {
+    // 11 digits - mobile with 9
+    return `(${limited.slice(0, 2)}) ${limited.slice(2, 7)}-${limited.slice(7)}`;
+  }
+};
+
+// Extract username/handle from social media URL or text
+// Accepts: username, @username, full URL - returns just username
+const extractSocialHandle = (input: string, platform: string): string => {
+  if (!input) return '';
+
+  // Remove @ if present at start
+  let clean = input.trim().replace(/^@/, '');
+
+  // If it looks like a URL, extract the username
+  const urlPatterns: Record<string, RegExp> = {
+    instagram: /(?:instagram\.com|instagr\.am)\/(?:@)?([A-Za-z0-9._]+)\/?/i,
+    tiktok: /(?:tiktok\.com)\/@?([A-Za-z0-9._]+)\/?/i,
+    youtube: /(?:youtube\.com)\/(?:@|channel\/|c\/)?([A-Za-z0-9._-]+)\/?/i,
+    twitter: /(?:twitter\.com|x\.com)\/(?:@)?([A-Za-z0-9_]+)\/?/i,
+    kwai: /(?:kwai\.com)\/@?([A-Za-z0-9._]+)\/?/i,
+  };
+
+  const pattern = urlPatterns[platform];
+  if (pattern) {
+    const match = clean.match(pattern);
+    if (match && match[1]) {
+      return match[1];
+    }
+  }
+
+  // If it contains any URL indicators, try generic extraction
+  if (clean.includes('/') || clean.includes('http')) {
+    // Get last path segment
+    const segments = clean.split('/').filter(s => s && !s.includes('http') && !s.includes('.com'));
+    if (segments.length > 0) {
+      return segments[segments.length - 1].replace(/^@/, '');
+    }
+  }
+
+  return clean;
+};
+
 export default function CreatorForm() {
   const { id } = useParams();
   const isEdit = !!id;
@@ -668,7 +728,12 @@ export default function CreatorForm() {
                   </div>
                   <div className="space-y-2">
                     <Label>WhatsApp / Telefone</Label>
-                    <Input value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} placeholder="(00) 00000-0000" />
+                    <Input
+                      value={formData.phone}
+                      onChange={e => setFormData({ ...formData, phone: formatPhone(e.target.value) })}
+                      placeholder="(00) 00000-0000"
+                      inputMode="tel"
+                    />
                   </div>
                 </div>
               </div>
@@ -732,12 +797,13 @@ export default function CreatorForm() {
                                   <Input
                                     value={displayValue}
                                     onChange={e => {
-                                      const val = e.target.value;
+                                      // Extract handle from URL or remove @ prefix
+                                      const extracted = extractSocialHandle(e.target.value, social.id);
                                       // If baseUrl exists, prepend it to save. Otherwise save as is.
-                                      const finalUrl = baseUrl ? `${baseUrl}${val}` : val;
+                                      const finalUrl = baseUrl ? `${baseUrl}${extracted}` : extracted;
                                       setFormData({ ...formData, [`${social.id}_url`]: finalUrl });
                                     }}
-                                    placeholder={social.placeholder.replace('instagram.com/', '').replace('youtube.com/', '').replace('tiktok.com/', '').replace('twitter.com/', '').replace('kwai.com/', '')}
+                                    placeholder={`@usuario ou cole o link`}
                                     className="bg-black/20"
                                   />
                                 </>
