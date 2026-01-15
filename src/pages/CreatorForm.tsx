@@ -269,6 +269,15 @@ export default function CreatorForm() {
   const populateForm = (creator: any) => {
     console.log("📸 Creator image_url from DB:", creator.image_url);
     const theme = creator.landing_theme as any;
+
+    // Helper to format numbers from DB for display
+    const formatForDisplay = (val: any) => {
+      if (!val && val !== 0) return '';
+      const num = typeof val === 'number' ? val : parseFloat(String(val).replace(/[^\d]/g, ''));
+      if (isNaN(num)) return '';
+      return num.toLocaleString('pt-BR');
+    };
+
     setFormData({
       profile_type: creator.profile_type || "influencer",
       name: creator.name || "",
@@ -290,13 +299,14 @@ export default function CreatorForm() {
       primaryColor: theme?.primaryColor || "#FF6B35",
       secondaryColor: theme?.secondaryColor || "#004E89",
       layout: (theme?.layout as LayoutType) || "minimal",
-      instagram_followers: creator.instagram_followers || "",
-      tiktok_followers: creator.tiktok_followers || "",
-      youtube_subscribers: creator.youtube_subscribers || "",
-      twitter_followers: creator.twitter_followers || "",
-      kwai_followers: creator.kwai_followers || "",
-      engagement_rate: creator.engagement_rate || "",
-      stories_views: creator.stories_views || "",
+      // Format numbers from DB for display
+      instagram_followers: formatForDisplay(creator.instagram_followers),
+      tiktok_followers: formatForDisplay(creator.tiktok_followers),
+      youtube_subscribers: formatForDisplay(creator.youtube_subscribers),
+      twitter_followers: formatForDisplay(creator.twitter_followers),
+      kwai_followers: formatForDisplay(creator.kwai_followers),
+      engagement_rate: formatForDisplay(creator.engagement_rate),
+      stories_views: formatForDisplay(creator.stories_views),
       gallery_urls: creator.gallery_urls || [],
       phone: creator.phone || "",
       primary_platform: creator.primary_platform || "",
@@ -311,10 +321,15 @@ export default function CreatorForm() {
         female_audience_percent: creator.admin_metadata?.female_audience_percent || "",
         audience_age_ranges: creator.admin_metadata?.audience_age_ranges || "",
         ideology: creator.admin_metadata?.ideology || "",
-        // Pricing
+        // Pricing - format for display
         price_story: creator.admin_metadata?.price_story || "",
         price_reels: creator.admin_metadata?.price_reels || "",
         price_feed_post: creator.admin_metadata?.price_feed_post || "",
+        price_carousel: creator.admin_metadata?.price_carousel || "",
+        price_tiktok_simple: creator.admin_metadata?.price_tiktok_simple || "",
+        price_tiktok_produced: creator.admin_metadata?.price_tiktok_produced || "",
+        price_youtube_mention: creator.admin_metadata?.price_youtube_mention || "",
+        price_youtube_dedicated: creator.admin_metadata?.price_youtube_dedicated || "",
         price_package_basic: creator.admin_metadata?.price_package_basic || "",
         price_package_premium: creator.admin_metadata?.price_package_premium || "",
         pricing_notes: creator.admin_metadata?.pricing_notes || "",
