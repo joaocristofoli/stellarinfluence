@@ -57,9 +57,36 @@ export default function CreatorForm() {
   const { user, loading: authLoading, isAdmin } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState(() => {
+    // Restore step from localStorage
+    if (!id) {
+      const saved = localStorage.getItem('creatorFormStep');
+      return saved ? parseInt(saved) : 1;
+    }
+    return 1;
+  });
 
-  const [formData, setFormData] = useState({
+  // Storage key for form persistence (different for new vs edit)
+  const STORAGE_KEY = id ? `creatorForm_${id}` : 'creatorFormDraft';
+
+  // Initialize formData from localStorage if available (for new creators only)
+  const getInitialFormData = () => {
+    if (!id) {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch {
+          // If parsing fails, use defaults
+        }
+      }
+    }
+    return null;
+  };
+
+  const savedData = getInitialFormData();
+
+  const [formData, setFormData] = useState(savedData || {
     profile_type: "influencer" as ProfileType,
     name: "",
     slug: "",
@@ -125,6 +152,21 @@ export default function CreatorForm() {
 
   // ALL HOOKS MUST BE DECLARED BEFORE ANY CONDITIONAL RETURNS
   // This follows React's Rules of Hooks
+
+  // Auto-save form data to localStorage (only for new creators)
+  useEffect(() => {
+    if (!id && formData.name) {
+      // Only save if there's some data entered
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(formData));
+      localStorage.setItem('creatorFormStep', String(currentStep));
+    }
+  }, [formData, currentStep, id, STORAGE_KEY]);
+
+  // Clear saved data function (call after successful save)
+  const clearSavedFormData = () => {
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem('creatorFormStep');
+  };
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -427,6 +469,9 @@ export default function CreatorForm() {
       if (error) throw error;
 
       toast({ title: "Sucesso!", description: "Perfil salvo com sucesso." });
+
+      // Clear saved form data from localStorage after successful save
+      clearSavedFormData();
 
       if (isAdmin) {
         navigate("/admin");
