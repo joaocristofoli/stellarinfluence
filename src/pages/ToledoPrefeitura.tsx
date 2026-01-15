@@ -584,15 +584,13 @@ export default function ToledoPrefeitura() {
                                 </a>
 
                                 <a
-                                    href="mailto:contato@stellarinfluence.com"
-                                    className="flex items-center gap-4 p-5 rounded-lg bg-white border border-gray-200 hover:border-green-300 transition-all group"
+                                    href="mailto:contato@agenciaeternizar.com.br"
+                                    className="flex items-center space-x-4 p-4 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 hover:bg-white/20 transition-all group"
                                 >
-                                    <div className="w-12 h-12 rounded-full bg-red-600 flex items-center justify-center group-hover:scale-105 transition-transform">
-                                        <Mail className="w-5 h-5 text-white" />
-                                    </div>
+                                    <Mail className="w-6 h-6 text-yellow-400 group-hover:scale-110 transition-transform" />
                                     <div>
-                                        <div className="text-gray-500 text-sm">E-mail</div>
-                                        <div className="text-gray-900 font-semibold">contato@stellarinfluence.com</div>
+                                        <div className="text-sm text-yellow-200">Email</div>
+                                        <div className="text-gray-900 font-semibold">contato@agenciaeternizar.com.br</div>
                                     </div>
                                 </a>
                             </div>
@@ -633,7 +631,7 @@ export default function ToledoPrefeitura() {
                         </div>
                     </div>
                     <div className="text-center md:text-right text-sm text-gray-400">
-                        <p>Divulgação realizada por <strong className="text-white">Stellar Influence</strong></p>
+                        <p>Divulgação realizada por <strong className="text-white">Agência Eternizar</strong></p>
                         <p>© 2026 Todos os direitos reservados</p>
                     </div>
                 </div>

@@ -45,7 +45,7 @@ const defaultSettings: CalendarSettings = {
     caldav_url: 'https://caldav.icloud.com',
     username: '',
     app_password: '',
-    calendar_name: 'Stellar Marketing',
+    calendar_name: 'Eternizar Marketing',
     sync_strategies: true,
     sync_tasks: true,
     sync_reminders: true,
@@ -348,7 +348,7 @@ export function CalendarIntegration() {
                             <Input
                                 value={settings.calendar_name}
                                 onChange={(e) => setSettings({ ...settings, calendar_name: e.target.value })}
-                                placeholder="Stellar Marketing"
+                                placeholder="Eternizar Marketing"
                                 className="mt-1.5"
                             />
                             <p className="text-xs text-muted-foreground mt-1">

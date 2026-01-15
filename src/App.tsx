@@ -21,6 +21,7 @@ import ToledoAdmin from "./pages/admin/ToledoAdmin";
 import MarketingPlanner from "./pages/marketing/MarketingPlanner";
 import ProjectsDashboard from "./pages/admin/ProjectsDashboard";
 import SharedPlan from "./pages/public/SharedPlan";
+import FlyerManager from "./pages/admin/FlyerManager";
 
 
 const queryClient = new QueryClient();
@@ -48,6 +49,7 @@ const App = () => (
             <Route path="/admin/themes" element={<ThemeManager />} />
             <Route path="/admin/toledo" element={<ToledoAdmin />} />
             <Route path="/admin/marketing" element={<MarketingPlanner />} />
+            <Route path="/admin/flyers" element={<FlyerManager />} />
             <Route path="/admin/dashboard" element={<ProjectsDashboard />} />
             <Route path="/view/plan/:id" element={<SharedPlan />} />
             <Route path="/preview" element={<Preview />} />

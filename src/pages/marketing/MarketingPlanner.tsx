@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Loader2, FileDown, ArrowLeft, Link2, Copy, Check } from 'lucide-react';
+import { Plus, Loader2, FileDown, ArrowLeft, Link2, Copy, Check, Calendar, LayoutGrid } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
+import { formatCurrency } from '@/utils/formatters';
 import {
     Dialog,
     DialogContent,
@@ -28,6 +29,9 @@ import { useCompanies, useCreateCompany, useUpdateCompany, useDeleteCompany } fr
 import { useStrategies, useCreateStrategy, useUpdateStrategy, useDeleteStrategy } from '@/hooks/useStrategies';
 import { useCampaigns, useCreateCampaign, useUpdateCampaign, useDeleteCampaign } from '@/hooks/useCampaigns';
 import { exportContract } from '@/utils/exportContract';
+import { FlyerIntegrationCard } from '@/components/marketing/FlyerIntegrationCard';
+import { CampaignCalendar } from '@/components/marketing/CampaignCalendar';
+import { supabase } from '@/integrations/supabase/client';
 
 const MarketingPlanner = () => {
     const { toast } = useToast();
@@ -49,6 +53,21 @@ const MarketingPlanner = () => {
     const [shareLink, setShareLink] = useState('');
     const [shareLoading, setShareLoading] = useState(false);
     const [copied, setCopied] = useState(false);
+
+    // View mode state - Cards or Calendar
+    const [viewMode, setViewMode] = useState<'cards' | 'calendar'>('cards');
+
+    // Creators for calendar
+    const [creators, setCreators] = useState<{ id: string; name: string; image_url?: string }[]>([]);
+
+    // Fetch creators for calendar display
+    useEffect(() => {
+        const fetchCreators = async () => {
+            const { data } = await supabase.from('creators').select('id, name, image_url');
+            if (data) setCreators(data);
+        };
+        fetchCreators();
+    }, []);
 
     // Queries
     const { data: companies = [], isLoading: loadingCompanies } = useCompanies();
@@ -338,12 +357,7 @@ const MarketingPlanner = () => {
         setCampaignFormOpen(true);
     };
 
-    const formatCurrency = (value: number) => {
-        return new Intl.NumberFormat('pt-BR', {
-            style: 'currency',
-            currency: 'BRL',
-        }).format(value);
-    };
+    // formatCurrency importado de @/utils/formatters
 
     // Share handler
     const handleShare = async () => {
@@ -507,6 +521,9 @@ const MarketingPlanner = () => {
 
                         <StatsOverview strategies={strategies} />
 
+                        {/* Flyer Integration */}
+                        <FlyerIntegrationCard companyId={selectedCompany.id} />
+
                         <ChannelFilter
                             selectedChannels={selectedChannels}
                             onToggleChannel={handleToggleChannel}
@@ -514,9 +531,32 @@ const MarketingPlanner = () => {
                         />
 
                         <div className="flex items-center justify-between">
-                            <h2 className="font-display text-2xl font-bold text-foreground">
-                                Estratégias de Marketing
-                            </h2>
+                            <div className="flex items-center gap-4">
+                                <h2 className="font-display text-2xl font-bold text-foreground">
+                                    Estratégias de Marketing
+                                </h2>
+                                {/* View Mode Toggle */}
+                                <div className="flex gap-1 bg-muted rounded-lg p-1">
+                                    <Button
+                                        variant={viewMode === 'cards' ? 'default' : 'ghost'}
+                                        size="sm"
+                                        onClick={() => setViewMode('cards')}
+                                        className="gap-1"
+                                    >
+                                        <LayoutGrid className="w-4 h-4" />
+                                        Cards
+                                    </Button>
+                                    <Button
+                                        variant={viewMode === 'calendar' ? 'default' : 'ghost'}
+                                        size="sm"
+                                        onClick={() => setViewMode('calendar')}
+                                        className="gap-1"
+                                    >
+                                        <Calendar className="w-4 h-4" />
+                                        Calendário
+                                    </Button>
+                                </div>
+                            </div>
                             <Button
                                 onClick={() => setFormOpen(true)}
                                 className="gap-2 shadow-lg hover:opacity-90 transition-all font-semibold"
@@ -562,6 +602,37 @@ const MarketingPlanner = () => {
                                     </Button>
                                 )}
                             </div>
+                        ) : viewMode === 'calendar' ? (
+                            <CampaignCalendar
+                                strategies={filteredStrategies}
+                                campaigns={campaigns}
+                                creators={creators}
+                                onStrategyClick={handleEditStrategy}
+                                onDateClick={(date) => {
+                                    // Open form with pre-filled date
+                                    setEditingStrategy(null);
+                                    setFormOpen(true);
+                                }}
+                                onStrategyDrop={async (strategyId, newDate) => {
+                                    // Update strategy start_date
+                                    try {
+                                        await updateStrategy.mutateAsync({
+                                            id: strategyId,
+                                            startDate: new Date(newDate),
+                                        } as any);
+                                        toast({
+                                            title: 'Data atualizada!',
+                                            description: 'A estratégia foi reagendada.',
+                                        });
+                                    } catch (error) {
+                                        toast({
+                                            title: 'Erro',
+                                            description: 'Não foi possível atualizar a data.',
+                                            variant: 'destructive',
+                                        });
+                                    }
+                                }}
+                            />
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 {filteredStrategies.map(strategy => (

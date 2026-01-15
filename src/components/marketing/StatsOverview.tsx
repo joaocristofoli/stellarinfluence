@@ -1,6 +1,8 @@
-import { TrendingUp, Target, DollarSign, CheckCircle2 } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import { MarketingStrategy, channelTypeLabels } from '@/types/marketing';
+import { useMemo } from 'react';
+import { TrendingUp, Wallet, Target, BarChart3, DollarSign, CheckCircle2 } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { MarketingStrategy, channelTypeLabels, channelTypeIcons, channelTypeColors } from '@/types/marketing';
+import { formatCurrency } from '@/utils/formatters';
 
 interface StatsOverviewProps {
     strategies: MarketingStrategy[];
@@ -19,12 +21,7 @@ export function StatsOverview({ strategies }: StatsOverviewProps) {
     const topChannel = Object.entries(channelBudgets)
         .sort(([, a], [, b]) => b - a)[0];
 
-    const formatCurrency = (value: number) => {
-        return new Intl.NumberFormat('pt-BR', {
-            style: 'currency',
-            currency: 'BRL',
-        }).format(value);
-    };
+    // formatCurrency importado de @/utils/formatters
 
     // Stats using CSS variables from company theme
     const stats = [

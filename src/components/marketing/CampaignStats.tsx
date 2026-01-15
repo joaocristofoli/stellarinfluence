@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { MarketingStrategy, MarketingCampaign, channelTypeLabels, channelTypeIcons } from '@/types/marketing';
 import { DollarSign, PieChart } from 'lucide-react';
+import { formatCurrency } from '@/utils/formatters';
+
 
 interface CampaignStatsProps {
     strategies: MarketingStrategy[];
@@ -37,12 +39,7 @@ export function CampaignStats({ strategies, campaign }: CampaignStatsProps) {
         };
     }, [strategies]);
 
-    const formatCurrency = (value: number) => {
-        return new Intl.NumberFormat('pt-BR', {
-            style: 'currency',
-            currency: 'BRL',
-        }).format(value);
-    };
+    // formatCurrency importado de @/utils/formatters
 
     if (strategies.length === 0) {
         return null;
@@ -53,7 +50,7 @@ export function CampaignStats({ strategies, campaign }: CampaignStatsProps) {
             <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-lg">
                     <PieChart className="w-5 h-5 text-purple-600" />
-                    {campaign ? `Resumo: ${campaign.name}` : 'Resumo Geral'}
+                    {campaign ? `Resumo: ${campaign.name} ` : 'Resumo Geral'}
                 </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">

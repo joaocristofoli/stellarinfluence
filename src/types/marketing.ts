@@ -54,6 +54,11 @@ export interface MarketingStrategy {
     whyToDo: string;
     connections: string[];
     status: 'planned' | 'in_progress' | 'completed';
+    // Calendar fields
+    startDate?: Date | null;
+    endDate?: Date | null;
+    // Multi-influencer support
+    linkedCreatorIds?: string[];
     createdAt: Date;
     updatedAt: Date;
 }

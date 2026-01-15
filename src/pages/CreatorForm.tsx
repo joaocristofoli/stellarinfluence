@@ -9,16 +9,45 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, ArrowLeft, ChevronRight, ChevronLeft, Check } from "lucide-react";
+import { Loader2, ArrowLeft, ChevronRight, ChevronLeft, Check, Plus, Trash2 } from "lucide-react";
 import { ImageUpload } from "@/components/ImageUpload";
 import { LAYOUT_PRESETS, LayoutType } from "@/types/landingTheme";
 import { formatNumber, parseFormattedNumber } from "@/utils/formatNumbers";
+import {
+  PROFILE_CATEGORIES,
+  CATEGORIES_BY_PROFILE_TYPE,
+  PRICING_FIELDS_BY_TYPE,
+  EXTRA_FIELDS_BY_TYPE,
+  ProfileType
+} from "@/types/profileTypes";
 
 // Helper function to safely parse numbers
 const parseNumber = (value: string | number | null | undefined) => {
   if (!value) return null;
   if (typeof value === 'number') return value;
   return parseFormattedNumber(value.toString());
+};
+
+// Format currency value for display (e.g., "1500" -> "1.500")
+const formatCurrencyValue = (value: string | number | undefined): string => {
+  if (!value) return '';
+  const numValue = typeof value === 'string' ? value.replace(/\./g, '').replace(/[^\d]/g, '') : String(value);
+  if (!numValue) return '';
+  return parseInt(numValue).toLocaleString('pt-BR');
+};
+
+// Handle currency input change - format as user types
+const handleCurrencyChange = (
+  value: string,
+  setter: (formatted: string) => void
+) => {
+  const rawValue = value.replace(/\./g, '').replace(/[^\d]/g, '');
+  if (!rawValue) {
+    setter('');
+    return;
+  }
+  const formatted = parseInt(rawValue).toLocaleString('pt-BR');
+  setter(formatted);
 };
 
 export default function CreatorForm() {
@@ -31,6 +60,7 @@ export default function CreatorForm() {
   const [currentStep, setCurrentStep] = useState(1);
 
   const [formData, setFormData] = useState({
+    profile_type: "influencer" as ProfileType,
     name: "",
     slug: "",
     category: "",
@@ -60,6 +90,10 @@ export default function CreatorForm() {
     gallery_urls: [] as string[],
     phone: "",
     primary_platform: "",
+    // Extra fields for different profile types
+    company: "", // Veículo, Emissora, Agência
+    program_name: "", // Programa, Coluna, Podcast
+    reach: "", // Alcance/Audiência
     // Admin-only metadata
     admin_metadata: {
       sexual_orientation: "",
@@ -69,6 +103,20 @@ export default function CreatorForm() {
       female_audience_percent: "",
       audience_age_ranges: "",
       ideology: "",
+      // Pricing info (admin-only)
+      price_story: "",
+      price_reels: "",
+      price_feed_post: "",
+      price_carousel: "",
+      price_tiktok_simple: "",
+      price_tiktok_produced: "",
+      price_youtube_mention: "",
+      price_youtube_dedicated: "",
+      price_package_basic: "",
+      price_package_premium: "",
+      pricing_notes: "",
+      // Dynamic pricing list for other services (press, etc)
+      custom_prices: [] as { label: string; price: string }[],
     },
   });
 
@@ -95,6 +143,7 @@ export default function CreatorForm() {
         setCurrentEditingId(id);
         // Reset form to avoid showing stale data
         setFormData({
+          profile_type: "influencer" as ProfileType,
           name: "",
           slug: "",
           category: "",
@@ -124,6 +173,9 @@ export default function CreatorForm() {
           gallery_urls: [],
           phone: "",
           primary_platform: "",
+          company: "",
+          program_name: "",
+          reach: "",
           admin_metadata: {
             sexual_orientation: "",
             promoted_betting: false,
@@ -132,6 +184,19 @@ export default function CreatorForm() {
             female_audience_percent: "",
             audience_age_ranges: "",
             ideology: "",
+            // Pricing
+            price_story: "",
+            price_reels: "",
+            price_feed_post: "",
+            price_carousel: "",
+            price_tiktok_simple: "",
+            price_tiktok_produced: "",
+            price_youtube_mention: "",
+            price_youtube_dedicated: "",
+            price_package_basic: "",
+            price_package_premium: "",
+            pricing_notes: "",
+            custom_prices: [],
           },
         });
         fetchCreator(id);
@@ -205,6 +270,7 @@ export default function CreatorForm() {
     console.log("📸 Creator image_url from DB:", creator.image_url);
     const theme = creator.landing_theme as any;
     setFormData({
+      profile_type: creator.profile_type || "influencer",
       name: creator.name || "",
       slug: creator.slug || "",
       category: creator.category || "",
@@ -234,6 +300,9 @@ export default function CreatorForm() {
       gallery_urls: creator.gallery_urls || [],
       phone: creator.phone || "",
       primary_platform: creator.primary_platform || "",
+      company: creator.company || "",
+      program_name: creator.program_name || "",
+      reach: creator.reach || "",
       admin_metadata: {
         sexual_orientation: creator.admin_metadata?.sexual_orientation || "",
         promoted_betting: creator.admin_metadata?.promoted_betting || false,
@@ -242,6 +311,14 @@ export default function CreatorForm() {
         female_audience_percent: creator.admin_metadata?.female_audience_percent || "",
         audience_age_ranges: creator.admin_metadata?.audience_age_ranges || "",
         ideology: creator.admin_metadata?.ideology || "",
+        // Pricing
+        price_story: creator.admin_metadata?.price_story || "",
+        price_reels: creator.admin_metadata?.price_reels || "",
+        price_feed_post: creator.admin_metadata?.price_feed_post || "",
+        price_package_basic: creator.admin_metadata?.price_package_basic || "",
+        price_package_premium: creator.admin_metadata?.price_package_premium || "",
+        pricing_notes: creator.admin_metadata?.pricing_notes || "",
+        custom_prices: creator.admin_metadata?.custom_prices || [],
       },
     });
     console.log("📸 Set formData.image_url to:", creator.image_url || "");
@@ -273,6 +350,7 @@ export default function CreatorForm() {
       }
 
       const creatorData = {
+        profile_type: formData.profile_type,
         name: formData.name,
         slug: finalSlug,
         category: formData.category,
@@ -301,6 +379,10 @@ export default function CreatorForm() {
         gallery_urls: formData.gallery_urls,
         phone: formData.phone,
         primary_platform: formData.primary_platform,
+        // Extra fields for different profile types
+        company: formData.company,
+        program_name: formData.program_name,
+        reach: formData.reach,
         admin_metadata: formData.admin_metadata,
         landing_theme: {
           primaryColor: formData.primaryColor,
@@ -394,9 +476,36 @@ export default function CreatorForm() {
                   <p className="text-white/60">Informações básicas e apresentação</p>
                 </div>
 
+                {/* Profile Type Selector - Admin Only */}
+                {isAdmin && (
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium">Tipo de Perfil</Label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                      {PROFILE_CATEGORIES.map((type) => (
+                        <button
+                          key={type.id}
+                          type="button"
+                          onClick={() => setFormData({ ...formData, profile_type: type.id, category: '' })}
+                          className={`
+                            p-3 rounded-xl border-2 transition-all text-left
+                            ${formData.profile_type === type.id
+                              ? 'border-accent bg-accent/10 shadow-lg'
+                              : 'border-white/10 hover:border-white/30 bg-black/20'
+                            }
+                          `}
+                        >
+                          <span className="text-2xl block mb-1">{type.icon}</span>
+                          <span className="text-sm font-medium block">{type.label}</span>
+                          <span className="text-xs text-muted-foreground block truncate">{type.description}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <ImageUpload
                   currentImage={formData.image_url}
-                  onImageUploaded={(url) => setFormData({ ...formData, image_url: url })}
+                  onImageUploaded={(url) => setFormData({ ...formData, image_url: url as string })}
                   label="Foto de Perfil"
                 />
 
@@ -405,20 +514,94 @@ export default function CreatorForm() {
                     <Label>Nome Completo</Label>
                     <Input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="Ex: João Silva" />
                   </div>
-                  <div className="space-y-2">
-                    <Label>Link Personalizado do seu Perfil</Label>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-muted-foreground whitespace-nowrap">seu-site.com/</span>
-                      <Input value={formData.slug} onChange={handleSlugChange} placeholder="ex: joao-silva" className="flex-1" />
+
+                  {isAdmin ? (
+                    /* Admin: Ask for Instagram @ instead of custom slug */
+                    <div className="space-y-2">
+                      <Label>@ do Instagram</Label>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground whitespace-nowrap bg-white/5 px-2 py-2 rounded-md border border-white/10">@</span>
+                        <Input
+                          value={formData.instagram_url?.replace(/^https?:\/\/(www\.)?instagram\.com\//, '').replace(/\/$/, '') || formData.slug}
+                          onChange={e => {
+                            const handle = e.target.value.replace('@', '').toLowerCase();
+                            setFormData({
+                              ...formData,
+                              slug: handle,
+                              instagram_url: handle ? `https://instagram.com/${handle}` : '',
+                              instagram_active: handle ? true : formData.instagram_active
+                            });
+                          }}
+                          placeholder="ex: joaosilva"
+                          className="flex-1"
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Digite o @ do Instagram. O slug e URL do Instagram serão gerados automaticamente.
+                      </p>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      Este será o link único do seu perfil. Use apenas letras minúsculas e hífens.
-                    </p>
-                  </div>
+                  ) : (
+                    /* Non-admin: Show custom slug field */
+                    <div className="space-y-2">
+                      <Label>Link Personalizado do seu Perfil</Label>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground whitespace-nowrap">seu-site.com/</span>
+                        <Input value={formData.slug} onChange={handleSlugChange} placeholder="ex: joao-silva" className="flex-1" />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Este será o link único do seu perfil. Use apenas letras minúsculas e hífens.
+                      </p>
+                    </div>
+                  )}
+
                   <div className="space-y-2">
                     <Label>Categoria</Label>
-                    <Input value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })} placeholder="Ex: Lifestyle" />
+                    <select
+                      value={formData.category}
+                      onChange={e => setFormData({ ...formData, category: e.target.value })}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    >
+                      <option value="">Selecione uma categoria...</option>
+                      {CATEGORIES_BY_PROFILE_TYPE[formData.profile_type].map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
                   </div>
+
+                  {/* Extra Fields based on Profile Type */}
+                  {isAdmin && EXTRA_FIELDS_BY_TYPE[formData.profile_type].company && (
+                    <div className="space-y-2">
+                      <Label>{EXTRA_FIELDS_BY_TYPE[formData.profile_type].company}</Label>
+                      <Input
+                        value={formData.company}
+                        onChange={e => setFormData({ ...formData, company: e.target.value })}
+                        placeholder={`Ex: ${formData.profile_type === 'press' ? 'Folha de S.Paulo' : formData.profile_type === 'tv' ? 'TV Globo' : 'Nome da empresa'}`}
+                      />
+                    </div>
+                  )}
+
+                  {isAdmin && EXTRA_FIELDS_BY_TYPE[formData.profile_type].program && (
+                    <div className="space-y-2">
+                      <Label>{EXTRA_FIELDS_BY_TYPE[formData.profile_type].program}</Label>
+                      <Input
+                        value={formData.program_name}
+                        onChange={e => setFormData({ ...formData, program_name: e.target.value })}
+                        placeholder={`Ex: ${formData.profile_type === 'press' ? 'Coluna Gente' : formData.profile_type === 'tv' ? 'Jornal Nacional' : formData.profile_type === 'podcast' ? 'Flow Podcast' : 'Nome do programa'}`}
+                      />
+                    </div>
+                  )}
+
+                  {isAdmin && EXTRA_FIELDS_BY_TYPE[formData.profile_type].reach && (
+                    <div className="space-y-2">
+                      <Label>{EXTRA_FIELDS_BY_TYPE[formData.profile_type].reach}</Label>
+                      <Input
+                        value={formData.reach}
+                        onChange={e => setFormData({ ...formData, reach: e.target.value })}
+                        placeholder="Ex: 500.000"
+                      />
+                    </div>
+                  )}
+
                   <div className="space-y-2">
                     <Label>Bio</Label>
                     <Textarea value={formData.bio} onChange={e => setFormData({ ...formData, bio: e.target.value })} rows={4} placeholder="Uma breve descrição..." />
@@ -587,286 +770,427 @@ export default function CreatorForm() {
 
             {currentStep === 3 && (
               <div className="space-y-6">
-                <div className="text-center mb-8">
-                  <h1 className="text-3xl font-bold mb-2">Personalização</h1>
-                  <p className="text-white/60">Aparência da Landing Page</p>
-                </div>
+                {/* Admin: Pricing Step */}
+                {isAdmin ? (
+                  <>
+                    <div className="text-center mb-6">
+                      <h1 className="text-2xl font-bold mb-2">💰 Preços</h1>
+                      <p className="text-white/60 text-sm">Valores cobrados pelo perfil</p>
+                    </div>
 
-                <div className="space-y-4 p-4 md:p-6 glass rounded-xl">
-                  <h3 className="font-medium mb-4">Escolha um Tema</h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                    {(Object.keys(LAYOUT_PRESETS) as LayoutType[]).map((themeKey) => {
-                      const preset = LAYOUT_PRESETS[themeKey];
-                      const isSelected = formData.layout === themeKey;
+                    {/* Dynamic Pricing based on selected social networks */}
+                    <div className="space-y-4">
 
-                      return (
-                        <div
-                          key={themeKey}
-                          onClick={() => {
-                            setFormData({
-                              ...formData,
-                              layout: themeKey,
-                              primaryColor: preset.primaryColor || formData.primaryColor,
-                              secondaryColor: preset.secondaryColor || formData.secondaryColor,
-                              // We can also update fonts/bg if we want to fully enforce the preset
-                            });
-                          }}
-                          className={`
-                            cursor-pointer relative overflow-hidden rounded-xl border-2 transition-all duration-300
-                            ${isSelected ? 'border-accent scale-105 shadow-[0_0_20px_rgba(255,107,53,0.3)]' : 'border-white/10 hover:border-white/30'}
-                          `}
-                        >
-                          <div className="aspect-square relative p-3 flex flex-col justify-between" style={{ backgroundColor: preset.backgroundColor }}>
-                            <div className="w-full h-1/3 rounded-lg opacity-80" style={{ backgroundColor: preset.primaryColor }} />
-                            <div className="w-2/3 h-2 rounded-full opacity-60" style={{ backgroundColor: preset.secondaryColor }} />
+                      {/* Instagram Pricing */}
+                      {formData.instagram_active && (
+                        <div className="p-4 glass rounded-xl border border-pink-500/20">
+                          <h3 className="font-medium text-pink-400 mb-4 flex items-center gap-2">
+                            <span>📷</span> Instagram
+                          </h3>
+                          <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-1">
-                              <div className="w-full h-1 rounded-full bg-current opacity-20" style={{ color: preset.textColor }} />
-                              <div className="w-3/4 h-1 rounded-full bg-current opacity-20" style={{ color: preset.textColor }} />
+                              <Label className="text-xs">Story (1x)</Label>
+                              <div className="relative">
+                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">R$</span>
+                                <Input
+                                  value={formatCurrencyValue(formData.admin_metadata.price_story)}
+                                  onChange={(e) => handleCurrencyChange(e.target.value, (v) => setFormData({
+                                    ...formData,
+                                    admin_metadata: { ...formData.admin_metadata, price_story: v }
+                                  }))}
+                                  placeholder="500"
+                                  className="bg-black/20 pl-8 h-9 text-sm"
+                                />
+                              </div>
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Reels</Label>
+                              <div className="relative">
+                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">R$</span>
+                                <Input
+                                  value={formatCurrencyValue(formData.admin_metadata.price_reels)}
+                                  onChange={(e) => handleCurrencyChange(e.target.value, (v) => setFormData({
+                                    ...formData,
+                                    admin_metadata: { ...formData.admin_metadata, price_reels: v }
+                                  }))}
+                                  placeholder="1.500"
+                                  className="bg-black/20 pl-8 h-9 text-sm"
+                                />
+                              </div>
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Post Feed</Label>
+                              <div className="relative">
+                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">R$</span>
+                                <Input
+                                  value={formatCurrencyValue(formData.admin_metadata.price_feed_post)}
+                                  onChange={(e) => handleCurrencyChange(e.target.value, (v) => setFormData({
+                                    ...formData,
+                                    admin_metadata: { ...formData.admin_metadata, price_feed_post: v }
+                                  }))}
+                                  placeholder="2.000"
+                                  className="bg-black/20 pl-8 h-9 text-sm"
+                                />
+                              </div>
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Carrossel</Label>
+                              <div className="relative">
+                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">R$</span>
+                                <Input
+                                  value={formatCurrencyValue((formData.admin_metadata as any).price_carousel || '')}
+                                  onChange={(e) => handleCurrencyChange(e.target.value, (v) => setFormData({
+                                    ...formData,
+                                    admin_metadata: { ...formData.admin_metadata, price_carousel: v }
+                                  }))}
+                                  placeholder="2.500"
+                                  className="bg-black/20 pl-8 h-9 text-sm"
+                                />
+                              </div>
                             </div>
                           </div>
-                          <div className="p-2 text-center text-xs font-medium uppercase tracking-wider bg-black/50 backdrop-blur-sm absolute bottom-0 w-full">
-                            {themeKey}
+                        </div>
+                      )}
+
+                      {/* TikTok Pricing */}
+                      {formData.tiktok_active && (
+                        <div className="p-4 glass rounded-xl border border-cyan-500/20">
+                          <h3 className="font-medium text-cyan-400 mb-4 flex items-center gap-2">
+                            <span>🎵</span> TikTok
+                          </h3>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1">
+                              <Label className="text-xs">Vídeo Simples</Label>
+                              <div className="relative">
+                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">R$</span>
+                                <Input
+                                  value={formatCurrencyValue((formData.admin_metadata as any).price_tiktok_simple || '')}
+                                  onChange={(e) => handleCurrencyChange(e.target.value, (v) => setFormData({
+                                    ...formData,
+                                    admin_metadata: { ...formData.admin_metadata, price_tiktok_simple: v }
+                                  }))}
+                                  placeholder="800"
+                                  className="bg-black/20 pl-8 h-9 text-sm"
+                                />
+                              </div>
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Vídeo Produzido</Label>
+                              <div className="relative">
+                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">R$</span>
+                                <Input
+                                  value={formatCurrencyValue((formData.admin_metadata as any).price_tiktok_produced || '')}
+                                  onChange={(e) => handleCurrencyChange(e.target.value, (v) => setFormData({
+                                    ...formData,
+                                    admin_metadata: { ...formData.admin_metadata, price_tiktok_produced: v }
+                                  }))}
+                                  placeholder="2.500"
+                                  className="bg-black/20 pl-8 h-9 text-sm"
+                                />
+                              </div>
+                            </div>
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
-                </div>
+                      )}
 
-                <div className="space-y-4 p-4 md:p-6 glass rounded-xl">
-                  <h3 className="font-medium mb-4">Cores do Tema</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label>Cor Primária</Label>
-                      <div className="flex gap-2">
-                        <Input type="color" value={formData.primaryColor} onChange={e => setFormData({ ...formData, primaryColor: e.target.value })} className="w-12 h-12 p-1 cursor-pointer" />
-                        <Input value={formData.primaryColor} onChange={e => setFormData({ ...formData, primaryColor: e.target.value })} className="uppercase" />
+                      {/* YouTube Pricing */}
+                      {formData.youtube_active && (
+                        <div className="p-4 glass rounded-xl border border-red-500/20">
+                          <h3 className="font-medium text-red-400 mb-4 flex items-center gap-2">
+                            <span>▶️</span> YouTube
+                          </h3>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1">
+                              <Label className="text-xs">Menção</Label>
+                              <div className="relative">
+                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">R$</span>
+                                <Input
+                                  value={formatCurrencyValue((formData.admin_metadata as any).price_youtube_mention || '')}
+                                  onChange={(e) => handleCurrencyChange(e.target.value, (v) => setFormData({
+                                    ...formData,
+                                    admin_metadata: { ...formData.admin_metadata, price_youtube_mention: v }
+                                  }))}
+                                  placeholder="3.000"
+                                  className="bg-black/20 pl-8 h-9 text-sm"
+                                />
+                              </div>
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Vídeo Dedicado</Label>
+                              <div className="relative">
+                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">R$</span>
+                                <Input
+                                  value={formatCurrencyValue((formData.admin_metadata as any).price_youtube_dedicated || '')}
+                                  onChange={(e) => handleCurrencyChange(e.target.value, (v) => setFormData({
+                                    ...formData,
+                                    admin_metadata: { ...formData.admin_metadata, price_youtube_dedicated: v }
+                                  }))}
+                                  placeholder="10.000"
+                                  className="bg-black/20 pl-8 h-9 text-sm"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* No networks selected message */}
+                      {!formData.instagram_active && !formData.tiktok_active && !formData.youtube_active && !formData.twitter_active && !formData.kwai_active && (
+                        <div className="p-6 glass rounded-xl border border-dashed border-white/20 text-center">
+                          <p className="text-muted-foreground text-sm">
+                            Nenhuma rede social ativada. Volte e ative ao menos uma rede para definir preços.
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Packages */}
+                      <div className="p-4 glass rounded-xl border border-accent/20">
+                        <h3 className="font-medium text-accent mb-4 flex items-center gap-2">
+                          <span>📦</span> Pacotes
+                        </h3>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <Label className="text-xs">Pacote Básico</Label>
+                            <div className="relative">
+                              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">R$</span>
+                              <Input
+                                value={formatCurrencyValue(formData.admin_metadata.price_package_basic)}
+                                onChange={(e) => handleCurrencyChange(e.target.value, (v) => setFormData({
+                                  ...formData,
+                                  admin_metadata: { ...formData.admin_metadata, price_package_basic: v }
+                                }))}
+                                placeholder="3.000"
+                                className="bg-black/20 pl-8 h-9 text-sm"
+                              />
+                            </div>
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Pacote Premium</Label>
+                            <div className="relative">
+                              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">R$</span>
+                              <Input
+                                value={formatCurrencyValue(formData.admin_metadata.price_package_premium)}
+                                onChange={(e) => handleCurrencyChange(e.target.value, (v) => setFormData({
+                                  ...formData,
+                                  admin_metadata: { ...formData.admin_metadata, price_package_premium: v }
+                                }))}
+                                placeholder="8.000"
+                                className="bg-black/20 pl-8 h-9 text-sm"
+                              />
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Cor Secundária</Label>
-                      <div className="flex gap-2">
-                        <Input type="color" value={formData.secondaryColor} onChange={e => setFormData({ ...formData, secondaryColor: e.target.value })} className="w-12 h-12 p-1 cursor-pointer" />
-                        <Input value={formData.secondaryColor} onChange={e => setFormData({ ...formData, secondaryColor: e.target.value })} className="uppercase" />
+
+
+
+                      {/* Notes */}
+                      <div className="space-y-2">
+                        <Label className="text-xs">📝 Observações</Label>
+                        <Textarea
+                          value={formData.admin_metadata.pricing_notes}
+                          onChange={(e) => setFormData({
+                            ...formData,
+                            admin_metadata: { ...formData.admin_metadata, pricing_notes: e.target.value }
+                          })}
+                          placeholder="Aceita permuta, negocia valores, cobra extra por exclusividade..."
+                          rows={2}
+                          className="bg-black/20 text-sm"
+                        />
                       </div>
-                    </div>
-                  </div>
-                </div>
 
-                <div className="space-y-4 p-4 md:p-6 glass rounded-xl">
-                  <h3 className="font-medium mb-4">Imagem de Fundo do Perfil</h3>
-                  <ImageUpload
-                    currentImage={formData.background_image_url}
-                    onImageUploaded={(url) => setFormData({ ...formData, background_image_url: url as string })}
-                    label="Imagem de Fundo"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Esta imagem aparecerá como fundo na sua página de perfil.
-                  </p>
-                </div>
-
-                <div className="space-y-4 p-4 md:p-6 glass rounded-xl">
-                  <h3 className="font-medium mb-4">Galeria de Fotos</h3>
-                  <ImageUpload
-                    currentImage={formData.gallery_urls.join(',')}
-                    onImageUploaded={(urls) => {
-                      const urlArray = Array.isArray(urls) ? urls : [urls];
-                      setFormData({ ...formData, gallery_urls: urlArray });
-                    }}
-                    label="Fotos da Galeria (até 6)"
-                    multiple={true}
-                    maxFiles={6}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Selecione até 6 fotos para a galeria do seu perfil.
-                  </p>
-                  {formData.gallery_urls.length > 0 && (
-                    <div className="mt-4">
-                      <Label className="text-xs">Fotos Selecionadas ({formData.gallery_urls.length}/6)</Label>
-                      <div className="grid grid-cols-3 gap-2 mt-2">
-                        {formData.gallery_urls.map((url, idx) => (
-                          <div key={idx} className="relative group">
-                            <img src={url} alt={`Gallery ${idx + 1}`} className="w-full h-24 object-cover rounded-lg" />
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const newUrls = formData.gallery_urls.filter((_, i) => i !== idx);
-                                setFormData({ ...formData, gallery_urls: newUrls });
-                              }}
-                              className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      {/* Admin Metadata - Collapsible */}
+                      <details className="group">
+                        <summary className="cursor-pointer p-3 glass rounded-xl border border-orange-500/20 flex items-center justify-between">
+                          <span className="text-sm font-medium text-orange-400">🔒 Metadados Privados</span>
+                          <ChevronRight className="w-4 h-4 text-orange-400 group-open:rotate-90 transition-transform" />
+                        </summary>
+                        <div className="mt-2 p-4 glass rounded-xl border border-orange-500/10 grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <Label className="text-xs">Idade</Label>
+                            <Input
+                              type="number"
+                              value={formData.admin_metadata.age}
+                              onChange={(e) => setFormData({
+                                ...formData,
+                                admin_metadata: { ...formData.admin_metadata, age: e.target.value }
+                              })}
+                              placeholder="25"
+                              className="bg-black/20 h-9 text-sm"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Orientação</Label>
+                            <select
+                              value={formData.admin_metadata.sexual_orientation}
+                              onChange={(e) => setFormData({
+                                ...formData,
+                                admin_metadata: { ...formData.admin_metadata, sexual_orientation: e.target.value }
+                              })}
+                              className="w-full h-9 px-2 bg-black/20 border border-white/10 rounded-lg text-sm"
                             >
-                              ×
-                            </button>
+                              <option value="">-</option>
+                              <option value="heterossexual">Hetero</option>
+                              <option value="homossexual">Homo</option>
+                              <option value="bissexual">Bi</option>
+                              <option value="outro">Outro</option>
+                            </select>
                           </div>
-                        ))}
+                          <div className="space-y-1">
+                            <Label className="text-xs">% Masc.</Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={formData.admin_metadata.male_audience_percent}
+                              onChange={(e) => setFormData({
+                                ...formData,
+                                admin_metadata: { ...formData.admin_metadata, male_audience_percent: e.target.value }
+                              })}
+                              placeholder="40"
+                              className="bg-black/20 h-9 text-sm"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">% Fem.</Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={formData.admin_metadata.female_audience_percent}
+                              onChange={(e) => setFormData({
+                                ...formData,
+                                admin_metadata: { ...formData.admin_metadata, female_audience_percent: e.target.value }
+                              })}
+                              placeholder="60"
+                              className="bg-black/20 h-9 text-sm"
+                            />
+                          </div>
+                          <div className="space-y-1 col-span-2">
+                            <Label className="text-xs flex items-center gap-2">
+                              Divulgou Aposta
+                              <Switch
+                                checked={formData.admin_metadata.promoted_betting}
+                                onCheckedChange={(checked) => setFormData({
+                                  ...formData,
+                                  admin_metadata: { ...formData.admin_metadata, promoted_betting: checked }
+                                })}
+                              />
+                            </Label>
+                          </div>
+                        </div>
+                      </details>
+                    </div>
+                  </>
+                ) : (
+                  /* Non-Admin: Personalization Step */
+                  <>
+                    <div className="text-center mb-8">
+                      <h1 className="text-3xl font-bold mb-2">Personalização</h1>
+                      <p className="text-white/60">Aparência da Landing Page</p>
+                    </div>
+
+                    <div className="space-y-4 p-4 md:p-6 glass rounded-xl">
+                      <h3 className="font-medium mb-4">Escolha um Tema</h3>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                        {(Object.keys(LAYOUT_PRESETS) as LayoutType[]).map((themeKey) => {
+                          const preset = LAYOUT_PRESETS[themeKey];
+                          const isSelected = formData.layout === themeKey;
+                          return (
+                            <div
+                              key={themeKey}
+                              onClick={() => {
+                                setFormData({
+                                  ...formData,
+                                  layout: themeKey,
+                                  primaryColor: preset.primaryColor || formData.primaryColor,
+                                  secondaryColor: preset.secondaryColor || formData.secondaryColor,
+                                });
+                              }}
+                              className={`cursor-pointer relative overflow-hidden rounded-xl border-2 transition-all duration-300 ${isSelected ? 'border-accent scale-105 shadow-[0_0_20px_rgba(255,107,53,0.3)]' : 'border-white/10 hover:border-white/30'}`}
+                            >
+                              <div className="aspect-square relative p-3 flex flex-col justify-between" style={{ backgroundColor: preset.backgroundColor }}>
+                                <div className="w-full h-1/3 rounded-lg opacity-80" style={{ backgroundColor: preset.primaryColor }} />
+                                <div className="w-2/3 h-2 rounded-full opacity-60" style={{ backgroundColor: preset.secondaryColor }} />
+                                <div className="space-y-1">
+                                  <div className="w-full h-1 rounded-full bg-current opacity-20" style={{ color: preset.textColor }} />
+                                  <div className="w-3/4 h-1 rounded-full bg-current opacity-20" style={{ color: preset.textColor }} />
+                                </div>
+                              </div>
+                              <div className="p-2 text-center text-xs font-medium uppercase tracking-wider bg-black/50 backdrop-blur-sm absolute bottom-0 w-full">
+                                {themeKey}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
-                  )}
-                </div>
 
-                {/* Admin-Only Metadata Section */}
-                {isAdmin && (
-                  <div className="mt-8 p-6 rounded-lg border-2 border-orange-500/30 bg-orange-500/5">
-                    <div className="flex items-center gap-2 mb-4">
-                      <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
-                      <h3 className="font-bold text-orange-500 uppercase tracking-wider text-sm">
-                        Informações Privadas (Apenas Admin)
-                      </h3>
-                    </div>
-                    <p className="text-xs text-muted-foreground mb-6">
-                      Estes campos são completament invisíveis para o criador e servem apenas para filtros internos.
-                    </p>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Sexual Orientation */}
-                      <div className="space-y-2">
-                        <Label className="text-xs">Orientação Sexual</Label>
-                        <select
-                          value={formData.admin_metadata.sexual_orientation}
-                          onChange={(e) => setFormData({
-                            ...formData,
-                            admin_metadata: {
-                              ...formData.admin_metadata,
-                              sexual_orientation: e.target.value
-                            }
-                          })}
-                          className="w-full px-3 py-2 bg-black/20 border border-white/10 rounded-lg text-sm"
-                        >
-                          <option value="">Não informado</option>
-                          <option value="heterossexual">Heterossexual</option>
-                          <option value="homossexual">Homossexual</option>
-                          <option value="bissexual">Bissexual</option>
-                          <option value="outro">Outro</option>
-                          <option value="prefere_nao_informar">Prefere não informar</option>
-                        </select>
-                      </div>
-
-                      {/* Age */}
-                      <div className="space-y-2">
-                        <Label className="text-xs">Idade</Label>
-                        <Input
-                          type="number"
-                          value={formData.admin_metadata.age}
-                          onChange={(e) => setFormData({
-                            ...formData,
-                            admin_metadata: {
-                              ...formData.admin_metadata,
-                              age: e.target.value
-                            }
-                          })}
-                          placeholder="Ex: 25"
-                          className="bg-black/20"
-                        />
-                      </div>
-
-                      {/* Promoted Betting */}
-                      <div className="space-y-2">
-                        <Label className="text-xs flex items-center gap-2">
-                          <span>Divulgou Aposta</span>
-                        </Label>
-                        <div className="flex items-center gap-2 px-3 py-2 bg-black/20 border border-white/10 rounded-lg">
-                          <Switch
-                            checked={formData.admin_metadata.promoted_betting}
-                            onCheckedChange={(checked) => setFormData({
-                              ...formData,
-                              admin_metadata: {
-                                ...formData.admin_metadata,
-                                promoted_betting: checked
-                              }
-                            })}
-                          />
-                          <span className="text-sm">
-                            {formData.admin_metadata.promoted_betting ? "Sim" : "Não"}
-                          </span>
+                    <div className="space-y-4 p-4 md:p-6 glass rounded-xl">
+                      <h3 className="font-medium mb-4">Cores do Tema</h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <Label>Cor Primária</Label>
+                          <div className="flex gap-2">
+                            <Input type="color" value={formData.primaryColor} onChange={e => setFormData({ ...formData, primaryColor: e.target.value })} className="w-12 h-12 p-1 cursor-pointer" />
+                            <Input value={formData.primaryColor} onChange={e => setFormData({ ...formData, primaryColor: e.target.value })} className="uppercase" />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Cor Secundária</Label>
+                          <div className="flex gap-2">
+                            <Input type="color" value={formData.secondaryColor} onChange={e => setFormData({ ...formData, secondaryColor: e.target.value })} className="w-12 h-12 p-1 cursor-pointer" />
+                            <Input value={formData.secondaryColor} onChange={e => setFormData({ ...formData, secondaryColor: e.target.value })} className="uppercase" />
+                          </div>
                         </div>
                       </div>
-
-                      {/* Ideology */}
-                      <div className="space-y-2">
-                        <Label className="text-xs">Ideologia</Label>
-                        <select
-                          value={formData.admin_metadata.ideology}
-                          onChange={(e) => setFormData({
-                            ...formData,
-                            admin_metadata: {
-                              ...formData.admin_metadata,
-                              ideology: e.target.value
-                            }
-                          })}
-                          className="w-full px-3 py-2 bg-black/20 border border-white/10 rounded-lg text-sm"
-                        >
-                          <option value="">Não informado</option>
-                          <option value="esquerda">Esquerda</option>
-                          <option value="centro-esquerda">Centro-Esquerda</option>
-                          <option value="centro">Centro</option>
-                          <option value="centro-direita">Centro-Direita</option>
-                          <option value="direita">Direita</option>
-                          <option value="outro">Outro</option>
-                          <option value="nao_se_aplica">Não se aplica</option>
-                        </select>
-                      </div>
-
-                      {/* Male Audience % */}
-                      <div className="space-y-2">
-                        <Label className="text-xs">Público Masculino (%)</Label>
-                        <Input
-                          type="number"
-                          min="0"
-                          max="100"
-                          value={formData.admin_metadata.male_audience_percent}
-                          onChange={(e) => setFormData({
-                            ...formData,
-                            admin_metadata: {
-                              ...formData.admin_metadata,
-                              male_audience_percent: e.target.value
-                            }
-                          })}
-                          placeholder="Ex: 65"
-                          className="bg-black/20"
-                        />
-                      </div>
-
-                      {/* Female Audience % */}
-                      <div className="space-y-2">
-                        <Label className="text-xs">Público Feminino (%)</Label>
-                        <Input
-                          type="number"
-                          min="0"
-                          max="100"
-                          value={formData.admin_metadata.female_audience_percent}
-                          onChange={(e) => setFormData({
-                            ...formData,
-                            admin_metadata: {
-                              ...formData.admin_metadata,
-                              female_audience_percent: e.target.value
-                            }
-                          })}
-                          placeholder="Ex: 35"
-                          className="bg-black/20"
-                        />
-                      </div>
-
-                      {/* Audience Age Ranges */}
-                      <div className="space-y-2 md:col-span-2">
-                        <Label className="text-xs">Faixas Etárias do Público</Label>
-                        <Input
-                          value={formData.admin_metadata.audience_age_ranges}
-                          onChange={(e) => setFormData({
-                            ...formData,
-                            admin_metadata: {
-                              ...formData.admin_metadata,
-                              audience_age_ranges: e.target.value
-                            }
-                          })}
-                          placeholder="Ex: 13-17, 18-24, 25-34"
-                          className="bg-black/20"
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Separe as faixas por vírgula. Ex: 13-17, 18-24, 25-34, 35-44, 45+
-                        </p>
-                      </div>
                     </div>
-                  </div>
+
+                    <div className="space-y-4 p-4 md:p-6 glass rounded-xl">
+                      <h3 className="font-medium mb-4">Imagem de Fundo do Perfil</h3>
+                      <ImageUpload
+                        currentImage={formData.background_image_url}
+                        onImageUploaded={(url) => setFormData({ ...formData, background_image_url: url as string })}
+                        label="Imagem de Fundo"
+                      />
+                    </div>
+
+                    <div className="space-y-4 p-4 md:p-6 glass rounded-xl">
+                      <h3 className="font-medium mb-4">Galeria de Fotos</h3>
+                      <ImageUpload
+                        currentImage={formData.gallery_urls.join(',')}
+                        onImageUploaded={(urls) => {
+                          const urlArray = Array.isArray(urls) ? urls : [urls];
+                          setFormData({ ...formData, gallery_urls: urlArray });
+                        }}
+                        label="Fotos da Galeria (até 6)"
+                        multiple={true}
+                        maxFiles={6}
+                      />
+                      {formData.gallery_urls.length > 0 && (
+                        <div className="mt-4">
+                          <Label className="text-xs">Fotos Selecionadas ({formData.gallery_urls.length}/6)</Label>
+                          <div className="grid grid-cols-3 gap-2 mt-2">
+                            {formData.gallery_urls.map((url, idx) => (
+                              <div key={idx} className="relative group">
+                                <img src={url} alt={`Gallery ${idx + 1}`} className="w-full h-24 object-cover rounded-lg" />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const newUrls = formData.gallery_urls.filter((_, i) => i !== idx);
+                                    setFormData({ ...formData, gallery_urls: newUrls });
+                                  }}
+                                  className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </>
                 )}
               </div>
             )}

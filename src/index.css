@@ -259,3 +259,25 @@ All colors MUST be HSL.
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(14 100% 55%);
 }
+
+/* Mobile: prevent zoom on inputs (iOS zooms when font-size < 16px) */
+@media screen and (max-width: 768px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+
+  /* Ensure touch targets are large enough */
+  input,
+  select,
+  button,
+  textarea {
+    min-height: 44px;
+  }
+
+  /* Fix horizontal overflow on mobile */
+  .overflow-x-hidden-mobile {
+    overflow-x: hidden;
+  }
+}

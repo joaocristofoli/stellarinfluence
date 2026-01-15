@@ -3,6 +3,7 @@ import { Trash2, Edit2, ChevronDown, ChevronUp, Link2, ListTodo } from 'lucide-r
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { formatCurrency } from '@/utils/formatters';
 import {
     MarketingStrategy,
     channelTypeLabels,
@@ -27,12 +28,7 @@ export function StrategyCard({ strategy, allStrategies, onEdit, onDelete }: Stra
     const completedTasks = tasks.filter(t => t.completed).length;
     const taskProgress = tasks.length > 0 ? Math.round((completedTasks / tasks.length) * 100) : 0;
 
-    const formatCurrency = (value: number) => {
-        return new Intl.NumberFormat('pt-BR', {
-            style: 'currency',
-            currency: 'BRL',
-        }).format(value);
-    };
+    // formatCurrency importado de @/utils/formatters
 
     const statusLabels = {
         planned: 'Planejado',

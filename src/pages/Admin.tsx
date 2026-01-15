@@ -195,7 +195,7 @@ export default function Admin() {
     <div className="flex flex-col h-full">
       {/* Logo */}
       <div className="p-6 border-b border-border/50">
-        <h1 className="text-xl font-bold text-gradient">Stellar Admin</h1>
+        <h1 className="text-xl font-bold text-gradient">Eternizar Admin</h1>
         <p className="text-xs text-muted-foreground mt-1">Painel de Controle</p>
       </div>
 

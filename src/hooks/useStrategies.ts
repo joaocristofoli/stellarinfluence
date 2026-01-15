@@ -16,6 +16,10 @@ const mapDbToStrategy = (row: any): MarketingStrategy => ({
     whyToDo: row.why_to_do,
     connections: row.connections || [],
     status: row.status,
+    // Calendar fields
+    startDate: row.start_date ? new Date(row.start_date) : null,
+    endDate: row.end_date ? new Date(row.end_date) : null,
+    linkedCreatorIds: row.linked_creator_ids || [],
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
 });
@@ -59,6 +63,10 @@ export function useCreateStrategy() {
                     why_to_do: strategy.whyToDo,
                     connections: strategy.connections,
                     status: strategy.status,
+                    // Calendar fields
+                    start_date: strategy.startDate ? new Date(strategy.startDate).toISOString().split('T')[0] : null,
+                    end_date: strategy.endDate ? new Date(strategy.endDate).toISOString().split('T')[0] : null,
+                    linked_creator_ids: strategy.linkedCreatorIds || [],
                 })
                 .select()
                 .single();
@@ -91,6 +99,14 @@ export function useUpdateStrategy() {
                     why_to_do: strategy.whyToDo,
                     connections: strategy.connections,
                     status: strategy.status,
+                    // Calendar fields
+                    start_date: strategy.startDate !== undefined
+                        ? (strategy.startDate ? new Date(strategy.startDate).toISOString().split('T')[0] : null)
+                        : undefined,
+                    end_date: strategy.endDate !== undefined
+                        ? (strategy.endDate ? new Date(strategy.endDate).toISOString().split('T')[0] : null)
+                        : undefined,
+                    linked_creator_ids: strategy.linkedCreatorIds,
                 })
                 .eq('id', id)
                 .select()

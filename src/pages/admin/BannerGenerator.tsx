@@ -60,7 +60,7 @@ export default function BannerGenerator() {
 
     // Agency Text (Footer)
     const [showFooterText, setShowFooterText] = useState(true);
-    const [footerText, setFooterText] = useState("Stellar Influence Studio");
+    const [footerText, setFooterText] = useState("Agência Eternizar");
     const [footerTextSize, setFooterTextSize] = useState(24);
 
     // Logo options

@@ -18,7 +18,7 @@ export function ContractPreviewDialog({ open, onClose, company, strategies }: Co
 
     useEffect(() => {
         if (company && open) {
-            setContractText(generateDefaultContract(company, strategies, "STELLAR INFLUENCE STUDIO"));
+            setContractText(generateDefaultContract(company, strategies, "AGÊNCIA ETERNIZAR"));
         }
     }, [company, strategies, open]);
 
@@ -104,7 +104,7 @@ export function ContractPreviewDialog({ open, onClose, company, strategies }: Co
             </head>
             <body>
                 <div class="header">
-                    <div class="logo">Stellar Influence Studio</div>
+                    <div class="logo">Agência Eternizar</div>
                     <h1>Contrato de Prestação de Serviços</h1>
                 </div>
 
@@ -112,7 +112,7 @@ export function ContractPreviewDialog({ open, onClose, company, strategies }: Co
 
                 <div class="signature-section">
                     <div class="signature-block">
-                        <strong>STELLAR INFLUENCE STUDIO</strong><br>
+                        <strong>AGÊNCIA ETERNIZAR</strong><br>
                         CONTRATADA
                     </div>
                     <div class="signature-block">

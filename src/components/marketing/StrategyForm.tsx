@@ -25,7 +25,7 @@ import {
     channelTypeIcons
 } from '@/types/marketing';
 import { generateMarketingIdeas, AIStrategySuggestion } from '@/utils/aiGenerator';
-import { Sparkles, Loader2, Lightbulb, Link as LinkIcon, Users, FolderKanban } from 'lucide-react';
+import { Sparkles, Loader2, Lightbulb, Link as LinkIcon, Users, FolderKanban, Calendar } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from "@/integrations/supabase/client";
 import { Creator } from '@/types/creator';
@@ -78,6 +78,10 @@ export function StrategyForm({
         connections: [] as string[],
         status: 'planned' as 'planned' | 'in_progress' | 'completed',
         campaignId: null as string | null,
+        // Calendar fields
+        startDate: '' as string,
+        endDate: '' as string,
+        linkedCreatorIds: [] as string[],
     });
 
     const { toast } = useToast();
@@ -126,7 +130,7 @@ export function StrategyForm({
         if (creator.instagram_url) return creator.instagram_url;
         if (creator.tiktok_url) return creator.tiktok_url;
         if (creator.youtube_url) return creator.youtube_url;
-        return `https://stellar-influence.com/creator/${creator.slug}`;
+        return `https://agenciaeternizar.com.br/creator/${creator.slug}`;
     };
 
     const handleGenerateAI = async () => {
@@ -196,6 +200,13 @@ export function StrategyForm({
                 connections: editingStrategy.connections,
                 status: editingStrategy.status,
                 campaignId: editingStrategy.campaignId,
+                startDate: editingStrategy.startDate
+                    ? new Date(editingStrategy.startDate).toISOString().split('T')[0]
+                    : '',
+                endDate: editingStrategy.endDate
+                    ? new Date(editingStrategy.endDate).toISOString().split('T')[0]
+                    : '',
+                linkedCreatorIds: editingStrategy.linkedCreatorIds || [],
             });
         } else {
             setFormData({
@@ -210,6 +221,9 @@ export function StrategyForm({
                 connections: [],
                 status: 'planned',
                 campaignId: defaultCampaignId,
+                startDate: '',
+                endDate: '',
+                linkedCreatorIds: [],
             });
         }
     }, [editingStrategy, open, defaultCampaignId]);
@@ -219,6 +233,8 @@ export function StrategyForm({
         onSave({
             ...formData,
             companyId,
+            startDate: formData.startDate ? new Date(formData.startDate) : null,
+            endDate: formData.endDate ? new Date(formData.endDate) : null,
         });
         onClose();
     };
@@ -347,6 +363,39 @@ export function StrategyForm({
                                     required
                                 />
                             </div>
+                        </div>
+
+                        {/* Calendar Dates Section */}
+                        <div className="bg-blue-50 dark:bg-blue-900/10 p-4 rounded-lg border border-blue-100 dark:border-blue-800">
+                            <Label className="text-blue-700 dark:text-blue-300 flex items-center gap-2 mb-3">
+                                <Calendar className="w-4 h-4" />
+                                Datas do Calendário
+                            </Label>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="startDate" className="text-sm">Data de Início</Label>
+                                    <Input
+                                        id="startDate"
+                                        type="date"
+                                        value={formData.startDate}
+                                        onChange={e => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
+                                        className="bg-white dark:bg-black/20"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="endDate" className="text-sm">Data de Fim</Label>
+                                    <Input
+                                        id="endDate"
+                                        type="date"
+                                        value={formData.endDate}
+                                        onChange={e => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
+                                        className="bg-white dark:bg-black/20"
+                                    />
+                                </div>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-2">
+                                Defina as datas para visualizar esta estratégia no calendário de campanhas.
+                            </p>
                         </div>
 
                         <div className="space-y-2">
