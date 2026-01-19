@@ -1,4 +1,5 @@
 import { MarketingStrategy, Company, channelTypeLabels, channelTypeIcons } from '@/types/marketing';
+import { formatCurrency } from '@/utils/formatters';
 
 /**
  * Generates the HTML content for a marketing plan.
@@ -35,12 +36,7 @@ export function generatePlanHtml(strategies: MarketingStrategy[], company?: Comp
     return `rgba(${r.r}, ${r.g}, ${r.b}, ${percent})`;
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
-  };
+  // formatCurrency removido - usar import de @/utils/formatters
 
   const totalBudget = strategies.reduce((sum, s) => sum + s.budget, 0);
   const plannedCount = strategies.filter(s => s.status === 'planned').length;

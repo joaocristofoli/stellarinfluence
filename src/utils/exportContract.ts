@@ -1,4 +1,5 @@
 import { Company, MarketingStrategy } from '@/types/marketing';
+import { formatCurrency, formatDate } from '@/utils/formatters';
 
 const AGENCY_INFO = {
     name: 'AGÊNCIA ETERNIZAR',
@@ -15,14 +16,9 @@ export function exportContract(
 ) {
     const totalBudget = strategies.reduce((sum, s) => sum + s.budget, 0);
 
-    const formatCurrency = (value: number) => {
-        return new Intl.NumberFormat('pt-BR', {
-            style: 'currency',
-            currency: 'BRL',
-        }).format(value);
-    };
-
-    const formatDate = (date: Date) => {
+    // formatCurrency e formatDate removidos - usar import de @/utils/formatters
+    // NOTA: formatDate de formatters não aceita Date, vamos usar inline para datas longas
+    const formatDateLong = (date: Date) => {
         return date.toLocaleDateString('pt-BR', {
             day: '2-digit',
             month: 'long',
@@ -310,7 +306,7 @@ export function exportContract(
         <h2>3. Do Prazo e Vigência</h2>
         <p>
             3.1. O presente contrato entra em vigor na data de sua assinatura e terá vigência de <strong>12 (doze) meses</strong>, 
-            até <strong>${formatDate(vigenciaDate)}</strong>.
+            até <strong>${formatDateLong(vigenciaDate)}</strong>.
         </p>
         <p>
             3.2. O contrato poderá ser renovado automaticamente por períodos sucessivos de 12 (doze) meses, 
@@ -395,7 +391,7 @@ export function exportContract(
         </p>
 
         <p class="date-location">
-            ${company.city || 'Toledo'}, ${formatDate(currentDate)}.
+            ${company.city || 'Toledo'}, ${formatDateLong(currentDate)}.
         </p>
 
         <div class="signature-block">

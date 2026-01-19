@@ -59,6 +59,25 @@ export interface MarketingStrategy {
     endDate?: Date | null;
     // Multi-influencer support
     linkedCreatorIds?: string[];
+    // Vinculação com eventos de panfletagem (para channelType: 'flyers')
+    linkedFlyerEventIds?: string[];
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+// Tarefas de calendário dentro de uma estratégia (para calendário unificado)
+// Nota: NÃO confundir com StrategyTask de src/types/tasks.ts (lista de tarefas simples)
+export interface CalendarTask {
+    id: string;
+    strategyId: string;
+    taskDate: Date;
+    title: string;
+    description?: string;
+    assignedCreatorId?: string;
+    status: 'planned' | 'in_progress' | 'completed' | 'cancelled';
+    startTime?: string;
+    endTime?: string;
+    cost: number;
     createdAt: Date;
     updatedAt: Date;
 }

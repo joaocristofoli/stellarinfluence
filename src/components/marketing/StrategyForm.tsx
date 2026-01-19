@@ -27,7 +27,7 @@ import {
 import { generateMarketingIdeas, AIStrategySuggestion } from '@/utils/aiGenerator';
 import { Sparkles, Loader2, Lightbulb, Link as LinkIcon, Users, FolderKanban, Calendar } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from "@/integrations/supabase/client";
+import { useCreators } from '@/hooks/useCreators';
 import { Creator } from '@/types/creator';
 import { CurrencyInput } from '@/components/ui/CurrencyInput';
 
@@ -40,6 +40,7 @@ interface StrategyFormProps {
     companyId: string;
     campaigns?: MarketingCampaign[];
     defaultCampaignId?: string | null;
+    defaultDate?: Date | null;
 }
 
 const channelTypes: ChannelType[] = [
@@ -65,6 +66,7 @@ export function StrategyForm({
     companyId,
     campaigns = [],
     defaultCampaignId = null,
+    defaultDate = null,
 }: StrategyFormProps) {
     const [formData, setFormData] = useState({
         name: '',
@@ -89,40 +91,82 @@ export function StrategyForm({
     const [aiSuggestions, setAiSuggestions] = useState<AIStrategySuggestion[]>([]);
     const [showAiDialog, setShowAiDialog] = useState(false);
 
-    // Creator Integration
-    const [creators, setCreators] = useState<Creator[]>([]);
-    const [loadingCreators, setLoadingCreators] = useState(false);
-
-    useEffect(() => {
-        const fetchCreators = async () => {
-            setLoadingCreators(true);
-            const { data } = await supabase.from('creators').select('*');
-            if (data) {
-                // @ts-ignore - Supabase types mismatch with our strict Creator type but structure is compatible
-                setCreators(data);
-            }
-            setLoadingCreators(false);
-        };
-        fetchCreators();
-    }, []);
+    // Creator Integration - usando hook centralizado
+    // Enforcing approvedOnly=true for Marketing Strategy Planning
+    const { data: creators = [], isLoading: loadingCreators } = useCreators(true);
 
     const handleCreatorSelect = (creatorId: string) => {
         const creator = creators.find(c => c.id === creatorId);
         if (!creator) return;
 
-        // Auto-fill fields based on creator data
+        // Verificar se já está vinculado
+        if (formData.linkedCreatorIds.includes(creatorId)) {
+            toast({
+                title: "Já vinculado",
+                description: `${creator.name} já está vinculado a esta estratégia.`,
+                variant: "destructive",
+            });
+            return;
+        }
+
+        // Lista atualizada de criadores
+        const newLinkedIds = [...formData.linkedCreatorIds, creatorId];
+        const linkedCreators = newLinkedIds
+            .map(id => creators.find(c => c.id === id))
+            .filter(Boolean) as Creator[];
+
+        // Gerar nome dinâmico com TODOS os influenciadores
+        const creatorNames = linkedCreators.map(c => c.name).join(' + ');
+        const categories = [...new Set(linkedCreators.map(c => c.category))].join(', ');
+
         setFormData(prev => ({
             ...prev,
-            name: `Parceria: ${creator.name}`,
-            responsible: creator.name,
-            budget: 0, // Could implement estimated cost logic here if data existed
-            description: `Parceria com influenciador do nicho ${creator.category}. \nPerfil: ${createProfileLink(creator)}`,
+            linkedCreatorIds: newLinkedIds,
+            // CORREÇÃO: Nome atualizado com TODOS os influenciadores
+            name: linkedCreators.length === 1
+                ? `Parceria: ${creator.name}`
+                : `Parceria: ${creatorNames}`,
+            responsible: linkedCreators.map(c => c.name).join(', '),
+            description: `Parceria com ${linkedCreators.length} influenciador(es) do nicho ${categories}.\n\nPerfis:\n${linkedCreators.map(c => `• ${c.name}: ${createProfileLink(c)}`).join('\n')}`,
             channelType: 'influencer'
         }));
 
         toast({
             title: "Influenciador Vinculado",
-            description: `Dados de ${creator.name} foram preenchidos automaticamente.`,
+            description: `${creator.name} adicionado. Total: ${newLinkedIds.length} influenciador(es).`,
+        });
+    };
+
+    // Função para remover influenciador vinculado
+    const handleCreatorRemove = (creatorId: string) => {
+        const creator = creators.find(c => c.id === creatorId);
+        const newLinkedIds = formData.linkedCreatorIds.filter(id => id !== creatorId);
+        const linkedCreators = newLinkedIds
+            .map(id => creators.find(c => c.id === id))
+            .filter(Boolean) as Creator[];
+
+        // Recalcular nome e descrição com os restantes
+        const creatorNames = linkedCreators.map(c => c.name).join(' + ');
+        const categories = [...new Set(linkedCreators.map(c => c.category))].join(', ');
+
+        setFormData(prev => ({
+            ...prev,
+            linkedCreatorIds: newLinkedIds,
+            // Atualizar nome/descrição se ainda houver influenciadores
+            name: linkedCreators.length === 0
+                ? ''
+                : linkedCreators.length === 1
+                    ? `Parceria: ${linkedCreators[0].name}`
+                    : `Parceria: ${creatorNames}`,
+            responsible: linkedCreators.map(c => c.name).join(', '),
+            description: linkedCreators.length === 0
+                ? ''
+                : `Parceria com ${linkedCreators.length} influenciador(es) do nicho ${categories}.\n\nPerfis:\n${linkedCreators.map(c => `• ${c.name}: ${createProfileLink(c)}`).join('\n')}`,
+        }));
+
+        toast({
+            title: "Influenciador Removido",
+            description: creator ? `${creator.name} foi desvinculado.` : "Influenciador removido.",
         });
     };
 
@@ -221,20 +265,97 @@ export function StrategyForm({
                 connections: [],
                 status: 'planned',
                 campaignId: defaultCampaignId,
-                startDate: '',
+                startDate: defaultDate ? defaultDate.toISOString().split('T')[0] : '',
                 endDate: '',
                 linkedCreatorIds: [],
             });
         }
-    }, [editingStrategy, open, defaultCampaignId]);
+    }, [editingStrategy, open, defaultCampaignId, defaultDate]);
+
+    // Estado para erros de validação - CRIT-003 fix
+    const [errors, setErrors] = useState<Record<string, string>>({});
+
+    /**
+     * Valida os campos obrigatórios do formulário.
+     * @returns true se válido, false se houver erros
+     */
+    const validateForm = (): boolean => {
+        const newErrors: Record<string, string> = {};
+
+        if (!formData.name.trim()) {
+            newErrors.name = 'Nome da ação é obrigatório';
+        }
+
+        if (!formData.responsible.trim()) {
+            newErrors.responsible = 'Responsável é obrigatório';
+        }
+
+        if (!formData.description.trim()) {
+            newErrors.description = 'Descrição é obrigatória';
+        }
+
+        // CLEAN-001: startDate é obrigatório para aparecer no calendário
+        if (!formData.startDate) {
+            newErrors.startDate = 'Data de início é obrigatória para aparecer no calendário';
+        }
+
+        // Validar datas se ambas preenchidas
+        if (formData.startDate && formData.endDate) {
+            const start = new Date(formData.startDate);
+            const end = new Date(formData.endDate);
+            if (end < start) {
+                newErrors.endDate = 'Data de fim não pode ser anterior à data de início';
+            }
+        }
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+
+    // Helper para limpar erros ao digitar
+    const clearError = (field: string) => {
+        if (errors[field]) {
+            setErrors(prev => {
+                const newErrors = { ...prev };
+                delete newErrors[field];
+                return newErrors;
+            });
+        }
+    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Validar antes de enviar - CRIT-003 fix
+        if (!validateForm()) {
+            toast({
+                title: 'Campos obrigatórios',
+                description: 'Por favor, corrija os erros destacados em vermelho.',
+                variant: 'destructive',
+            });
+            return;
+        }
+
+        const creatorSnapshots = formData.channelType === 'influencer' && formData.linkedCreatorIds.length > 0
+            ? formData.linkedCreatorIds.reduce((acc, id) => {
+                const creator = creators.find(c => c.id === id);
+                if (creator) {
+                    acc[id] = {
+                        captured_at: new Date().toISOString(),
+                        ...creator
+                    };
+                }
+                return acc;
+            }, {} as Record<string, any>)
+            : {};
+
         onSave({
             ...formData,
             companyId,
             startDate: formData.startDate ? new Date(formData.startDate) : null,
             endDate: formData.endDate ? new Date(formData.endDate) : null,
+            // @ts-ignore - Adding creator_snapshots to payload for Premium Agency Pricing Rule
+            creator_snapshots: creatorSnapshots
         });
         onClose();
     };
@@ -282,10 +403,14 @@ export function StrategyForm({
                                 <Input
                                     id="name"
                                     value={formData.name}
-                                    onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                                    onChange={e => {
+                                        setFormData(prev => ({ ...prev, name: e.target.value }));
+                                        clearError('name');
+                                    }}
                                     placeholder="Ex: Campanha de Lançamento"
-                                    required
+                                    className={errors.name ? "border-red-500 focus-visible:ring-red-500" : ""}
                                 />
+                                {errors.name && <p className="text-xs text-red-500 mt-1 font-medium">{errors.name}</p>}
                             </div>
 
                             <div className="space-y-2">
@@ -316,10 +441,47 @@ export function StrategyForm({
                                 <Label className="text-purple-700 dark:text-purple-300 flex items-center gap-2 mb-2">
                                     <Users className="w-4 h-4" />
                                     Vincular Influenciador do Banco de Talentos
+                                    {formData.linkedCreatorIds.length > 0 && (
+                                        <span className="ml-auto text-xs bg-purple-200 dark:bg-purple-800 px-2 py-0.5 rounded-full">
+                                            {formData.linkedCreatorIds.length} vinculado(s)
+                                        </span>
+                                    )}
                                 </Label>
+
+                                {/* TASK-002: Chips dos influenciadores vinculados */}
+                                {formData.linkedCreatorIds.length > 0 && (
+                                    <div className="flex flex-wrap gap-2 mb-3">
+                                        {formData.linkedCreatorIds.map(creatorId => {
+                                            const creator = creators.find(c => c.id === creatorId);
+                                            return (
+                                                <div
+                                                    key={creatorId}
+                                                    className="flex items-center gap-1 px-2 py-1 bg-purple-200 dark:bg-purple-800 rounded-full text-sm"
+                                                >
+                                                    <span className="text-purple-800 dark:text-purple-200">
+                                                        {creator?.name || 'Desconhecido'}
+                                                    </span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleCreatorRemove(creatorId)}
+                                                        className="ml-1 w-4 h-4 rounded-full bg-purple-400 dark:bg-purple-600 hover:bg-red-500 text-white flex items-center justify-center text-xs transition-colors"
+                                                        title={`Remover ${creator?.name}`}
+                                                    >
+                                                        ×
+                                                    </button>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+
                                 <Select onValueChange={handleCreatorSelect}>
                                     <SelectTrigger className="bg-white dark:bg-black/20">
-                                        <SelectValue placeholder="Selecione um influenciador..." />
+                                        <SelectValue placeholder={
+                                            formData.linkedCreatorIds.length > 0
+                                                ? "Adicionar mais influenciadores..."
+                                                : "Selecione um influenciador..."
+                                        } />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {loadingCreators ? (
@@ -327,16 +489,27 @@ export function StrategyForm({
                                         ) : creators.length === 0 ? (
                                             <div className="p-2 text-center text-sm text-muted-foreground">Nenhum influenciador cadastrado</div>
                                         ) : (
-                                            creators.map(creator => (
-                                                <SelectItem key={creator.id} value={creator.id}>
-                                                    {creator.name} ({creator.category})
-                                                </SelectItem>
-                                            ))
+                                            creators.map(creator => {
+                                                const isAlreadyLinked = formData.linkedCreatorIds.includes(creator.id);
+                                                return (
+                                                    <SelectItem
+                                                        key={creator.id}
+                                                        value={creator.id}
+                                                        disabled={isAlreadyLinked}
+                                                        className={isAlreadyLinked ? 'opacity-50' : ''}
+                                                    >
+                                                        {creator.name} ({creator.category})
+                                                        {isAlreadyLinked && ' ✓'}
+                                                    </SelectItem>
+                                                );
+                                            })
                                         )}
                                     </SelectContent>
                                 </Select>
                                 <p className="text-xs text-muted-foreground mt-2">
-                                    Selecionar um influenciador preencherá automaticamente o nome, responsável e descrição.
+                                    {formData.linkedCreatorIds.length === 0
+                                        ? "Selecionar um influenciador preencherá automaticamente o nome, responsável e descrição."
+                                        : "Você pode vincular múltiplos influenciadores. Clique no × para remover."}
                                 </p>
                             </div>
                         )}
@@ -358,10 +531,14 @@ export function StrategyForm({
                                 <Input
                                     id="responsible"
                                     value={formData.responsible}
-                                    onChange={e => setFormData(prev => ({ ...prev, responsible: e.target.value }))}
+                                    onChange={e => {
+                                        setFormData(prev => ({ ...prev, responsible: e.target.value }));
+                                        clearError('responsible');
+                                    }}
                                     placeholder="Nome do responsável"
-                                    required
+                                    className={errors.responsible ? "border-red-500 focus-visible:ring-red-500" : ""}
                                 />
+                                {errors.responsible && <p className="text-xs text-red-500 mt-1 font-medium">{errors.responsible}</p>}
                             </div>
                         </div>
 
@@ -378,9 +555,13 @@ export function StrategyForm({
                                         id="startDate"
                                         type="date"
                                         value={formData.startDate}
-                                        onChange={e => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
-                                        className="bg-white dark:bg-black/20"
+                                        onChange={e => {
+                                            setFormData(prev => ({ ...prev, startDate: e.target.value }));
+                                            clearError('startDate');
+                                        }}
+                                        className={`bg-white dark:bg-black/20 ${errors.startDate ? "border-red-500 focus-visible:ring-red-500" : ""}`}
                                     />
+                                    {errors.startDate && <p className="text-xs text-red-500 mt-1 font-medium">{errors.startDate}</p>}
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="endDate" className="text-sm">Data de Fim</Label>
@@ -388,9 +569,13 @@ export function StrategyForm({
                                         id="endDate"
                                         type="date"
                                         value={formData.endDate}
-                                        onChange={e => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
-                                        className="bg-white dark:bg-black/20"
+                                        onChange={e => {
+                                            setFormData(prev => ({ ...prev, endDate: e.target.value }));
+                                            clearError('endDate');
+                                        }}
+                                        className={`bg-white dark:bg-black/20 ${errors.endDate ? "border-red-500 focus-visible:ring-red-500" : ""}`}
                                     />
+                                    {errors.endDate && <p className="text-xs text-red-500 mt-1 font-medium">{errors.endDate}</p>}
                                 </div>
                             </div>
                             <p className="text-xs text-muted-foreground mt-2">
@@ -449,11 +634,15 @@ export function StrategyForm({
                             <Textarea
                                 id="description"
                                 value={formData.description}
-                                onChange={e => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                                onChange={e => {
+                                    setFormData(prev => ({ ...prev, description: e.target.value }));
+                                    clearError('description');
+                                }}
                                 placeholder="Descreva a estratégia..."
                                 rows={2}
-                                required
+                                className={errors.description ? "border-red-500 focus-visible:ring-red-500" : ""}
                             />
+                            {errors.description && <p className="text-xs text-red-500 mt-1 font-medium">{errors.description}</p>}
                         </div>
 
                         <div className="space-y-2">

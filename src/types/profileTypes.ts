@@ -9,6 +9,8 @@ export const PROFILE_CATEGORIES = [
     { id: 'gossip', label: 'Fofoca/Entretenimento', icon: '🗣️', description: 'Blog de celebridades, Perfil de fofoca' },
     { id: 'podcast', label: 'Podcast/Streamer', icon: '🎙️', description: 'Podcaster, Streamer, Twitch' },
     { id: 'other', label: 'Outro', icon: '🎯', description: 'Perfil personalizado' },
+    { id: 'outdoor', label: 'Mídia Exterior', icon: '🪧', description: 'Outdoor, Painel, Empena' },
+    { id: 'btl', label: 'Mídia BTL', icon: '🎪', description: 'Ativação, Stand, PDV' },
 ] as const;
 
 export type ProfileType = typeof PROFILE_CATEGORIES[number]['id'];
@@ -47,6 +49,14 @@ export const CATEGORIES_BY_PROFILE_TYPE: Record<ProfileType, string[]> = {
     other: [
         'Geral', 'Nicho Específico', 'Corporativo', 'Institucional',
         'Evento', 'Campanha', 'Outro'
+    ],
+    outdoor: [
+        'Outdoor Padrão', 'Front Light', 'Back Light', 'Painel LED',
+        'Empena', 'Abrigo de Ônibus', 'Relógio de Rua', 'Mobiliário Urbano'
+    ],
+    btl: [
+        'Ativação em Loja', 'Evento Corporativo', 'Feira/Stand',
+        'Sampling/Amostra', 'Blitz', 'Promoção'
     ],
 };
 
@@ -99,10 +109,32 @@ export const PRICING_FIELDS_BY_TYPE: Record<ProfileType, { id: string; label: st
         { id: 'price_secondary', label: 'Serviço Secundário', icon: '💵' },
         { id: 'price_package', label: 'Pacote', icon: '📦' },
     ],
+    outdoor: [
+        { id: 'price_biweek', label: 'Bi-semana', icon: '📅' },
+        { id: 'price_production', label: 'Produção/Impressão', icon: '🖨️' },
+        { id: 'price_monthly', label: 'Mensal', icon: '📆' },
+    ],
+    btl: [
+        { id: 'price_day', label: 'Diária', icon: '☀️' },
+        { id: 'price_event', label: 'Por Evento', icon: '🎉' },
+        { id: 'price_production', label: 'Produção/Montagem', icon: '🛠️' },
+    ],
 };
 
 // Labels de campos extras por tipo
-export const EXTRA_FIELDS_BY_TYPE: Record<ProfileType, { company?: string; program?: string; reach?: string }> = {
+export const EXTRA_FIELDS_BY_TYPE: Record<ProfileType, {
+    company?: string;
+    program?: string;
+    reach?: string;
+    location?: string;
+    dimensions?: string;
+    traffic?: string;
+    format?: string;
+    face?: string;
+    lighting?: string;
+    min_period?: string;
+    gps_coordinates?: string;
+}> = {
     influencer: {},
     press: { company: 'Veículo/Empresa', program: 'Coluna/Seção', reach: 'Alcance Mensal' },
     tv: { company: 'Emissora', program: 'Programa', reach: 'Audiência Média' },
@@ -110,6 +142,21 @@ export const EXTRA_FIELDS_BY_TYPE: Record<ProfileType, { company?: string; progr
     gossip: { company: 'Portal/Blog', reach: 'Alcance Mensal' },
     podcast: { company: 'Produtora/Rede', program: 'Nome do Podcast', reach: 'Downloads/Episódio' },
     other: { company: 'Empresa', reach: 'Alcance Estimado' },
+    outdoor: {
+        company: 'Proprietário/Operadora',
+        location: 'Endereço Completo',
+        dimensions: 'Dimensões (LxA)',
+        traffic: 'Tráfego Diário Estimado',
+        face: 'Face (A/B)',
+        lighting: 'Iluminação',
+        min_period: 'Período Mínimo',
+        gps_coordinates: 'Coordenadas GPS'
+    },
+    btl: {
+        company: 'Fornecedor',
+        reach: 'Alcance Estimado',
+        format: 'Formato (Stand/Totem/Banner)'
+    },
 };
 
 // Helper para obter label do tipo de perfil

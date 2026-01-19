@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { Creator } from "@/types/creator";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,7 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Pencil, Trash2, Loader2, ExternalLink, Palette } from "lucide-react";
+import { Pencil, Trash2, Loader2, ExternalLink, Palette, AlertTriangle, CheckCircle, GitMerge } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,15 +23,38 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  parseFollowerCount,
+  parseEngagementRate,
+  meetsFollowerRequirement
+} from "@/utils/creatorParsing";
+import {
+  PROFILE_CATEGORIES,
+  getProfileTypeIcon,
+  getProfileTypeLabel
+} from "@/types/profileTypes";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { MobileCreatorCard } from "./MobileCreatorCard";
 import { FilterBar, FilterState } from "./FilterBar";
+import { useSoftDelete } from "@/hooks/useSoftDelete";
 
-// Removed local Creator type; using shared type from '@/types/creator'
-
+/**
+ * CreatorsTable - Admin component for managing content creators
+ * 
+ * @description
+ * Provides CRUD operations with soft delete, cascade checking,
+ * approval workflow, and advanced filtering capabilities.
+ */
 export function CreatorsTable() {
   const [creators, setCreators] = useState<Creator[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [linkedStrategiesCount, setLinkedStrategiesCount] = useState(0);
   const [filters, setFilters] = useState<FilterState>({
     search: "",
     category: "all",
@@ -42,6 +65,14 @@ export function CreatorsTable() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // Soft delete hook with undo capability
+  const { softDelete, checkLinkedData, isPending } = useSoftDelete({
+    tableName: 'creators',
+    successMessage: 'Criador removido',
+    undoMessage: 'Desfazer',
+    undoTimeout: 5000,
+  });
+
   useEffect(() => {
     fetchCreators();
   }, []);
@@ -51,6 +82,7 @@ export function CreatorsTable() {
       const { data, error } = await supabase
         .from("creators")
         .select("*")
+        .is("deleted_at", null) // Only fetch non-deleted creators
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -66,32 +98,64 @@ export function CreatorsTable() {
     }
   };
 
-  const handleDelete = async () => {
-    if (!deleteId) return;
-
+  const handleApprove = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
     try {
       const { error } = await supabase
-        .from("creators")
-        .delete()
-        .eq("id", deleteId);
+        .from('creators')
+        .update({ approval_status: 'approved', approved_at: new Date().toISOString() } as any) // Cast to any if Types aren't updated yet
+        .eq('id', id);
 
       if (error) throw error;
 
-      toast({
-        title: "Criador removido",
-        description: "O criador foi removido com sucesso.",
-      });
+      // Optimistic update
+      setCreators(prev => prev.map(c =>
+        c.id === id ? { ...c, approval_status: 'approved' } : c
+      ));
 
-      fetchCreators();
+      toast({ title: "Criador Aprovado", description: "O perfil está agora visível no planejamento." });
     } catch (error: any) {
-      toast({
-        title: "Erro ao remover criador",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setDeleteId(null);
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
     }
+  };
+
+  /**
+   * Check for linked strategies before deletion
+   * Prevents orphaned data in marketing_strategies
+   */
+  const handleDeleteClick = useCallback(async (id: string) => {
+    // Check for linked strategies
+    const linkedTables = await checkLinkedData(id, [
+      { table: 'marketing_strategies', field: 'linkedCreatorIds' },
+    ]);
+
+    if (linkedTables.length > 0) {
+      // Get count of linked strategies
+      const { data } = await (supabase as any)
+        .from('marketing_strategies')
+        .select('id')
+        .contains('linkedCreatorIds', [id]);
+
+      setLinkedStrategiesCount(data?.length || 0);
+    } else {
+      setLinkedStrategiesCount(0);
+    }
+
+    setDeleteId(id);
+  }, [checkLinkedData]);
+
+  /**
+   * Execute soft delete with undo capability
+   */
+  const handleDelete = async () => {
+    if (!deleteId) return;
+
+    const success = await softDelete(deleteId);
+    if (success) {
+      // Optimistically remove from list
+      setCreators(prev => prev.filter(c => c.id !== deleteId));
+    }
+    setDeleteId(null);
   };
 
   // Get unique categories
@@ -99,13 +163,16 @@ export function CreatorsTable() {
     return Array.from(new Set(creators.map(c => c.category)));
   }, [creators]);
 
-  // Filter creators based on FilterState
+  /**
+   * Filter creators with proper K/M suffix parsing
+   * Handles engagement rate as string and validates all inputs
+   */
   const filteredCreators = useMemo(() => {
     return creators.filter(creator => {
-      // Search filter
+      // Search filter (name or category)
       if (filters.search &&
-        !creator.name.toLowerCase().includes(filters.search.toLowerCase()) &&
-        !creator.category.toLowerCase().includes(filters.search.toLowerCase())) {
+        !creator.name?.toLowerCase().includes(filters.search.toLowerCase()) &&
+        !creator.category?.toLowerCase().includes(filters.search.toLowerCase())) {
         return false;
       }
 
@@ -127,17 +194,22 @@ export function CreatorsTable() {
         if (!hasMatchingPlatform) return false;
       }
 
-      // Min followers filter (simple comparison)
+      // FIX: Min followers filter with K/M suffix parsing
       if (filters.minFollowers) {
-        // This is a simple string comparison, could be enhanced
-        // to parse K/M suffixes
+        if (!meetsFollowerRequirement(creator.total_followers, filters.minFollowers)) {
+          return false;
+        }
       }
 
-      // Engagement filter
+      // FIX: Engagement filter with proper string parsing
       if (filters.engagementMin) {
-        const creatorEngagement = parseFloat(creator.engagement_rate);
+        const creatorEngagement = parseEngagementRate(creator.engagement_rate);
         const minEngagement = parseFloat(filters.engagementMin);
-        if (creatorEngagement < minEngagement) return false;
+
+        // Skip filter if either value is unparseable
+        if (creatorEngagement !== null && !isNaN(minEngagement)) {
+          if (creatorEngagement < minEngagement) return false;
+        }
       }
 
       return true;
@@ -203,83 +275,125 @@ export function CreatorsTable() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nome</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead>Categoria</TableHead>
                 <TableHead>Seguidores</TableHead>
-                <TableHead>Seguidores Kwai</TableHead>
                 <TableHead>Engajamento</TableHead>
-                <TableHead>Redes Ativas</TableHead>
+                <TableHead>Redes</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredCreators.map((creator) => (
-                <TableRow key={creator.id}>
-                  <TableCell className="font-medium">{creator.name}</TableCell>
+                <TableRow key={creator.id} className="hover:bg-white/5 transition-colors cursor-pointer" onClick={() => navigate(`/admin/creators/${creator.id}`)}>
+                  <TableCell className="font-medium">
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2">
+                        {creator.image_url && <img src={creator.image_url} className="w-8 h-8 rounded-full object-cover" />}
+                        {creator.name}
+                        {/* VISIBILITY: Profile Type Badge */}
+                        {creator.profile_type && creator.profile_type !== 'influencer' && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <span className="text-xs bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded border border-purple-500/30 flex items-center gap-1">
+                                  {getProfileTypeIcon(creator.profile_type as any)}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {getProfileTypeLabel(creator.profile_type as any)}
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {creator.approval_status === 'pending' ? (
+                      <span className="inline-flex items-center px-2 py-0.5 text-xs font-semibold bg-yellow-500/20 text-yellow-300 rounded-full animate-pulse">
+                        Pendente
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2 py-0.5 text-xs font-semibold bg-green-500/20 text-green-300 rounded-full">
+                        Aprovado
+                      </span>
+                    )}
+                  </TableCell>
                   <TableCell>{creator.category}</TableCell>
                   <TableCell>{creator.total_followers}</TableCell>
-                  <TableCell>{creator.kwai_followers || "-"}</TableCell>
                   <TableCell>{creator.engagement_rate}</TableCell>
                   <TableCell>
                     <div className="flex gap-1">
                       {creator.instagram_active && (
-                        <span className="text-xs px-2 py-1 bg-accent/20 text-accent rounded">
-                          IG
-                        </span>
+                        <span className="text-xs px-2 py-1 bg-pink-500/20 text-pink-300 rounded" title="Instagram">IG</span>
                       )}
                       {creator.youtube_active && (
-                        <span className="text-xs px-2 py-1 bg-accent/20 text-accent rounded">
-                          YT
-                        </span>
+                        <span className="text-xs px-2 py-1 bg-red-500/20 text-red-300 rounded" title="YouTube">YT</span>
                       )}
                       {creator.tiktok_active && (
-                        <span className="text-xs px-2 py-1 bg-accent/20 text-accent rounded">
-                          TT
-                        </span>
+                        <span className="text-xs px-2 py-1 bg-cyan-500/20 text-cyan-300 rounded" title="TikTok">TT</span>
                       )}
                       {creator.twitter_active && (
-                        <span className="text-xs px-2 py-1 bg-accent/20 text-accent rounded">
-                          TW
-                        </span>
+                        <span className="text-xs px-2 py-1 bg-blue-500/20 text-blue-300 rounded" title="Twitter">TW</span>
                       )}
                       {creator.kwai_active && (
-                        <span className="text-xs px-2 py-1 bg-accent/20 text-accent rounded">
-                          KW
-                        </span>
+                        <span className="text-xs px-2 py-1 bg-orange-500/20 text-orange-300 rounded" title="Kwai">KW</span>
                       )}
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex gap-2 justify-end">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => window.open(`/creator/${creator.slug}`, '_blank')}
-                        title="Ver perfil público"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => navigate(`/admin/creators/${creator.id}/landing`)}
-                        title="Editar landing page"
-                      >
-                        <Palette className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => navigate(`/admin/creators/${creator.id}`)}
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setDeleteId(creator.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                    {/* Actions container with click propagation stopped to prevent row navigation */}
+                    <div className="flex gap-2 justify-end" onClick={e => e.stopPropagation()}>
+                      {creator.approval_status === 'pending' && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 text-green-400 hover:bg-green-500/20"
+                              onClick={(e) => handleApprove(creator.id, e)}
+                            >
+                              <CheckCircle className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Aprovar Criador</TooltipContent>
+                        </Tooltip>
+                      )}
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 hover:bg-white/10"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/admin/creators/${creator.id}`);
+                            }}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Editar</TooltipContent>
+                      </Tooltip>
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-red-400 hover:bg-red-500/20"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteClick(creator.id);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Excluir</TooltipContent>
+                      </Tooltip>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -289,19 +403,37 @@ export function CreatorsTable() {
         )}
       </div>
 
+      {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja remover este criador? Esta ação não pode
-              ser desfeita.
+            <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-4">
+              <p>
+                Esta ação enviará o criador para a lixeira. Você poderá restaurá-lo por 5 segundos.
+              </p>
+
+              {linkedStrategiesCount > 0 && (
+                <div className="flex items-start gap-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-200">
+                  <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="font-semibold">Atenção: Vínculos Detectados</p>
+                    <p className="text-sm opacity-90">
+                      Este criador está vinculado a {linkedStrategiesCount} estratégia(s) de marketing.
+                      A exclusão removerá o criador dessas estratégias.
+                    </p>
+                  </div>
+                </div>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}>
-              Confirmar
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-red-500 hover:bg-red-600 text-white"
+            >
+              {linkedStrategiesCount > 0 ? "Excluir e Remover Vínculos" : "Excluir"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

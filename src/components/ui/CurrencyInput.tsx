@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
@@ -12,11 +12,10 @@ interface CurrencyInputProps {
 }
 
 /**
- * Brazilian Real (R$) currency input with formatting.
- * - Displays formatted value with thousands separator and decimals
- * - Allows typing only numbers
- * - Allows clearing to empty (will become 0 on blur)
- * - Stores numeric value internally
+ * Brazilian Real (R$) currency input with REAL-TIME formatting.
+ * - Formata enquanto o usuário digita
+ * - Mostra R$ e separadores de milhar em tempo real
+ * - Converte automaticamente centavos (123 = R$ 1,23)
  */
 export function CurrencyInput({
     value,
@@ -27,74 +26,64 @@ export function CurrencyInput({
     id,
 }: CurrencyInputProps) {
     const [displayValue, setDisplayValue] = useState('');
-    const [isFocused, setIsFocused] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
 
-    // Format number to Brazilian Real display format
-    const formatCurrency = (num: number): string => {
-        if (num === 0) return '';
+    // Formata número para moeda brasileira
+    const formatCurrency = useCallback((cents: number): string => {
+        if (cents === 0) return '';
+        const reais = cents / 100;
         return new Intl.NumberFormat('pt-BR', {
             style: 'currency',
             currency: 'BRL',
-        }).format(num);
-    };
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        }).format(reais);
+    }, []);
 
-    // Parse display value back to number
-    const parseValue = (str: string): number => {
-        // Remove currency symbol and non-numeric chars except comma/dot
-        const cleaned = str.replace(/[^\d,]/g, '');
-        if (!cleaned) return 0;
-
-        // Replace comma with dot for parsing
-        const normalized = cleaned.replace(',', '.');
-        const parsed = parseFloat(normalized);
-        return isNaN(parsed) ? 0 : parsed;
-    };
-
-    // Update display when value changes from outside
+    // Atualiza display quando value muda externamente
     useEffect(() => {
-        if (!isFocused) {
-            setDisplayValue(formatCurrency(value));
-        }
-    }, [value, isFocused]);
+        // Converte valor (que está em reais) para centavos para exibição
+        const cents = Math.round(value * 100);
+        setDisplayValue(formatCurrency(cents));
+    }, [value, formatCurrency]);
 
-    const handleFocus = () => {
-        setIsFocused(true);
-        // Show raw number value for editing
-        if (value === 0) {
-            setDisplayValue('');
-        } else {
-            setDisplayValue(value.toFixed(2).replace('.', ','));
-        }
-    };
-
-    const handleBlur = () => {
-        setIsFocused(false);
-        const parsed = parseValue(displayValue);
-        onChange(parsed);
-        setDisplayValue(formatCurrency(parsed));
-    };
-
+    // Handler de mudança com formatação em tempo real
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const input = e.target.value;
 
-        // Allow empty input
-        if (input === '') {
+        // Remove tudo exceto dígitos
+        const digitsOnly = input.replace(/\D/g, '');
+
+        // Se vazio, zera
+        if (!digitsOnly) {
             setDisplayValue('');
+            onChange(0);
             return;
         }
 
-        // Remove non-numeric except comma (Brazilian decimal separator)
-        const cleaned = input.replace(/[^\d,]/g, '');
+        // Converte para número (centavos)
+        const cents = parseInt(digitsOnly, 10);
 
-        // Only allow one comma
-        const parts = cleaned.split(',');
-        if (parts.length > 2) return;
+        // Limita a 10 bilhões (para evitar overflow)
+        if (cents > 10000000000) return;
 
-        // Limit decimal places to 2
-        if (parts[1] && parts[1].length > 2) return;
+        // Formata e atualiza display
+        const formatted = formatCurrency(cents);
+        setDisplayValue(formatted);
 
-        setDisplayValue(cleaned);
+        // Converte centavos para reais e notifica pai
+        const reais = cents / 100;
+        onChange(reais);
+    };
+
+    // Limpa formatação no foco para melhor UX (opcional - mantém formatado)
+    const handleFocus = () => {
+        // Mantém formatado, apenas seleciona tudo para facilitar substituição
+        if (inputRef.current) {
+            setTimeout(() => {
+                inputRef.current?.select();
+            }, 0);
+        }
     };
 
     return (
@@ -102,14 +91,14 @@ export function CurrencyInput({
             ref={inputRef}
             id={id}
             type="text"
-            inputMode="decimal"
+            inputMode="numeric"
             value={displayValue}
             onChange={handleChange}
             onFocus={handleFocus}
-            onBlur={handleBlur}
             placeholder={placeholder}
             required={required}
-            className={cn('text-right', className)}
+            className={cn('text-right tabular-nums', className)}
         />
     );
 }
+

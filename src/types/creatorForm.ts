@@ -1,19 +1,7 @@
-// Creator Form State Types
-export const PROFILE_TYPES = ['nano', 'micro', 'macro', 'mega', 'celebrity'] as const;
-export const GENDER_OPTIONS = ['male', 'female', 'non-binary', 'other', 'not-disclosed'] as const;
-export const POLITICAL_OPTIONS = ['left', 'center-left', 'center', 'center-right', 'right', 'neutral', 'not-disclosed'] as const;
-export const TARGET_GENDER_OPTIONS = ['male', 'female', 'all', 'diverse'] as const;
+import { ProfileType } from './profileTypes';
 
-export const MUSIC_GENRES = [
-    'Pop', 'Rock', 'Hip Hop', 'R&B', 'Electronic', 'Sertanejo', 'Funk',
-    'Reggae', 'Jazz', 'Classical', 'MPB', 'Gospel', 'K-Pop', 'Indie'
-];
-
-export const CONTENT_GENRES = [
-    'Lifestyle', 'Travel', 'Fitness', 'Fashion', 'Beauty', 'Tech',
-    'Gaming', 'Food', 'DIY', 'Education', 'Business', 'Finance',
-    'Comedy', 'Music', 'Sports', 'Photography', 'Art', 'Pets'
-];
+// Example tiers
+export const INFLUENCER_TIERS = ['nano', 'micro', 'macro', 'mega', 'celebrity'] as const;
 
 export type CreatorFormData = {
     // Basic
@@ -22,53 +10,94 @@ export type CreatorFormData = {
     category: string;
     bio: string;
     image_url: string;
+    background_image_url: string;
+    phone: string;
 
-    // Demographics
-    age: number | null;
-    gender: typeof GENDER_OPTIONS[number] | '';
-    location_city: string;
-    location_state: string;
-    location_country: string;
+    // Type & Audience
+    profile_type: ProfileType | '';
 
-    // Psychographics
-    political_leaning: typeof POLITICAL_OPTIONS[number] | '';
-    music_preferences: string[];
-    content_genres: string[];
+    // Relationships
+    agency_id?: string;
+    parent_creator_id?: string;
 
-    // Profile Type & Audience
-    profile_type: typeof PROFILE_TYPES[number] | '';
-    target_audience_description: string;
-    target_age_min: number | null;
-    target_age_max: number | null;
-    target_gender: typeof TARGET_GENDER_OPTIONS[number] | '';
+    // Outdoor/BTL Specifics
+    location?: string;
+    dimensions?: string;
+    traffic?: string;
+    format?: string; // BTL
+
+    // New Outdoor Fields (Premium Agency)
+    outdoor_face?: string;
+    outdoor_lighting?: boolean;
+    min_period?: string;
+    gps_coordinates?: string;
+
+    // Admin Metadata (Generic bag for extreme flexibility)
+    company?: string;
+    program_name?: string;
+    reach?: string;
 
     // Social Media
     instagram_url: string;
     youtube_url: string;
     tiktok_url: string;
     twitter_url: string;
-    linkedin_url: string;
-    twitch_url: string;
-    facebook_url: string;
-    pinterest_url: string;
+    kwai_url: string;
 
     instagram_active: boolean;
     youtube_active: boolean;
     tiktok_active: boolean;
     twitter_active: boolean;
-    linkedin_active: boolean;
-    twitch_active: boolean;
-    facebook_active: boolean;
-    pinterest_active: boolean;
+    kwai_active: boolean;
 
-    // Homepage
-    featured_on_homepage: boolean;
-    homepage_display_order: number;
+    // Metrics (Display values, usually strings during input)
+    instagram_followers: string;
+    tiktok_followers: string;
+    youtube_subscribers: string;
+    twitter_followers: string;
+    kwai_followers: string;
+    engagement_rate: string;
+    stories_views: string;
+
+    // Media
+    gallery_urls: string[];
 
     // Landing Theme
     primaryColor: string;
     secondaryColor: string;
     layout: string;
+    primary_platform: string;
+
+    // Admin & Pricing Metadata
+    admin_metadata: {
+        // Demographics
+        age: string;
+        sexual_orientation: string;
+        male_audience_percent: string;
+        female_audience_percent: string;
+        audience_age_ranges: string;
+        ideology: string;
+        promoted_betting: boolean;
+
+        // Pricing
+        price_story: string;
+        price_reels: string;
+        price_feed_post: string;
+        price_carousel: string;
+        price_tiktok_simple: string;
+        price_tiktok_produced: string;
+        price_youtube_mention: string;
+        price_youtube_dedicated: string;
+        price_package_basic: string;
+        price_package_premium: string;
+        pricing_notes: string;
+
+        custom_prices: { label: string; price: string }[];
+    };
+
+    // Legacy/Unused potential fields (keeping for safety or removal)
+    music_preferences: string[];
+    content_genres: string[];
 };
 
 export const initialFormData: CreatorFormData = {
@@ -77,45 +106,61 @@ export const initialFormData: CreatorFormData = {
     category: '',
     bio: '',
     image_url: '',
+    background_image_url: '',
+    phone: '',
 
-    age: null,
-    gender: '',
-    location_city: '',
-    location_state: '',
-    location_country: 'Brazil',
-
-    political_leaning: '',
-    music_preferences: [],
-    content_genres: [],
-
-    profile_type: '',
-    target_audience_description: '',
-    target_age_min: null,
-    target_age_max: null,
-    target_gender: '',
+    profile_type: 'influencer',
 
     instagram_url: '',
     youtube_url: '',
     tiktok_url: '',
     twitter_url: '',
-    linkedin_url: '',
-    twitch_url: '',
-    facebook_url: '',
-    pinterest_url: '',
+    kwai_url: '',
 
     instagram_active: false,
     youtube_active: false,
     tiktok_active: false,
     twitter_active: false,
-    linkedin_active: false,
-    twitch_active: false,
-    facebook_active: false,
-    pinterest_active: false,
+    kwai_active: false,
 
-    featured_on_homepage: false,
-    homepage_display_order: 999,
+    instagram_followers: '',
+    tiktok_followers: '',
+    youtube_subscribers: '',
+    twitter_followers: '',
+    kwai_followers: '',
+    engagement_rate: '',
+    stories_views: '',
+
+    gallery_urls: [],
 
     primaryColor: '#FF6B35',
     secondaryColor: '#004E89',
     layout: 'default',
+    primary_platform: '',
+
+    admin_metadata: {
+        age: '',
+        sexual_orientation: '',
+        male_audience_percent: '',
+        female_audience_percent: '',
+        audience_age_ranges: '',
+        ideology: '',
+        promoted_betting: false,
+        price_story: '',
+        price_reels: '',
+        price_feed_post: '',
+        price_carousel: '',
+        price_tiktok_simple: '',
+        price_tiktok_produced: '',
+        price_youtube_mention: '',
+        price_youtube_dedicated: '',
+        price_package_basic: '',
+        price_package_premium: '',
+        pricing_notes: '',
+        custom_prices: [],
+    },
+
+    music_preferences: [],
+    content_genres: [],
 };
+

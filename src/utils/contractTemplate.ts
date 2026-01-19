@@ -1,4 +1,5 @@
 import { MarketingStrategy, Company } from '../types/marketing';
+import { formatCurrency } from '@/utils/formatters';
 
 interface ContractParties {
     agencyName: string;
@@ -22,8 +23,7 @@ export const generateDefaultContract = (
     agencyName: string = AGENCY_INFO.agencyName
 ) => {
     const totalBudget = strategies.reduce((sum, s) => sum + s.budget, 0);
-    const formatCurrency = (value: number) =>
-        new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+    // formatCurrency removido - usar import de @/utils/formatters
 
     const strategiesList = strategies
         .map(

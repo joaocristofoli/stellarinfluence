@@ -24,7 +24,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let isMounted = true;
 
     const checkUserRoles = async (userId: string) => {
-      console.log("🔍 Starting role check for:", userId);
+      if (import.meta.env.DEV) console.log("🔍 Starting role check for:", userId);
 
       // Always ensure loading completes, even if RPC fails
       const timeout = setTimeout(() => {
@@ -36,20 +36,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       try {
         // Check if user is admin using RPC function (bypasses RLS)
-        console.log("📡 Calling is_user_admin RPC...");
+        if (import.meta.env.DEV) console.log("📡 Calling is_user_admin RPC...");
         const { data: isAdminData, error: adminError } = await supabase
           .rpc('is_user_admin' as any, { check_user_id: userId });
 
         if (adminError) {
-          console.error("❌ Error checking admin role:", adminError);
+          if (import.meta.env.DEV) console.error("❌ Error checking admin role:", adminError);
           if (isMounted) setIsAdmin(false);
         } else {
-          console.log("👨‍💼 Admin check result:", { isAdminData, userId });
+          if (import.meta.env.DEV) console.log("👨‍💼 Admin check result:", { isAdminData, userId });
           if (isMounted) setIsAdmin(!!isAdminData);
         }
 
         // Check if user is a creator
-        console.log("📡 Checking creator status...");
+        if (import.meta.env.DEV) console.log("📡 Checking creator status...");
         const { data: creatorData, error: creatorError } = await supabase
           .from("creators")
           .select("id")
@@ -57,16 +57,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .maybeSingle();
 
         if (creatorError) {
-          console.error("❌ Error checking creator role:", creatorError);
+          if (import.meta.env.DEV) console.error("❌ Error checking creator role:", creatorError);
           if (isMounted) setIsCreator(false);
         } else {
-          console.log("🎨 Creator check result:", { creatorData, userId });
+          if (import.meta.env.DEV) console.log("🎨 Creator check result:", { creatorData, userId });
           if (isMounted) setIsCreator(!!creatorData);
         }
 
-        console.log("✅ Role check complete:", { isAdmin: !!isAdminData, isCreator: !!creatorData });
+        if (import.meta.env.DEV) console.log("✅ Role check complete:", { isAdmin: !!isAdminData, isCreator: !!creatorData });
       } catch (error) {
-        console.error("❌ Unexpected error in role check:", error);
+        if (import.meta.env.DEV) console.error("❌ Unexpected error in role check:", error);
         if (isMounted) {
           setIsAdmin(false);
           setIsCreator(false);
@@ -74,7 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } finally {
         clearTimeout(timeout);
         if (isMounted) {
-          console.log("🏁 Setting loading to false");
+          if (import.meta.env.DEV) console.log("🏁 Setting loading to false");
           setLoading(false);
         }
       }
@@ -83,7 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log("🔐 Auth state changed:", event, session?.user?.email);
+        if (import.meta.env.DEV) console.log("🔐 Auth state changed:", event, session?.user?.email);
 
         if (isMounted) {
           setSession(session);
@@ -104,9 +104,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
 
     // Check for existing session
-    console.log("📱 Checking for existing session...");
+    if (import.meta.env.DEV) console.log("📱 Checking for existing session...");
     supabase.auth.getSession().then(async ({ data: { session } }) => {
-      console.log("📱 Initial session:", session?.user?.email ?? "none");
+      if (import.meta.env.DEV) console.log("📱 Initial session:", session?.user?.email ?? "none");
 
       if (isMounted) {
         setSession(session);

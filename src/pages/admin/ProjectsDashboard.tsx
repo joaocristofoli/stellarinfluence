@@ -10,6 +10,7 @@ import { useStrategies } from '@/hooks/useStrategies';
 import { ActivityTimeline } from '@/components/marketing/ActivityTimeline';
 import { NotificationBell } from '@/components/NotificationBell';
 import { channelTypeLabels, channelTypeIcons } from '@/types/marketing';
+import { formatCurrency } from '@/utils/formatters';
 
 export default function ProjectsDashboard() {
     const { data: companies = [], isLoading: loadingCompanies } = useCompanies();
@@ -38,14 +39,6 @@ export default function ProjectsDashboard() {
         acc[s.channelType].budget += s.budget;
         return acc;
     }, {} as Record<string, { count: number; budget: number }>);
-
-    const formatCurrency = (value: number) => {
-        return new Intl.NumberFormat('pt-BR', {
-            style: 'currency',
-            currency: 'BRL',
-            minimumFractionDigits: 0,
-        }).format(value);
-    };
 
     if (loadingCompanies) {
         return (
@@ -251,14 +244,6 @@ function CompanyCard({ companyId, company }: { companyId: string; company: any }
         ? Math.round((completedCount / strategies.length) * 100)
         : 0;
 
-    const formatCurrency = (value: number) => {
-        return new Intl.NumberFormat('pt-BR', {
-            style: 'currency',
-            currency: 'BRL',
-            minimumFractionDigits: 0,
-        }).format(value);
-    };
-
     return (
         <Card className="hover:shadow-md transition-shadow">
             <CardContent className="p-6">
@@ -307,7 +292,7 @@ function CompanyCard({ companyId, company }: { companyId: string; company: any }
                     </div>
                 </div>
 
-                <Link to="/admin/marketing">
+                <Link to={`/admin/marketing?companyId=${companyId}`}>
                     <Button variant="outline" className="w-full mt-4" size="sm">
                         Ver Detalhes
                     </Button>
@@ -316,3 +301,5 @@ function CompanyCard({ companyId, company }: { companyId: string; company: any }
         </Card>
     );
 }
+
+// ... (rest of file)

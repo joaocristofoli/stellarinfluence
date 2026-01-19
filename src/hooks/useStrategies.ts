@@ -1,8 +1,50 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { MarketingStrategy, ChannelType } from '@/types/marketing';
 
-const mapDbToStrategy = (row: any): MarketingStrategy => ({
+/**
+ * Interface para tipar a resposta do banco de dados.
+ * Garante type-safety no mapeamento DB -> TypeScript.
+ */
+interface DbStrategyRow {
+    id: string;
+    company_id: string;
+    campaign_id: string | null;
+    name: string;
+    channel_type: string;
+    budget: number | string;
+    responsible: string;
+    description: string;
+    how_to_do: string;
+    when_to_do: string;
+    why_to_do: string;
+    connections: string[];
+    status: 'planned' | 'in_progress' | 'completed';
+    start_date: string | null;
+    end_date: string | null;
+    linked_creator_ids: string[] | null;
+    linked_flyer_event_ids: string[] | null;
+    created_at: string;
+    updated_at: string;
+}
+
+/**
+ * Converte string de data do banco (YYYY-MM-DD) para Date object
+ * SEM problema de timezone. Adiciona T12:00:00 para evitar que
+ * meia-noite UTC vire dia anterior em timezones negativos.
+ */
+const parseDateSafe = (dateString: string | null): Date | null => {
+    if (!dateString) return null;
+    // Adiciona meio-dia para evitar problema de timezone
+    // "2026-01-31" -> "2026-01-31T12:00:00"
+    return new Date(`${dateString}T12:00:00`);
+};
+
+/**
+ * Mapeia uma row do banco para o tipo MarketingStrategy do frontend.
+ */
+const mapDbToStrategy = (row: DbStrategyRow): MarketingStrategy => ({
     id: row.id,
     companyId: row.company_id,
     campaignId: row.campaign_id || null,
@@ -16,13 +58,15 @@ const mapDbToStrategy = (row: any): MarketingStrategy => ({
     whyToDo: row.why_to_do,
     connections: row.connections || [],
     status: row.status,
-    // Calendar fields
-    startDate: row.start_date ? new Date(row.start_date) : null,
-    endDate: row.end_date ? new Date(row.end_date) : null,
+    // Calendar fields - usando parseDateSafe para evitar bug de timezone
+    startDate: parseDateSafe(row.start_date),
+    endDate: parseDateSafe(row.end_date),
     linkedCreatorIds: row.linked_creator_ids || [],
+    linkedFlyerEventIds: row.linked_flyer_event_ids || [],
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
 });
+
 
 export function useStrategies(companyId: string | null) {
     return useQuery({
@@ -41,6 +85,50 @@ export function useStrategies(companyId: string | null) {
         },
         enabled: !!companyId,
     });
+}
+
+/**
+ * Hook para subscription de Realtime na tabela strategies.
+ * Quando qualquer usuário criar/atualizar/deletar uma estratégia,
+ * o cache é invalidado automaticamente para todos.
+ * 
+ * @param companyId - ID da empresa para filtrar mudanças
+ */
+export function useStrategiesRealtime(companyId: string | null) {
+    const queryClient = useQueryClient();
+
+    useEffect(() => {
+        if (!companyId) return;
+
+        // Criar channel de subscription para a tabela strategies
+        const channel = supabase
+            .channel(`strategies-realtime-${companyId}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: '*', // INSERT, UPDATE, DELETE
+                    schema: 'public',
+                    table: 'strategies',
+                    filter: `company_id=eq.${companyId}`,
+                },
+                (payload) => {
+                    console.log('🔄 Realtime: Strategy change detected', payload.eventType);
+                    // Invalidar cache para recarregar dados
+                    queryClient.invalidateQueries({ queryKey: ['strategies', companyId] });
+                }
+            )
+            .subscribe((status) => {
+                if (status === 'SUBSCRIBED') {
+                    console.log('✅ Realtime: Connected to strategies channel');
+                }
+            });
+
+        // Cleanup: remover subscription ao desmontar
+        return () => {
+            console.log('🔌 Realtime: Disconnecting from strategies channel');
+            supabase.removeChannel(channel);
+        };
+    }, [companyId, queryClient]);
 }
 
 export function useCreateStrategy() {

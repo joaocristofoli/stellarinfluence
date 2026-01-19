@@ -18,9 +18,11 @@ import {
     Copy,
     CheckCircle,
     AlertCircle,
-    Sparkles
+    Sparkles,
+    MousePointer2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Company } from '@/types/marketing';
 import { FlyerCampaign, FlyerEvent } from '@/types/flyer';
 import { useCompanies } from '@/hooks/useCompanies';
@@ -57,6 +59,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { formatCurrency } from '@/utils/formatters';
 
 const FlyerManager = () => {
     const { toast } = useToast();
@@ -115,12 +118,7 @@ const FlyerManager = () => {
         totalBudget: campaigns.reduce((sum, c) => sum + (c.totalBudget || 0), 0),
     };
 
-    const formatCurrency = (value: number) => {
-        return new Intl.NumberFormat('pt-BR', {
-            style: 'currency',
-            currency: 'BRL',
-        }).format(value);
-    };
+    // formatCurrency removido - usar import de @/utils/formatters
 
     const formatDate = (dateString: string) => {
         return new Date(dateString + 'T00:00:00').toLocaleDateString('pt-BR', {
@@ -453,24 +451,13 @@ const FlyerManager = () => {
                                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
                             </div>
                         ) : campaigns.length === 0 ? (
-                            <Card className="border-dashed border-2 border-border/50 bg-card/30">
-                                <CardContent className="flex flex-col items-center justify-center py-16">
-                                    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-green-500/20 to-emerald-500/20 flex items-center justify-center mb-6">
-                                        <CalendarIcon className="w-10 h-10 text-green-600" />
-                                    </div>
-                                    <h3 className="font-semibold text-xl mb-2">Nenhuma campanha criada</h3>
-                                    <p className="text-muted-foreground text-center max-w-md mb-6">
-                                        Crie sua primeira campanha de panfletagem para começar a organizar eventos de distribuição.
-                                    </p>
-                                    <Button
-                                        onClick={handleNewCampaign}
-                                        className="gap-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
-                                    >
-                                        <Plus className="w-4 h-4" />
-                                        Criar Primeira Campanha
-                                    </Button>
-                                </CardContent>
-                            </Card>
+                            <EmptyState
+                                icon={CalendarIcon}
+                                title="Nenhuma campanha criada"
+                                description="Crie sua primeira campanha de panfletagem para começar a organizar eventos de distribuição."
+                                actionLabel="Criar Primeira Campanha"
+                                onAction={handleNewCampaign}
+                            />
                         ) : (
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                                 {/* Campaigns List */}
@@ -488,8 +475,8 @@ const FlyerManager = () => {
                                             <Card
                                                 key={campaign.id}
                                                 className={`cursor-pointer transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 ${isSelected
-                                                        ? 'ring-2 ring-primary shadow-lg'
-                                                        : 'hover:border-primary/50'
+                                                    ? 'ring-2 ring-primary shadow-lg'
+                                                    : 'hover:border-primary/50'
                                                     }`}
                                                 onClick={() => setSelectedCampaign(campaign)}
                                             >
@@ -659,14 +646,12 @@ const FlyerManager = () => {
                                             </CardContent>
                                         </Card>
                                     ) : (
-                                        <Card className="h-full flex items-center justify-center border-dashed border-2">
-                                            <CardContent className="text-center py-16">
-                                                <CalendarIcon className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
-                                                <p className="text-muted-foreground">
-                                                    Selecione uma campanha para ver os eventos
-                                                </p>
-                                            </CardContent>
-                                        </Card>
+                                        <EmptyState
+                                            icon={MousePointer2}
+                                            title="Selecione uma campanha"
+                                            description="Clique em uma campanha na lista ao lado para gerenciar seus eventos e ver detalhes."
+                                            className="h-full"
+                                        />
                                     )}
                                 </div>
                             </div>
@@ -675,17 +660,12 @@ const FlyerManager = () => {
                 )}
 
                 {!selectedCompany && (
-                    <Card className="border-dashed border-2 border-border/50 bg-card/30">
-                        <CardContent className="flex flex-col items-center justify-center py-16">
-                            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center mb-6">
-                                <Users className="w-10 h-10 text-muted-foreground" />
-                            </div>
-                            <h3 className="font-semibold text-xl mb-2">Selecione uma empresa</h3>
-                            <p className="text-muted-foreground text-center max-w-md">
-                                Escolha uma empresa acima para gerenciar suas campanhas de panfletagem.
-                            </p>
-                        </CardContent>
-                    </Card>
+                    <EmptyState
+                        icon={Users}
+                        title="Selecione uma empresa"
+                        description="Escolha uma empresa acima para gerenciar suas campanhas de panfletagem."
+                        className="py-24"
+                    />
                 )}
             </main>
 
@@ -717,6 +697,8 @@ const FlyerManager = () => {
                             onDuplicate={handleDuplicateEvent}
                             editingEvent={editingEvent}
                             campaignId={selectedCampaign.id}
+                            campaignStartDate={selectedCampaign.startDate}
+                            campaignEndDate={selectedCampaign.endDate}
                             initialDate={newEventDate}
                         />
                     )}

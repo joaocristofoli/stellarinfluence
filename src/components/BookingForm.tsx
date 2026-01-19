@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PhoneInput } from "@/components/ui/PhoneInput";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -180,19 +181,17 @@ export function BookingForm() {
                                     type="email"
                                     required
                                     value={formData.contact_email}
-                                    onChange={(e) => setFormData({ ...formData, contact_email: e.target.value })}
+                                    onChange={(e) => setFormData({ ...formData, contact_email: e.target.value.trim().toLowerCase() })}
                                     placeholder="contato@empresa.com"
                                 />
                             </div>
 
                             <div className="space-y-2">
                                 <Label htmlFor="contact_phone">Telefone</Label>
-                                <Input
+                                <PhoneInput
                                     id="contact_phone"
-                                    type="tel"
                                     value={formData.contact_phone}
-                                    onChange={(e) => setFormData({ ...formData, contact_phone: e.target.value })}
-                                    placeholder="(11) 99999-9999"
+                                    onChange={(value) => setFormData({ ...formData, contact_phone: value })}
                                 />
                             </div>
                         </div>

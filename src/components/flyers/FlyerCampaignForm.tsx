@@ -18,6 +18,7 @@ import { CalendarIcon, Palette } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 interface FlyerCampaignFormProps {
     open: boolean;
@@ -47,17 +48,60 @@ export function FlyerCampaignForm({
     editingCampaign,
     companyId,
 }: FlyerCampaignFormProps) {
-    const [formData, setFormData] = useState({
-        name: '',
-        description: '',
-        color: '#8b5cf6', // Roxo default (Aiqfome)
-        startDate: '',
-        endDate: '',
-        totalBudget: 0,
+    const [formData, setFormData] = useState(() => {
+        // Restore from localStorage if creating new
+        if (!editingCampaign) {
+            const saved = localStorage.getItem('flyerCampaignDraft');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    // Ensure dates are parsed back if needed, but strings are fine for initial state
+                    return parsed;
+                } catch (e) {
+                    console.error('Error parsing draft campaign:', e);
+                }
+            }
+        }
+
+        return {
+            name: '',
+            description: '',
+            color: '#8b5cf6', // Roxo default (Aiqfome)
+            startDate: '',
+            endDate: '',
+            totalBudget: 0,
+        };
     });
 
-    const [startDate, setStartDate] = useState<Date | undefined>();
-    const [endDate, setEndDate] = useState<Date | undefined>();
+    const [startDate, setStartDate] = useState<Date | undefined>(() => {
+        // Restore start date from draft if available
+        if (!editingCampaign) {
+            const saved = localStorage.getItem('flyerCampaignDraft');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    if (parsed.startDate) return new Date(parsed.startDate);
+                } catch { }
+            }
+        }
+        return undefined;
+    });
+
+    const [endDate, setEndDate] = useState<Date | undefined>(() => {
+        // Restore end date from draft if available
+        if (!editingCampaign) {
+            const saved = localStorage.getItem('flyerCampaignDraft');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    if (parsed.endDate) return new Date(parsed.endDate);
+                } catch { }
+            }
+        }
+        return undefined;
+    });
+
+    const { toast } = useToast(); // Assuming useToast is available in component scope or imported
 
     useEffect(() => {
         if (editingCampaign) {
@@ -71,25 +115,39 @@ export function FlyerCampaignForm({
             });
             setStartDate(new Date(editingCampaign.startDate));
             setEndDate(new Date(editingCampaign.endDate));
-        } else {
-            setFormData({
-                name: '',
-                description: '',
-                color: '#8b5cf6',
-                startDate: '',
-                endDate: '',
-                totalBudget: 0,
-            });
-            setStartDate(undefined);
-            setEndDate(undefined);
         }
+        // If creating new, we rely on the state initializer for localStorage restoration
     }, [editingCampaign, open]);
+
+    // Auto-save draft
+    useEffect(() => {
+        if (!editingCampaign && open) {
+            localStorage.setItem('flyerCampaignDraft', JSON.stringify({
+                ...formData,
+                startDate: startDate ? format(startDate, 'yyyy-MM-dd') : '',
+                endDate: endDate ? format(endDate, 'yyyy-MM-dd') : ''
+            }));
+        }
+    }, [formData, startDate, endDate, editingCampaign, open]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
         if (!startDate || !endDate) {
-            alert('Por favor, selecione as datas de início e fim');
+            toast({
+                title: 'Datas obrigatórias',
+                description: 'Por favor, selecione as datas de início e fim da campanha.',
+                variant: 'destructive',
+            });
+            return;
+        }
+
+        if (endDate < startDate) {
+            toast({
+                title: 'Data inválida',
+                description: 'A data de fim não pode ser anterior à data de início.',
+                variant: 'destructive',
+            });
             return;
         }
 
@@ -102,6 +160,22 @@ export function FlyerCampaignForm({
             endDate: format(endDate, 'yyyy-MM-dd'),
             totalBudget: formData.totalBudget,
         });
+
+        // Clear draft after successful save
+        if (!editingCampaign) {
+            localStorage.removeItem('flyerCampaignDraft');
+            setFormData({
+                name: '',
+                description: '',
+                color: '#8b5cf6',
+                startDate: '',
+                endDate: '',
+                totalBudget: 0,
+            });
+            setStartDate(undefined);
+            setEndDate(undefined);
+        }
+
         onClose();
     };
 

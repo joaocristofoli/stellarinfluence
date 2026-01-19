@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Plus, Loader2, FileDown, ArrowLeft, Link2, Copy, Check, Calendar, LayoutGrid } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { formatCurrency } from '@/utils/formatters';
 import {
@@ -26,22 +26,37 @@ import { exportToPdf } from '@/utils/exportPdf';
 import { createShareableLink, getShareableUrl } from '@/utils/shareableLink';
 import { useToast } from '@/hooks/use-toast';
 import { useCompanies, useCreateCompany, useUpdateCompany, useDeleteCompany } from '@/hooks/useCompanies';
-import { useStrategies, useCreateStrategy, useUpdateStrategy, useDeleteStrategy } from '@/hooks/useStrategies';
+import { useStrategies, useStrategiesRealtime, useCreateStrategy, useUpdateStrategy, useDeleteStrategy } from '@/hooks/useStrategies';
 import { useCampaigns, useCreateCampaign, useUpdateCampaign, useDeleteCampaign } from '@/hooks/useCampaigns';
 import { exportContract } from '@/utils/exportContract';
-import { FlyerIntegrationCard } from '@/components/marketing/FlyerIntegrationCard';
+// FlyerIntegrationCard REMOVIDO - Flyers agora integrados no CampaignCalendar unificado
 import { CampaignCalendar } from '@/components/marketing/CampaignCalendar';
+import { BigCalendarView } from '@/components/marketing/BigCalendarView';
+import { useFlyerEventsByCompany, useUpdateFlyerEvent } from '@/hooks/useFlyers';
+import { EventDetailsDialog } from '@/components/flyers/EventDetailsDialog';
+import { FlyerEvent } from '@/types/flyer';
 import { supabase } from '@/integrations/supabase/client';
 
 const MarketingPlanner = () => {
     const { toast } = useToast();
+    const [searchParams] = useSearchParams();
+    const urlCompanyId = searchParams.get('companyId');
     const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
     const [companyFormOpen, setCompanyFormOpen] = useState(false);
     const [editingCompanyMode, setEditingCompanyMode] = useState(false);
     const [formOpen, setFormOpen] = useState(false);
     const [contractPreviewOpen, setContractPreviewOpen] = useState(false);
     const [editingStrategy, setEditingStrategy] = useState<MarketingStrategy | null>(null);
-    const [selectedChannels, setSelectedChannels] = useState<ChannelType[]>([]);
+
+    // MAJ-008 fix: Persistir filtros de canal em localStorage
+    const [selectedChannels, setSelectedChannels] = useState<ChannelType[]>(() => {
+        try {
+            const stored = localStorage.getItem('marketing-planner-channel-filters');
+            return stored ? JSON.parse(stored) : [];
+        } catch {
+            return [];
+        }
+    });
 
     // Campaign state
     const [selectedCampaign, setSelectedCampaign] = useState<MarketingCampaign | 'all' | 'none'>('all');
@@ -50,12 +65,27 @@ const MarketingPlanner = () => {
 
     // Share state
     const [shareDialogOpen, setShareDialogOpen] = useState(false);
+    const [hideFinancials, setHideFinancials] = useState(false);
     const [shareLink, setShareLink] = useState('');
     const [shareLoading, setShareLoading] = useState(false);
     const [copied, setCopied] = useState(false);
 
-    // View mode state - Cards or Calendar
-    const [viewMode, setViewMode] = useState<'cards' | 'calendar'>('cards');
+    // MAJ-007 fix: Persistir viewMode em localStorage
+    const [viewMode, setViewMode] = useState<'cards' | 'calendar'>(() => {
+        try {
+            const stored = localStorage.getItem('marketing-planner-view-mode');
+            return (stored === 'cards' || stored === 'calendar') ? stored : 'cards';
+        } catch {
+            return 'cards';
+        }
+    });
+
+    // Selected date for pre-filling form when clicking on calendar
+    const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+
+    // State for editing flyer events inline
+    const [selectedFlyerEvent, setSelectedFlyerEvent] = useState<FlyerEvent | null>(null);
+    const [flyerDialogOpen, setFlyerDialogOpen] = useState(false);
 
     // Creators for calendar
     const [creators, setCreators] = useState<{ id: string; name: string; image_url?: string }[]>([]);
@@ -69,10 +99,23 @@ const MarketingPlanner = () => {
         fetchCreators();
     }, []);
 
+    // MAJ-007 fix: Persistir viewMode quando mudar
+    useEffect(() => {
+        localStorage.setItem('marketing-planner-view-mode', viewMode);
+    }, [viewMode]);
+
+    // MAJ-008 fix: Persistir selectedChannels quando mudar
+    useEffect(() => {
+        localStorage.setItem('marketing-planner-channel-filters', JSON.stringify(selectedChannels));
+    }, [selectedChannels]);
+
     // Queries
     const { data: companies = [], isLoading: loadingCompanies } = useCompanies();
     const { data: strategies = [], isLoading: loadingStrategies } = useStrategies(selectedCompany?.id || null);
+    // REALTIME: Atualização automática quando outro usuário modificar
+    useStrategiesRealtime(selectedCompany?.id || null);
     const { data: campaigns = [], isLoading: loadingCampaigns } = useCampaigns(selectedCompany?.id || null);
+    const { data: flyerEvents = [] } = useFlyerEventsByCompany(selectedCompany?.id || null);
 
     // Mutations
     const createCompany = useCreateCompany();
@@ -84,17 +127,27 @@ const MarketingPlanner = () => {
     const createCampaign = useCreateCampaign();
     const updateCampaign = useUpdateCampaign();
     const deleteCampaign = useDeleteCampaign();
+    const updateFlyerEvent = useUpdateFlyerEvent();
 
-    // Auto-select first company
+    // Auto-select company from URL or first available
     useEffect(() => {
         if (companies.length > 0 && !selectedCompany) {
+            if (urlCompanyId) {
+                const found = companies.find(c => c.id === urlCompanyId);
+                if (found) {
+                    setSelectedCompany(found);
+                    return;
+                }
+            }
             setSelectedCompany(companies[0]);
         }
-    }, [companies, selectedCompany]);
+    }, [companies, selectedCompany, urlCompanyId]);
 
     // Reset campaign selection when company changes
     useEffect(() => {
-        setSelectedCampaign('all');
+        if (selectedCompany?.id) {
+            setSelectedCampaign('all');
+        }
     }, [selectedCompany?.id]);
 
     const totalBudget = strategies.reduce((sum, s) => sum + s.budget, 0);
@@ -359,16 +412,25 @@ const MarketingPlanner = () => {
 
     // formatCurrency importado de @/utils/formatters
 
-    // Share handler
-    const handleShare = async () => {
+    // Share handler - now split into open dialog and generate link
+    const openShareDialog = () => {
+        if (!selectedCompany) return;
+        setShareLink(''); // Clear any previous link
+        setShareDialogOpen(true);
+    };
+
+    const generateShareLink = async () => {
         if (!selectedCompany) return;
 
         setShareLoading(true);
         try {
-            const shareId = await createShareableLink(selectedCompany, strategies);
+            const shareId = await createShareableLink(selectedCompany, strategies, hideFinancials);
             const url = getShareableUrl(shareId);
             setShareLink(url);
-            setShareDialogOpen(true);
+            toast({
+                title: hideFinancials ? '🔒 Link gerado (valores ocultos)' : '💰 Link gerado (valores visíveis)',
+                description: 'Link pronto para copiar!',
+            });
         } catch (error) {
             console.error('Error creating share link:', error);
             toast({
@@ -451,7 +513,7 @@ const MarketingPlanner = () => {
                         </div>
                         <div className="flex gap-2">
                             <Button
-                                onClick={handleShare}
+                                onClick={openShareDialog}
                                 variant="outline"
                                 className="gap-2"
                                 disabled={shareLoading || strategies.length === 0}
@@ -471,6 +533,16 @@ const MarketingPlanner = () => {
                                 <FileDown className="w-4 h-4" />
                                 Gerar Contrato
                             </Button>
+                            {selectedCompany && (
+                                <Button
+                                    variant="outline"
+                                    className="gap-2"
+                                    onClick={() => navigate(`/admin/calendar/${selectedCompany.id}`)}
+                                >
+                                    <Calendar className="w-4 h-4" />
+                                    Calendário Tela Cheia
+                                </Button>
+                            )}
                             <Button
                                 onClick={handleExport}
                                 className="gap-2 shadow-lg font-semibold"
@@ -521,8 +593,7 @@ const MarketingPlanner = () => {
 
                         <StatsOverview strategies={strategies} />
 
-                        {/* Flyer Integration */}
-                        <FlyerIntegrationCard companyId={selectedCompany.id} />
+                        {/* FlyerIntegrationCard REMOVIDO - Flyers agora aparecem no calendário unificado */}
 
                         <ChannelFilter
                             selectedChannels={selectedChannels}
@@ -603,35 +674,18 @@ const MarketingPlanner = () => {
                                 )}
                             </div>
                         ) : viewMode === 'calendar' ? (
-                            <CampaignCalendar
+                            <BigCalendarView
                                 strategies={filteredStrategies}
-                                campaigns={campaigns}
-                                creators={creators}
                                 onStrategyClick={handleEditStrategy}
                                 onDateClick={(date) => {
                                     // Open form with pre-filled date
                                     setEditingStrategy(null);
+                                    setSelectedDate(date);
                                     setFormOpen(true);
                                 }}
-                                onStrategyDrop={async (strategyId, newDate) => {
-                                    // Update strategy start_date
-                                    try {
-                                        await updateStrategy.mutateAsync({
-                                            id: strategyId,
-                                            startDate: new Date(newDate),
-                                        } as any);
-                                        toast({
-                                            title: 'Data atualizada!',
-                                            description: 'A estratégia foi reagendada.',
-                                        });
-                                    } catch (error) {
-                                        toast({
-                                            title: 'Erro',
-                                            description: 'Não foi possível atualizar a data.',
-                                            variant: 'destructive',
-                                        });
-                                    }
-                                }}
+                                showCosts={true}
+                                currentDate={new Date()}
+                                onNavigate={() => { }}
                             />
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -674,13 +728,17 @@ const MarketingPlanner = () => {
                     <>
                         <StrategyForm
                             open={formOpen}
-                            onClose={handleCloseForm}
+                            onClose={() => {
+                                handleCloseForm();
+                                setSelectedDate(null);
+                            }}
                             onSave={handleSaveStrategy}
                             editingStrategy={editingStrategy}
                             existingStrategies={strategies}
                             companyId={selectedCompany.id}
                             campaigns={campaigns}
                             defaultCampaignId={activeCampaign?.id || null}
+                            defaultDate={selectedDate}
                         />
                         <ContractPreviewDialog
                             open={contractPreviewOpen}
@@ -727,32 +785,121 @@ const MarketingPlanner = () => {
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
-                        <div className="flex items-center gap-2">
-                            <Input
-                                value={shareLink}
-                                readOnly
-                                className="flex-1 text-sm bg-muted"
-                            />
-                            <Button
-                                onClick={handleCopyLink}
-                                variant="outline"
-                                size="icon"
-                                className="shrink-0"
-                            >
-                                {copied ? (
-                                    <Check className="w-4 h-4 text-green-600" />
+                        {/* Privacy Toggle */}
+                        <div className="flex items-center justify-between p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                            <div className="flex items-center gap-2">
+                                {hideFinancials ? (
+                                    <span className="text-lg">🔒</span>
                                 ) : (
-                                    <Copy className="w-4 h-4" />
+                                    <span className="text-lg">💰</span>
                                 )}
+                                <div>
+                                    <p className="text-sm font-medium text-purple-800 dark:text-purple-200">
+                                        {hideFinancials ? 'Valores Ocultos' : 'Valores Visíveis'}
+                                    </p>
+                                    <p className="text-xs text-purple-600 dark:text-purple-400">
+                                        {hideFinancials
+                                            ? 'Cliente NÃO verá orçamentos'
+                                            : 'Cliente verá todos os valores'}
+                                    </p>
+                                </div>
+                            </div>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={!hideFinancials}
+                                    onChange={(e) => setHideFinancials(!e.target.checked)}
+                                    className="sr-only peer"
+                                />
+                                <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-purple-300 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                            </label>
+                        </div>
+
+                        {/* Conditional: Show generate button OR link input */}
+                        {!shareLink ? (
+                            <Button
+                                onClick={generateShareLink}
+                                className="w-full bg-purple-600 hover:bg-purple-700 text-white gap-2"
+                                disabled={shareLoading}
+                            >
+                                {shareLoading ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                    <Link2 className="w-4 h-4" />
+                                )}
+                                {shareLoading ? 'Gerando...' : 'Gerar Link de Compartilhamento'}
                             </Button>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-amber-600 bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg">
-                            <span className="text-lg">⏰</span>
-                            <span>Este link expira em <strong>24 horas</strong></span>
-                        </div>
+                        ) : (
+                            <>
+                                <div className="flex items-center gap-2">
+                                    <Input
+                                        value={shareLink}
+                                        readOnly
+                                        className="flex-1 text-sm bg-muted"
+                                    />
+                                    <Button
+                                        onClick={handleCopyLink}
+                                        variant="outline"
+                                        size="icon"
+                                        className="shrink-0"
+                                    >
+                                        {copied ? (
+                                            <Check className="w-4 h-4 text-green-600" />
+                                        ) : (
+                                            <Copy className="w-4 h-4" />
+                                        )}
+                                    </Button>
+                                </div>
+                                <div className="flex items-center gap-2 text-sm text-amber-600 bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg">
+                                    <span className="text-lg">⏰</span>
+                                    <span>Este link expira em <strong>24 horas</strong></span>
+                                </div>
+                                <Button
+                                    onClick={() => setShareLink('')}
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-purple-600 hover:text-purple-700"
+                                >
+                                    ↻ Gerar novo link
+                                </Button>
+                            </>
+                        )}
                     </div>
                 </DialogContent>
             </Dialog>
+
+            {/* Dialog para editar Flyer Events inline */}
+            {selectedFlyerEvent && (
+                <EventDetailsDialog
+                    open={flyerDialogOpen}
+                    onClose={() => {
+                        setFlyerDialogOpen(false);
+                        setSelectedFlyerEvent(null);
+                    }}
+                    onSave={async (eventData) => {
+                        try {
+                            await updateFlyerEvent.mutateAsync({
+                                id: selectedFlyerEvent.id,
+                                ...eventData,
+                            });
+                            toast({
+                                title: '✅ Evento atualizado!',
+                                description: `Panfletagem em ${eventData.location} salva com sucesso.`,
+                            });
+                            setFlyerDialogOpen(false);
+                            setSelectedFlyerEvent(null);
+                        } catch (error) {
+                            toast({
+                                title: 'Erro ao salvar',
+                                description: 'Não foi possível atualizar o evento.',
+                                variant: 'destructive',
+                            });
+                        }
+                    }}
+                    editingEvent={selectedFlyerEvent}
+                    campaignId={selectedFlyerEvent.campaignId}
+                />
+            )}
         </div >
     );
 };

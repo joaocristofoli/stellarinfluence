@@ -14,6 +14,8 @@ export interface FlyerCampaign {
 export interface FlyerEvent {
     id: string;
     campaignId: string;
+    // Vinculação opcional com MarketingStrategy (para integração unificada)
+    strategyId?: string;
     eventDate: string; // ISO date
     startTime?: string; // HH:mm
     endTime?: string;

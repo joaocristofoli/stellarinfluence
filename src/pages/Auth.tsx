@@ -125,7 +125,7 @@ export default function Auth() {
             data: {
               full_name: fullName,
             },
-            emailRedirectTo: `http://192.168.0.82:8080/admin`,
+            emailRedirectTo: `${window.location.origin}/admin`,
           },
         });
 
@@ -214,7 +214,7 @@ export default function Auth() {
                 type="email"
                 placeholder="seu@email.com"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => setEmail(e.target.value.trim().toLowerCase())}
                 required
               />
             </div>

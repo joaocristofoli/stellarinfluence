@@ -2,13 +2,21 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { MarketingCampaign } from '@/types/marketing';
 
+/**
+ * Converte string de data (YYYY-MM-DD) para Date sem problema de timezone.
+ */
+const parseDateSafe = (dateString: string | null): Date | null => {
+    if (!dateString) return null;
+    return new Date(`${dateString}T12:00:00`);
+};
+
 const mapDbToCampaign = (row: any): MarketingCampaign => ({
     id: row.id,
     companyId: row.company_id,
     name: row.name,
     description: row.description,
-    startDate: row.start_date ? new Date(row.start_date) : null,
-    endDate: row.end_date ? new Date(row.end_date) : null,
+    startDate: parseDateSafe(row.start_date),
+    endDate: parseDateSafe(row.end_date),
     status: row.status,
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),

@@ -1,0 +1,488 @@
+/* ==========================================================================
+   CALENDAR PREMIUM THEME V4
+   Ultra Clean - Inspired by Linear, Notion, Monday
+   Minimal borders, soft shadows, subtle interactions
+   ========================================================================== */
+
+/* CSS Variables - Ultra Clean Theme */
+:root {
+    --cal-bg: #ffffff;
+    --cal-bg-day: #ffffff;
+    --cal-bg-today: rgba(139, 92, 246, 0.06);
+    --cal-bg-hover: rgba(139, 92, 246, 0.03);
+    --cal-border: rgba(0, 0, 0, 0.05);
+    --cal-border-strong: rgba(0, 0, 0, 0.08);
+    --cal-text: #1a1a2e;
+    --cal-text-muted: #64748b;
+    --cal-text-subtle: #94a3b8;
+    --cal-accent: #8b5cf6;
+    --cal-accent-light: rgba(139, 92, 246, 0.08);
+    --cal-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+    --cal-shadow-md: 0 2px 8px rgba(0, 0, 0, 0.06);
+    --cal-radius: 6px;
+    --cal-radius-lg: 10px;
+}
+
+.dark {
+    --cal-bg: #1a1a2e;
+    --cal-bg-day: #16162a;
+    --cal-bg-today: rgba(139, 92, 246, 0.12);
+    --cal-bg-hover: rgba(139, 92, 246, 0.06);
+    --cal-border: rgba(255, 255, 255, 0.05);
+    --cal-border-strong: rgba(255, 255, 255, 0.08);
+    --cal-text: #f1f5f9;
+    --cal-text-muted: #94a3b8;
+    --cal-text-subtle: #64748b;
+    --cal-accent: #a78bfa;
+    --cal-accent-light: rgba(139, 92, 246, 0.12);
+}
+
+/* ==========================================================================
+   CONTAINER
+   ========================================================================== */
+
+.premium-calendar-container {
+    background: var(--cal-bg);
+    border-radius: var(--cal-radius-lg);
+    overflow: hidden;
+    box-shadow: var(--cal-shadow-md);
+    border: 1px solid var(--cal-border);
+}
+
+/* ==========================================================================
+   TOOLBAR - Clean & Minimal
+   ========================================================================== */
+
+.rbc-toolbar {
+    background: var(--cal-bg);
+    padding: 12px 16px;
+    margin-bottom: 0;
+    border-bottom: 1px solid var(--cal-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.rbc-toolbar-label {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--cal-text);
+    text-transform: capitalize;
+    letter-spacing: -0.01em;
+}
+
+.rbc-btn-group {
+    display: flex;
+    gap: 2px;
+    background: var(--cal-accent-light);
+    padding: 2px;
+    border-radius: var(--cal-radius);
+}
+
+.rbc-btn-group button {
+    background: transparent;
+    border: none;
+    color: var(--cal-text-muted);
+    padding: 5px 12px;
+    border-radius: 4px;
+    font-weight: 500;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.rbc-btn-group button:hover {
+    color: var(--cal-accent);
+    background: rgba(139, 92, 246, 0.08);
+}
+
+.rbc-btn-group button.rbc-active {
+    background: var(--cal-accent);
+    color: white;
+    font-weight: 600;
+}
+
+/* ==========================================================================
+   HEADER - Days of week
+   ========================================================================== */
+
+.rbc-header {
+    background: var(--cal-bg);
+    padding: 8px 4px;
+    font-weight: 600;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--cal-text-subtle);
+    border-bottom: 1px solid var(--cal-border);
+    text-align: center;
+}
+
+.rbc-header+.rbc-header {
+    border-left: none;
+}
+
+/* ==========================================================================
+   GRID - Days
+   ========================================================================== */
+
+.rbc-month-view {
+    border: none;
+    border-radius: 0;
+}
+
+.rbc-month-row {
+    border: none;
+    min-height: 90px;
+}
+
+.rbc-day-bg {
+    background: var(--cal-bg-day);
+    border-right: 1px solid var(--cal-border);
+    border-bottom: 1px solid var(--cal-border);
+    transition: background 0.15s ease;
+}
+
+.rbc-day-bg:last-child {
+    border-right: none;
+}
+
+.rbc-day-bg:hover {
+    background: var(--cal-bg-hover);
+}
+
+/* Today */
+.rbc-today {
+    background: var(--cal-bg-today) !important;
+}
+
+/* Off range days */
+.rbc-off-range-bg {
+    background: rgba(0, 0, 0, 0.015);
+}
+
+.rbc-off-range {
+    color: var(--cal-text-subtle);
+    opacity: 0.4;
+}
+
+/* ==========================================================================
+   DATE NUMBERS
+   ========================================================================== */
+
+.rbc-date-cell {
+    padding: 4px 6px;
+    text-align: right;
+}
+
+.rbc-date-cell a,
+.rbc-date-cell button {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--cal-text-muted);
+    text-decoration: none;
+    padding: 2px 5px;
+    border-radius: 4px;
+    transition: all 0.15s ease;
+}
+
+.rbc-date-cell a:hover,
+.rbc-date-cell button:hover {
+    background: var(--cal-accent-light);
+    color: var(--cal-accent);
+}
+
+/* Today number */
+.rbc-now button,
+.rbc-now a {
+    background: var(--cal-accent);
+    color: white !important;
+    font-weight: 600;
+}
+
+/* ==========================================================================
+   EVENTS - Clean Pills (controlled by React component)
+   ========================================================================== */
+
+.rbc-event {
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 1px 2px;
+    border-radius: 0;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+.rbc-event:focus {
+    outline: none !important;
+}
+
+.rbc-event-content {
+    overflow: visible;
+}
+
+.rbc-row-segment {
+    padding: 1px 3px;
+}
+
+/* Show more button */
+.rbc-show-more {
+    color: var(--cal-accent);
+    font-weight: 600;
+    font-size: 0.65rem;
+    background: var(--cal-accent-light);
+    padding: 2px 8px;
+    border-radius: 10px;
+    transition: all 0.15s ease;
+    border: none;
+    margin-top: 2px;
+    cursor: pointer;
+}
+
+.rbc-show-more:hover {
+    background: var(--cal-accent);
+    color: white;
+}
+
+/* ==========================================================================
+   POPUP/OVERLAY
+   ========================================================================== */
+
+.rbc-overlay {
+    background: var(--cal-bg);
+    border-radius: var(--cal-radius-lg);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+    border: 1px solid var(--cal-border);
+    padding: 12px;
+    z-index: 1000;
+    min-width: 220px;
+    max-width: 300px;
+    animation: popupFade 0.15s ease-out;
+}
+
+@keyframes popupFade {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.rbc-overlay-header {
+    font-weight: 600;
+    font-size: 0.8rem;
+    color: var(--cal-text);
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--cal-border);
+    margin-bottom: 8px;
+}
+
+.rbc-overlay .rbc-event {
+    margin-bottom: 4px;
+}
+
+/* ==========================================================================
+   RESPONSIVENESS
+   ========================================================================== */
+
+@media (max-width: 768px) {
+    .rbc-toolbar {
+        flex-direction: column;
+        padding: 12px;
+        gap: 10px;
+    }
+
+    .rbc-toolbar-label {
+        font-size: 0.9rem;
+    }
+
+    .rbc-btn-group button {
+        padding: 4px 10px;
+        font-size: 0.7rem;
+    }
+
+    .rbc-header {
+        padding: 6px 2px;
+        font-size: 0.55rem;
+    }
+
+    .rbc-month-row {
+        min-height: 70px;
+    }
+
+    .rbc-date-cell {
+        padding: 2px 4px;
+    }
+
+    .rbc-date-cell a,
+    .rbc-date-cell button {
+        font-size: 0.65rem;
+    }
+}
+
+/* ==========================================================================
+   CLIENT PORTAL - Dark Theme Override
+   ========================================================================== */
+
+.client-portal-calendar {
+    --cal-bg: rgba(30, 27, 75, 0.6);
+    --cal-bg-day: rgba(30, 27, 75, 0.4);
+    --cal-bg-today: rgba(251, 191, 36, 0.12);
+    --cal-border: rgba(255, 255, 255, 0.08);
+    --cal-text: #ffffff;
+    --cal-text-muted: rgba(255, 255, 255, 0.7);
+    --cal-text-subtle: rgba(255, 255, 255, 0.4);
+    --cal-accent: #fbbf24;
+    --cal-accent-light: rgba(251, 191, 36, 0.15);
+}
+
+.client-portal-calendar .premium-calendar-container {
+    backdrop-filter: blur(12px);
+}
+
+.client-portal-calendar .rbc-off-range-bg {
+    background: rgba(0, 0, 0, 0.15);
+}
+
+/* ==========================================================================
+   CLIENT PORTAL - TODAY GLOW EFFECT (Premium)
+   ========================================================================== */
+
+.client-portal-calendar .rbc-today {
+    background: linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(139, 92, 246, 0.08)) !important;
+    box-shadow:
+        inset 0 0 20px rgba(168, 85, 247, 0.15),
+        0 0 30px rgba(168, 85, 247, 0.25);
+    position: relative;
+    animation: todayPulse 3s ease-in-out infinite;
+}
+
+@keyframes todayPulse {
+
+    0%,
+    100% {
+        box-shadow:
+            inset 0 0 20px rgba(168, 85, 247, 0.15),
+            0 0 25px rgba(168, 85, 247, 0.2);
+    }
+
+    50% {
+        box-shadow:
+            inset 0 0 25px rgba(168, 85, 247, 0.2),
+            0 0 40px rgba(168, 85, 247, 0.35);
+    }
+}
+
+.client-portal-calendar .rbc-now button,
+.client-portal-calendar .rbc-now a {
+    background: linear-gradient(135deg, #8b5cf6, #a78bfa) !important;
+    color: white !important;
+    font-weight: 700;
+    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.4);
+}
+
+/* ==========================================================================
+   PREMIUM CHANNEL COLORS - Event Pills
+   ========================================================================== */
+
+/* Influencer/Celebrity - Gold */
+.event-influencer {
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.9), rgba(245, 158, 11, 0.85)) !important;
+    border-radius: 6px !important;
+}
+
+/* Physical Media - Emerald */
+.event-physical_media {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.9), rgba(5, 150, 105, 0.85)) !important;
+    border-radius: 6px !important;
+}
+
+/* Events - Violet */
+.event-events {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.9), rgba(124, 58, 237, 0.85)) !important;
+    border-radius: 6px !important;
+}
+
+/* Radio - Coral */
+.event-radio {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.9), rgba(220, 38, 38, 0.85)) !important;
+    border-radius: 6px !important;
+}
+
+/* Paid Traffic - Blue */
+.event-paid_traffic {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.9), rgba(37, 99, 235, 0.85)) !important;
+    border-radius: 6px !important;
+}
+
+/* Flyers - Green */
+.event-flyers {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.9), rgba(22, 163, 74, 0.85)) !important;
+    border-radius: 6px !important;
+}
+
+/* Partnerships - Yellow/Gold */
+.event-partnerships {
+    background: linear-gradient(135deg, rgba(234, 179, 8, 0.9), rgba(202, 138, 4, 0.85)) !important;
+    border-radius: 6px !important;
+}
+
+/* Social Media - Cyan */
+.event-social_media {
+    background: linear-gradient(135deg, rgba(6, 182, 212, 0.9), rgba(8, 145, 178, 0.85)) !important;
+    border-radius: 6px !important;
+}
+
+/* Email Marketing - Indigo */
+.event-email_marketing {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.9), rgba(79, 70, 229, 0.85)) !important;
+    border-radius: 6px !important;
+}
+
+/* Sound Car - Orange */
+.event-sound_car {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.9), rgba(217, 119, 6, 0.85)) !important;
+    border-radius: 6px !important;
+}
+
+/* Promoters - Teal */
+.event-promoters {
+    background: linear-gradient(135deg, rgba(20, 184, 166, 0.9), rgba(13, 148, 136, 0.85)) !important;
+    border-radius: 6px !important;
+}
+
+/* ==========================================================================
+   MULTI-DAY EVENTS - Continuous Pills
+   ========================================================================== */
+
+.rbc-event-continues-prior {
+    border-top-left-radius: 0 !important;
+    border-bottom-left-radius: 0 !important;
+    margin-left: 0 !important;
+}
+
+.rbc-event-continues-after {
+    border-top-right-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+    margin-right: 0 !important;
+}
+
+/* ==========================================================================
+   CLICKABLE EVENTS - Client Portal Interactivity
+   ========================================================================== */
+
+.client-portal-calendar .rbc-event {
+    cursor: pointer !important;
+    transition: transform 0.15s ease, box-shadow 0.15s ease !important;
+}
+
+.client-portal-calendar .rbc-event:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+}

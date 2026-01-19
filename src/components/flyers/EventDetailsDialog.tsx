@@ -29,6 +29,7 @@ import { cn } from '@/lib/utils';
 import { getStatusLabel } from '@/utils/calendarHelpers';
 import { useFlyerAssignments, useCreateFlyerAssignment, useDeleteFlyerAssignment } from '@/hooks/useFlyers';
 import { useToast } from '@/hooks/use-toast';
+import { formatCurrency } from '@/utils/formatters';
 
 interface EventDetailsDialogProps {
     open: boolean;
@@ -38,6 +39,8 @@ interface EventDetailsDialogProps {
     onDuplicate?: (event: FlyerEvent) => void;
     editingEvent?: FlyerEvent | null;
     campaignId: string;
+    campaignStartDate?: string;
+    campaignEndDate?: string;
     initialDate?: Date;
 }
 
@@ -49,21 +52,55 @@ export function EventDetailsDialog({
     onDuplicate,
     editingEvent,
     campaignId,
+    campaignStartDate,
+    campaignEndDate,
     initialDate,
 }: EventDetailsDialogProps) {
     const { toast } = useToast();
-    const [selectedDate, setSelectedDate] = useState<Date | undefined>();
+    const [selectedDate, setSelectedDate] = useState<Date | undefined>(() => {
+        if (!editingEvent && !initialDate) {
+            const saved = localStorage.getItem('flyerEventDraft');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    if (parsed.eventDate) return new Date(parsed.eventDate + 'T00:00:00');
+                } catch { }
+            }
+        }
+        return initialDate || undefined;
+    });
 
-    const [formData, setFormData] = useState({
-        eventDate: '',
-        startTime: '',
-        endTime: '',
-        location: '',
-        numPeople: 4,
-        hourlyRate: 20,
-        shiftDuration: 4,
-        notes: '',
-        status: 'planned' as FlyerEvent['status'],
+    const [formData, setFormData] = useState(() => {
+        if (!editingEvent) {
+            const saved = localStorage.getItem('flyerEventDraft');
+            if (saved && !initialDate) { // Only load draft if not explicitly creating from a calendar date click force
+                try {
+                    const parsed = JSON.parse(saved);
+                    return {
+                        ...parsed,
+                        // Ensure optional fields fallback
+                        startTime: parsed.startTime || '',
+                        endTime: parsed.endTime || '',
+                        location: parsed.location || '',
+                        notes: parsed.notes || '',
+                    };
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+        }
+
+        return {
+            eventDate: '',
+            startTime: '',
+            endTime: '',
+            location: '',
+            numPeople: 4,
+            hourlyRate: 20,
+            shiftDuration: 4,
+            notes: '',
+            status: 'planned' as FlyerEvent['status'],
+        };
     });
 
     // Assignments state
@@ -75,6 +112,13 @@ export function EventDetailsDialog({
     const { data: assignments = [] } = useFlyerAssignments(editingEvent?.id || null);
     const createAssignment = useCreateFlyerAssignment();
     const deleteAssignment = useDeleteFlyerAssignment();
+
+    // Fetch campaign details to validate dates
+    // Assuming we don't have direct access to campaign dates here easily via props (only ID passed).
+    // Ideally we should pass campaign start/end via props for validation, or fetch it.
+    // For now, checking if we can get it from context or just validate present/future if no campaign data.
+    // Actually, looking at FlyerManager, it passes `selectedCampaign.id` but not the object.
+    // We will implement basic validations first.
 
     useEffect(() => {
         if (editingEvent) {
@@ -94,21 +138,19 @@ export function EventDetailsDialog({
             const dateStr = format(initialDate, 'yyyy-MM-dd');
             setFormData(prev => ({ ...prev, eventDate: dateStr }));
             setSelectedDate(initialDate);
-        } else {
-            setFormData({
-                eventDate: '',
-                startTime: '',
-                endTime: '',
-                location: '',
-                numPeople: 4,
-                hourlyRate: 20,
-                shiftDuration: 4,
-                notes: '',
-                status: 'planned',
-            });
-            setSelectedDate(undefined);
         }
+        // We rely on initializer for draft loading
     }, [editingEvent, initialDate, open]);
+
+    // Auto-save draft
+    useEffect(() => {
+        if (!editingEvent && open && !initialDate) {
+            localStorage.setItem('flyerEventDraft', JSON.stringify({
+                ...formData,
+                eventDate: selectedDate ? format(selectedDate, 'yyyy-MM-dd') : ''
+            }));
+        }
+    }, [formData, selectedDate, editingEvent, open, initialDate]);
 
     const calculatedCost = formData.numPeople * formData.hourlyRate * formData.shiftDuration;
 
@@ -116,8 +158,25 @@ export function EventDetailsDialog({
         e.preventDefault();
 
         if (!selectedDate) {
-            alert('Por favor, selecione uma data');
+            toast({
+                title: 'Data obrigatória',
+                description: 'Por favor, selecione a data do evento.',
+                variant: 'destructive',
+            });
             return;
+        }
+
+        // Validate Date Range
+        if (campaignStartDate && campaignEndDate) {
+            const dateStr = format(selectedDate, 'yyyy-MM-dd');
+            if (dateStr < campaignStartDate || dateStr > campaignEndDate) {
+                toast({
+                    title: 'Data fora do período',
+                    description: `O evento deve ocorrer entre ${format(new Date(campaignStartDate), 'dd/MM/yyyy')} e ${format(new Date(campaignEndDate), 'dd/MM/yyyy')}.`,
+                    variant: 'destructive',
+                });
+                return;
+            }
         }
 
         onSave({
@@ -132,6 +191,26 @@ export function EventDetailsDialog({
             notes: formData.notes || undefined,
             status: formData.status,
         });
+
+        // Clear draft
+        if (!editingEvent) {
+            localStorage.removeItem('flyerEventDraft');
+            if (!initialDate) {
+                setFormData({
+                    eventDate: '',
+                    startTime: '',
+                    endTime: '',
+                    location: '',
+                    numPeople: 4,
+                    hourlyRate: 20,
+                    shiftDuration: 4,
+                    notes: '',
+                    status: 'planned' as FlyerEvent['status'],
+                });
+                setSelectedDate(undefined);
+            }
+        }
+
         onClose();
     };
 
@@ -185,12 +264,7 @@ export function EventDetailsDialog({
         }
     };
 
-    const formatCurrency = (value: number) => {
-        return new Intl.NumberFormat('pt-BR', {
-            style: 'currency',
-            currency: 'BRL',
-        }).format(value);
-    };
+    // formatCurrency removido - usar import de @/utils/formatters
 
     return (
         <Dialog open={open} onOpenChange={onClose}>

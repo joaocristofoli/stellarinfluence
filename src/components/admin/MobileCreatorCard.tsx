@@ -4,22 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Pencil, Trash2, Eye, ExternalLink } from "lucide-react";
+import { Creator } from "@/types/creator";
 
-type Creator = {
-    id: string;
-    name: string;
-    slug: string;
-    category: string;
-    total_followers: string;
-    engagement_rate: string;
-    image_url?: string;
-    instagram_active: boolean;
-    youtube_active: boolean;
-    tiktok_active: boolean;
-    twitter_active: boolean;
-    kwai_active: boolean;
-    kwai_followers: string;
-};
 
 interface MobileCreatorCardProps {
     creator: Creator;
@@ -76,7 +62,7 @@ export function MobileCreatorCard({ creator, onDelete }: MobileCreatorCardProps)
                                 </div>
                                 <div>
                                     <span className="text-muted-foreground">Eng: </span>
-                                    <span className="font-medium">{creator.engagement_rate}</span>
+                                    <span className="font-medium">{creator.engagement_rate || '-'}</span>
                                 </div>
                                 {creator.kwai_active && (
                                     <div>

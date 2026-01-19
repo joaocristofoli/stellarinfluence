@@ -177,6 +177,38 @@ export function useFlyerEvents(campaignId: string | null) {
     });
 }
 
+/**
+ * Hook para buscar TODOS os eventos de flyers de uma empresa
+ * Usa join com flyer_campaigns para filtrar por company_id
+ */
+export function useFlyerEventsByCompany(companyId: string | null) {
+    return useQuery({
+        queryKey: ['flyer-events-by-company', companyId],
+        queryFn: async () => {
+            if (!companyId) return [];
+
+            const { data, error } = await supabase
+                .from('flyer_events')
+                .select(`
+                    *,
+                    flyer_campaigns!inner(company_id, name, color)
+                `)
+                .eq('flyer_campaigns.company_id', companyId)
+                .order('event_date', { ascending: true });
+
+            if (error) throw error;
+
+            return data.map(row => ({
+                ...mapDbToEvent(row),
+                campaignName: row.flyer_campaigns?.name,
+                campaignColor: row.flyer_campaigns?.color,
+            }));
+        },
+        enabled: !!companyId,
+        staleTime: 1000 * 60 * 2, // 2 minutos de cache
+    });
+}
+
 export function useCreateFlyerEvent() {
     const queryClient = useQueryClient();
 

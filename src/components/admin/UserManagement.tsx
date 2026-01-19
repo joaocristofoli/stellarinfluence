@@ -28,6 +28,14 @@ interface UserData {
     email_confirmed_at: string | null;
 }
 
+// VULN-001 FIX: Lista de Super Admins protegidos (não podem ter permissões alteradas)
+const SUPER_ADMIN_EMAILS = [
+    'contatojoaochristofoli@gmail.com',
+] as const;
+
+const isSuperAdmin = (email: string): boolean =>
+    SUPER_ADMIN_EMAILS.includes(email as typeof SUPER_ADMIN_EMAILS[number]);
+
 export function UserManagement() {
     const { user: currentUser } = useAuth();
     const [users, setUsers] = useState<UserData[]>([]);
@@ -54,7 +62,7 @@ export function UserManagement() {
     }, []);
 
     const handleToggleAdmin = async (targetUser: UserData) => {
-        if (targetUser.email === 'contatojoaochristofoli@gmail.com') {
+        if (isSuperAdmin(targetUser.email)) {
             toast.error("Não é possível alterar o Super Admin");
             return;
         }
@@ -147,7 +155,7 @@ export function UserManagement() {
                                     )}
                                 </TableCell>
                                 <TableCell className="text-right">
-                                    {u.email !== 'contatojoaochristofoli@gmail.com' && (
+                                    {!isSuperAdmin(u.email) && (
                                         <div className="flex justify-end gap-2">
                                             {!u.email_confirmed_at && (
                                                 <Button
@@ -202,7 +210,7 @@ export function UserManagement() {
                                             </AlertDialog>
                                         </div>
                                     )}
-                                    {u.email === 'contatojoaochristofoli@gmail.com' && (
+                                    {isSuperAdmin(u.email) && (
                                         <span className="text-xs text-muted-foreground italic">
                                             Super Admin
                                         </span>
