@@ -58,6 +58,8 @@ export interface MarketingStrategy {
     // Calendar fields
     startDate?: Date | null;
     endDate?: Date | null;
+    contentFormat?: string; // Phase 23: Format (Story, Feed, etc)
+    is_draft?: boolean; // Phase 24: Ghost Mode
     // Phase 3: Detailed Financials
     mediaBudget?: number;
     agencyFeePercentage?: number;
@@ -66,6 +68,50 @@ export interface MarketingStrategy {
     version?: number;
     // Multi-influencer support
     linkedCreatorIds?: string[];
+    // Vinculação com eventos de panfletagem (para channelType: 'flyers')
+    linkedFlyerEventIds?: string[];
+    updatedAt: Date;
+}
+
+export interface StrategyDeliverable {
+    creatorId: string;
+    format: string; // 'story', 'reels', etc.
+    price: number;
+    platform?: 'instagram' | 'tiktok' | 'youtube';
+    date?: Date;
+    status?: 'pending' | 'approved' | 'posted';
+    quantity?: number;
+}
+
+export interface MarketingStrategy {
+    id: string;
+    companyId: string;
+    campaignId: string | null;
+    name: string;
+    channelType: ChannelType;
+    budget: number;
+    responsible: string;
+    description: string;
+    howToDo: string;
+    whenToDo: string;
+    whyToDo: string;
+    connections: string[];
+    status: 'planned' | 'in_progress' | 'completed';
+    // Calendar fields
+    startDate?: Date | null;
+    endDate?: Date | null;
+    contentFormat?: string; // Legacy (kept for backward compatibility during migration)
+    is_draft?: boolean; // Phase 24: Ghost Mode
+    // Phase 3: Detailed Financials
+    mediaBudget?: number;
+    agencyFeePercentage?: number;
+    agencyFeeValue?: number;
+    taxRate?: number;
+    version?: number;
+    // Multi-influencer support
+    linkedCreatorIds?: string[];
+    // Cart Architecture (New) 🛒
+    deliverables?: StrategyDeliverable[];
     // Vinculação com eventos de panfletagem (para channelType: 'flyers')
     linkedFlyerEventIds?: string[];
     createdAt: Date;

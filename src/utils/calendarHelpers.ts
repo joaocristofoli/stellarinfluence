@@ -1,168 +1,100 @@
-import { FlyerEvent, CalendarDay, CampaignStats } from '@/types/flyer';
+import { MarketingStrategy } from '@/types/marketing';
+import { areIntervalsOverlapping, isSameDay } from 'date-fns';
 
 /**
- * Gera array de dias para visualização em calendário mensal
- * Inclui dias do mês anterior e próximo para preencher grid 7x6
+ * Detecta conflitos de agenda para o MESMO creator.
+ * Retorna true se houver sobreposição.
  */
-export function generateCalendarDays(year: number, month: number): CalendarDay[] {
-    const days: CalendarDay[] = [];
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
+export function checkOverlap(
+    currentStrategy: MarketingStrategy,
+    allStrategies: MarketingStrategy[]
+): boolean {
+    // Se não tiver data ou creator, não tem conflito
+    if (!currentStrategy.startDate || !currentStrategy.linkedCreatorIds?.length) return false;
 
-    // Dia da semana do primeiro dia (0 = domingo)
-    const startDayOfWeek = firstDay.getDay();
+    const currentStart = new Date(currentStrategy.startDate);
+    const currentEnd = currentStrategy.endDate ? new Date(currentStrategy.endDate) : currentStart;
 
-    // Adicionar dias do mês anterior
-    const prevMonthLastDay = new Date(year, month, 0).getDate();
-    for (let i = startDayOfWeek - 1; i >= 0; i--) {
-        const date = new Date(year, month - 1, prevMonthLastDay - i);
-        days.push({
-            date,
-            isCurrentMonth: false,
-            events: [],
-        });
-    }
+    // Normalizar datas para início/fim do dia para garantir overlap mesmo em eventos "All Day"
+    currentStart.setHours(0, 0, 0, 0);
+    currentEnd.setHours(23, 59, 59, 999);
 
-    // Adicionar dias do mês atual
-    for (let day = 1; day <= lastDay.getDate(); day++) {
-        const date = new Date(year, month, day);
-        days.push({
-            date,
-            isCurrentMonth: true,
-            events: [],
-        });
-    }
+    return allStrategies.some(other => {
+        // Ignora a si mesmo
+        if (other.id === currentStrategy.id) return false;
 
-    // Adicionar dias do próximo mês para completar 42 células (6 semanas)
-    const remainingDays = 42 - days.length;
-    for (let day = 1; day <= remainingDays; day++) {
-        const date = new Date(year, month + 1, day);
-        days.push({
-            date,
-            isCurrentMonth: false,
-            events: [],
-        });
-    }
+        // Ignora se não tiver creators em comum
+        const hasSharedCreator = other.linkedCreatorIds?.some(id =>
+            currentStrategy.linkedCreatorIds.includes(id)
+        );
+        if (!hasSharedCreator) return false;
 
-    return days;
-}
+        if (!other.startDate) return false;
 
-/**
- * Agrupa eventos por data (YYYY-MM-DD)
- */
-export function groupEventsByDate(events: FlyerEvent[]): Map<string, FlyerEvent[]> {
-    const grouped = new Map<string, FlyerEvent[]>();
+        const otherStart = new Date(other.startDate);
+        const otherEnd = other.endDate ? new Date(other.endDate) : otherStart;
 
-    events.forEach(event => {
-        const dateKey = event.eventDate; // Já está em formato ISO
-        if (!grouped.has(dateKey)) {
-            grouped.set(dateKey, []);
-        }
-        grouped.get(dateKey)!.push(event);
+        otherStart.setHours(0, 0, 0, 0);
+        otherEnd.setHours(23, 59, 59, 999);
+
+        // Check Overlap
+        return areIntervalsOverlapping(
+            { start: currentStart, end: currentEnd },
+            { start: otherStart, end: otherEnd }
+        );
     });
-
-    return grouped;
 }
 
 /**
- * Calcula estatísticas de uma campanha
+ * Calcula o consumo do budget total e por dia.
  */
-export function calculateCampaignStats(events: FlyerEvent[]): CampaignStats {
-    const totalCost = events.reduce((sum, e) => sum + e.dayCost, 0);
-    const totalDays = new Set(events.map(e => e.eventDate)).size;
-    const totalPeople = events.reduce((sum, e) => sum + e.numPeople, 0);
-    const completedEvents = events.filter(e => e.status === 'completed').length;
-    const plannedEvents = events.filter(e => e.status === 'planned').length;
+export interface BudgetBurnStatus {
+    totalBudget: number;
+    usedBudget: number;
+    remainingBudget: number;
+    usagePercent: number;
+    status: 'safe' | 'warning' | 'critical';
+}
+
+export function calculateBudgetBurn(
+    strategies: MarketingStrategy[],
+    totalCampaignBudget: number
+): BudgetBurnStatus {
+    const usedBudget = strategies.reduce((acc, s) => acc + (s.budget || 0), 0);
+    const remainingBudget = totalCampaignBudget - usedBudget;
+
+    let usagePercent = 0;
+    if (totalCampaignBudget > 0) {
+        usagePercent = (usedBudget / totalCampaignBudget) * 100;
+    } else if (usedBudget > 0) {
+        // Se não tem budget definido mas gastou, é 100% critical? Ou infito?
+        // Vamos considerar 100% visualmente se não houver teto definido
+        usagePercent = 100;
+    }
+
+    let status: 'safe' | 'warning' | 'critical' = 'safe';
+    if (usagePercent >= 100) status = 'critical';
+    else if (usagePercent > 80) status = 'warning';
 
     return {
-        totalCost,
-        totalDays,
-        totalPeople,
-        avgCostPerDay: totalDays > 0 ? totalCost / totalDays : 0,
-        completedEvents,
-        plannedEvents,
+        totalBudget: totalCampaignBudget,
+        usedBudget,
+        remainingBudget,
+        usagePercent,
+        status
     };
 }
 
 /**
- * Formata data para string legível (ex: "16 de Janeiro")
+ * Retorna o label legível para o status.
  */
-export function formatDateBr(dateString: string): string {
-    const date = new Date(dateString + 'T00:00:00');
-    const months = [
-        'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-        'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-    ];
-
-    return `${date.getDate()} de ${months[date.getMonth()]}`;
-}
-
-/**
- * Formata horário (HH:mm)
- */
-export function formatTime(time?: string): string {
-    if (!time) return '--:--';
-    return time.substring(0, 5); // HH:mm
-}
-
-/**
- * Retorna cor de status
- */
-export function getStatusColor(status: FlyerEvent['status']): string {
-    switch (status) {
-        case 'completed':
-            return '#10b981'; // green
-        case 'in_progress':
-            return '#f59e0b'; // orange
-        case 'cancelled':
-            return '#ef4444'; // red
-        case 'planned':
-        default:
-            return '#6b7280'; // gray
-    }
-}
-
-/**
- * Retorna label de status em português
- */
-export function getStatusLabel(status: FlyerEvent['status']): string {
-    switch (status) {
-        case 'completed':
-            return 'Concluído';
-        case 'in_progress':
-            return 'Em Andamento';
-        case 'cancelled':
-            return 'Cancelado';
-        case 'planned':
-        default:
-            return 'Planejado';
-    }
-}
-
-/**
- * Converte Date para string ISO date (YYYY-MM-DD)
- */
-export function dateToISOString(date: Date): string {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-}
-
-/**
- * Verifica se duas datas são do mesmo dia
- */
-export function isSameDay(date1: Date, date2: Date): boolean {
-    return (
-        date1.getFullYear() === date2.getFullYear() &&
-        date1.getMonth() === date2.getMonth() &&
-        date1.getDate() === date2.getDate()
-    );
-}
-
-/**
- * Verifica se uma data é hoje
- */
-export function isToday(date: Date): boolean {
-    return isSameDay(date, new Date());
+export function getStatusLabel(status: string): string {
+    const labels: Record<string, string> = {
+        planned: 'Planejado',
+        in_progress: 'Em Andamento',
+        completed: 'Concluído',
+        cancelled: 'Cancelado',
+        draft: 'Rascunho'
+    };
+    return labels[status] || status;
 }

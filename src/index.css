@@ -167,11 +167,21 @@ All colors MUST be HSL.
     -webkit-text-fill-color: transparent;
   }
 
+  .bg-gradient-hero {
+    background-image: var(--gradient-hero);
+  }
+
   .text-gradient-premium {
     @apply bg-clip-text text-transparent;
     background-image: var(--gradient-premium);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+    animation: gradient-shift 8s ease infinite;
+    background-size: 200% 200%;
+  }
+
+  .bg-gradient-premium {
+    background-image: var(--gradient-premium);
     animation: gradient-shift 8s ease infinite;
     background-size: 200% 200%;
   }

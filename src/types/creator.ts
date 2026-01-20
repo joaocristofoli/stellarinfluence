@@ -66,6 +66,9 @@ export interface Creator {
     outdoor_lighting?: boolean;
     min_period?: string;
     gps_coordinates?: string;
+
+    // Admin Metadata (Internal)
+    admin_metadata?: Record<string, any>;
 }
 
 /**

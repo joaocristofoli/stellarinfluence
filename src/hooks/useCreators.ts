@@ -24,7 +24,9 @@ export function useCreators(approvedOnly: boolean = false) {
                     instagram_url, 
                     tiktok_url, 
                     youtube_url,
-                    approval_status
+                    youtube_url,
+                    approval_status,
+                    admin_metadata
                 `);
 
             if (approvedOnly) {
@@ -63,7 +65,7 @@ export function useCreator(creatorId: string | null) {
                 .single();
 
             if (error) throw error;
-            return data as Creator;
+            return data as unknown as Creator;
         },
         enabled: !!creatorId,
     });

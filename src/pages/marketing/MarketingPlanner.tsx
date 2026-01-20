@@ -34,6 +34,7 @@ import { exportContract } from '@/utils/exportContract';
 // FlyerIntegrationCard REMOVIDO - Flyers agora integrados no CampaignCalendar unificado
 import { CampaignCalendar } from '@/components/marketing/CampaignCalendar';
 import { BigCalendarView } from '@/components/marketing/BigCalendarView';
+import { CalendarToolbar } from '@/components/marketing/CalendarToolbar'; // Added Toolbar
 import { useFlyerEventsByCompany, useUpdateFlyerEvent } from '@/hooks/useFlyers';
 import { EventDetailsDialog } from '@/components/flyers/EventDetailsDialog';
 import { FlyerEvent } from '@/types/flyer';
@@ -85,6 +86,8 @@ const MarketingPlanner = () => {
 
     // Selected date for pre-filling form when clicking on calendar
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+    const [currentDate, setCurrentDate] = useState<Date>(new Date());
+
 
     // State for editing flyer events inline
     const [selectedFlyerEvent, setSelectedFlyerEvent] = useState<FlyerEvent | null>(null);
@@ -723,19 +726,43 @@ const MarketingPlanner = () => {
                                 onAction={strategies.length === 0 ? () => setFormOpen(true) : undefined}
                             />
                         ) : viewMode === 'calendar' ? (
-                            <BigCalendarView
-                                strategies={filteredStrategies}
-                                onStrategyClick={handleEditStrategy}
-                                onDateClick={(date) => {
-                                    setEditingStrategy(null);
-                                    setSelectedDate(date);
-                                    setFormOpen(true);
-                                }}
-                                showCosts={true}
-                                currentDate={new Date()}
-                                onNavigate={() => { }}
-                                onEventDrop={handleEventDrop}
-                            />
+                            <div className="bg-black/20 rounded-xl border border-white/5 p-4 md:p-6 backdrop-blur-sm shadow-2xl">
+                                {/* Toolbar Premium */}
+                                <CalendarToolbar
+                                    totalBudget={activeCampaign ? (activeCampaign as any).totalBudget || totalBudget : totalBudget}
+                                    onExport={handleExport}
+                                    onViewChange={(v) => console.log(v)}
+                                    currentView="month"
+                                    date={currentDate}
+                                    onNavigate={(action) => {
+                                        const newDate = new Date(currentDate);
+                                        if (action === 'TODAY') {
+                                            setCurrentDate(new Date());
+                                        } else if (action === 'PREV') {
+                                            newDate.setMonth(newDate.getMonth() - 1);
+                                            setCurrentDate(newDate);
+                                        } else if (action === 'NEXT') {
+                                            newDate.setMonth(newDate.getMonth() + 1);
+                                            setCurrentDate(newDate);
+                                        }
+                                    }}
+                                />
+
+                                <BigCalendarView
+                                    strategies={filteredStrategies}
+                                    companyId={selectedCompany.id}
+                                    currentDate={currentDate}
+                                    onNavigate={(date) => setCurrentDate(date)}
+                                    onStrategyClick={handleEditStrategy}
+                                    onCreateRange={(start, end) => {
+                                        setEditingStrategy(null);
+                                        setSelectedDate(start);
+                                        // TODO: Pass 'end' to form via state store or prop
+                                        setFormOpen(true);
+                                        toast({ title: "Bora criar! 🚀", description: "Selecione os detalhes da nova ação." });
+                                    }}
+                                />
+                            </div>
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 {filteredStrategies.map(strategy => (

@@ -29,6 +29,7 @@ import {
 } from '@/components/ui/select';
 import { MarketingCampaign } from '@/types/marketing';
 import { Calendar } from '@/components/ui/calendar';
+import { DatePickerWithRange } from '@/components/ui/date-range-picker';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
@@ -149,64 +150,22 @@ export function CampaignForm({
                             />
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label>Data de Início</Label>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button
-                                            variant="outline"
-                                            className={cn(
-                                                'w-full justify-start text-left font-normal',
-                                                !formData.startDate && 'text-muted-foreground'
-                                            )}
-                                        >
-                                            <CalendarIcon className="mr-2 h-4 w-4" />
-                                            {formData.startDate
-                                                ? format(formData.startDate, 'dd/MM/yyyy', { locale: ptBR })
-                                                : 'Selecione'}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="start">
-                                        <Calendar
-                                            mode="single"
-                                            selected={formData.startDate || undefined}
-                                            onSelect={(date) => setFormData(prev => ({ ...prev, startDate: date || null }))}
-                                            initialFocus
-                                            locale={ptBR}
-                                        />
-                                    </PopoverContent>
-                                </Popover>
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label>Data de Fim</Label>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button
-                                            variant="outline"
-                                            className={cn(
-                                                'w-full justify-start text-left font-normal',
-                                                !formData.endDate && 'text-muted-foreground'
-                                            )}
-                                        >
-                                            <CalendarIcon className="mr-2 h-4 w-4" />
-                                            {formData.endDate
-                                                ? format(formData.endDate, 'dd/MM/yyyy', { locale: ptBR })
-                                                : 'Selecione'}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="start">
-                                        <Calendar
-                                            mode="single"
-                                            selected={formData.endDate || undefined}
-                                            onSelect={(date) => setFormData(prev => ({ ...prev, endDate: date || null }))}
-                                            initialFocus
-                                            locale={ptBR}
-                                        />
-                                    </PopoverContent>
-                                </Popover>
-                            </div>
+                        <div className="space-y-2">
+                            <Label>Período da Campanha</Label>
+                            <DatePickerWithRange
+                                date={
+                                    formData.startDate && formData.endDate
+                                        ? { from: formData.startDate, to: formData.endDate }
+                                        : undefined
+                                }
+                                setDate={(range) => {
+                                    setFormData(prev => ({
+                                        ...prev,
+                                        startDate: range?.from || null,
+                                        endDate: range?.to || null
+                                    }));
+                                }}
+                            />
                         </div>
 
                         <div className="space-y-2">

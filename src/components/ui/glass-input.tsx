@@ -61,14 +61,14 @@ const GlassInput = React.forwardRef<HTMLInputElement, GlassInputProps>(
                                 // Base
                                 "flex h-12 w-full rounded-lg border px-3 py-2 text-sm transition-all duration-300",
                                 // Glassmorphism - Premium
-                                "bg-white/5 backdrop-blur-md border-white/10 shadow-[inner_0_2px_4px_rgba(0,0,0,0.05)]",
+                                "bg-background/80 backdrop-blur-md border-input shadow-[inner_0_2px_4px_rgba(0,0,0,0.05)]",
                                 // Typography & Colors
                                 "text-foreground placeholder:text-muted-foreground/70 file:border-0 file:bg-transparent file:text-sm file:font-medium",
                                 // Spacing
                                 icon ? "pl-10" : "pl-4",
                                 (rightIcon || isError || isSuccess) ? "pr-10" : "pr-4",
                                 // Focus States (Glow instead of ring)
-                                "focus-visible:outline-none focus:border-accent/50 focus:bg-white/10 dark:focus:bg-black/20 focus:shadow-[0_0_20px_rgba(255,107,53,0.15)]",
+                                "focus-visible:outline-none focus:border-accent/50 focus:bg-background dark:focus:bg-black/20 focus:shadow-[0_0_20px_rgba(255,107,53,0.15)]",
                                 // Error/Success States
                                 isError && "border-destructive/50 text-destructive focus:border-destructive focus:shadow-[0_0_20px_rgba(239,68,68,0.15)]",
                                 isSuccess && "border-green-500/50 text-green-500 focus:border-green-500 focus:shadow-[0_0_20px_rgba(34,197,94,0.15)]",

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -36,12 +36,17 @@ import {
     Sparkles, Loader2, Users, FolderKanban, Calendar as CalendarIcon,
     AlertTriangle, DollarSign, PieChart, Clock, AlignLeft, LayoutGrid, Lock
 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { useCreators } from '@/hooks/useCreators';
+
+import { useToast } from "@/hooks/use-toast";
+import { useCreators } from "@/hooks/useCreators";
+import { PROFILE_CATEGORIES } from "@/types/profileTypes";
 import { Creator } from '@/types/creator';
 import { CurrencyInput } from '@/components/ui/CurrencyInput';
 import { GlassInput } from '@/components/ui/glass-input';
 import { motion, AnimatePresence } from "framer-motion";
+import { CreatorCartItem } from './CreatorCartItem';
+import { StrategyDeliverable } from '@/types/marketing';
+import { formatCurrency } from '@/utils/formatters';
 import {
     Tooltip,
     TooltipContent,
@@ -75,6 +80,66 @@ const channelTypes: ChannelType[] = [
     'promoters',
 ];
 
+// ⚡ PERFORMANCE FIX: Debounced Input to prevent re-rendering the whole form on every keystroke
+const DebouncedGlassInput = ({ value, onChange, delay = 300, ...props }: any) => {
+    const [localValue, setLocalValue] = useState(value);
+    const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    useEffect(() => {
+        setLocalValue(value);
+    }, [value]);
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newValue = e.target.value;
+        setLocalValue(newValue);
+
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+
+        timeoutRef.current = setTimeout(() => {
+            onChange({ target: { value: newValue } });
+        }, delay);
+    };
+
+    return <GlassInput {...props} value={localValue} onChange={handleChange} />;
+};
+
+const DebouncedTextarea = ({ value, onChange, delay = 300, ...props }: any) => {
+    const [localValue, setLocalValue] = useState(value);
+    const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    useEffect(() => {
+        setLocalValue(value);
+    }, [value]);
+
+    const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        const newValue = e.target.value;
+        setLocalValue(newValue);
+
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+
+        timeoutRef.current = setTimeout(() => {
+            onChange({ target: { value: newValue } });
+        }, delay);
+    };
+
+
+    return <Textarea {...props} value={localValue} onChange={handleChange} />;
+};
+
+const TabContainer = ({ children, value }: { children: React.ReactNode; value: string }) => (
+    <TabsContent value={value} className="mt-0 focus-visible:ring-0">
+        <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+            className="space-y-6 pt-4 px-1"
+        >
+            {children}
+        </motion.div>
+    </TabsContent>
+);
+
 export function StrategyForm({
     open,
     onClose,
@@ -104,11 +169,40 @@ export function StrategyForm({
         agencyFeePercentage: 0,
         taxRate: 6,
         mediaBudget: 0,
+        contentFormat: '' as string, // Kept for legacy compatibility
+        deliverables: [] as StrategyDeliverable[], // New Cart System 🛒
     });
 
     const [activeTab, setActiveTab] = useState("general");
+    const [creatorFilter, setCreatorFilter] = useState<string>('all');
+    const { toast } = useToast();
+    const { data: creators = [], isLoading: loadingCreators } = useCreators(true);
 
-    // Phase 3: Financial Calculation Logic
+    // Auto-Pricing Logic (Cart Version) 🛒
+    useEffect(() => {
+        // Auto-sum items in the cart
+        const cartTotal = formData.deliverables.reduce((acc, item) => acc + item.price, 0);
+
+        // Only auto-update if total > 0.
+        // If the user manually edits the budget, we might want to respect that, 
+        // BUT for the "Cart" model, the budget is usually the sum of items.
+        // We will FORCE the budget to match the cart for now to ensure consistency.
+        if (cartTotal > 0) {
+            setFormData(prev => ({ ...prev, budget: cartTotal }));
+        }
+    }, [formData.deliverables]);
+
+    // Memoize Filtered Creators List 🧠
+    // This was the performance killer (re-calculating on every keystroke)
+    const filteredCreators = useMemo(() => {
+        return creators.filter(c =>
+            creatorFilter === 'all' ||
+            (c.category && c.category.toLowerCase().includes(creatorFilter)) ||
+            (c as any).profile_type === creatorFilter
+        );
+    }, [creators, creatorFilter]);
+
+    // Financial Calculation Logic
     useEffect(() => {
         const total = Number(formData.budget);
         const fee = total * (formData.agencyFeePercentage / 100);
@@ -121,46 +215,71 @@ export function StrategyForm({
         });
     }, [formData.budget, formData.agencyFeePercentage, formData.taxRate]);
 
-    const { toast } = useToast();
     const [aiLoading, setAiLoading] = useState(false);
     const [showAiDialog, setShowAiDialog] = useState(false);
-    const { data: creators = [], isLoading: loadingCreators } = useCreators(true);
     const [errors, setErrors] = useState<Record<string, string>>({});
 
     const handleCreatorSelect = (creatorId: string) => {
         const creator = creators.find(c => c.id === creatorId);
         if (!creator) return;
 
-        if (formData.linkedCreatorIds.includes(creatorId)) {
-            toast({
-                title: "Já vinculado",
-                description: `${creator.name} já está vinculado.`,
-                variant: "destructive",
-            });
-            return;
+        // Allow multiple formats for same creator? Yes.
+        // But maybe warn if adding duplicate? 
+
+        // Default Format Logic
+        const defaultFormat = 'story';
+        let initialPrice = 0;
+
+        // Try to find price in metadata
+        if (creator.admin_metadata && creator.admin_metadata[`price_${defaultFormat}`]) {
+            const raw = String(creator.admin_metadata[`price_${defaultFormat}`]);
+            const price = parseFloat(raw.replace(/\./g, '').replace(',', '.'));
+            if (!isNaN(price)) initialPrice = price;
         }
 
-        const newLinkedIds = [...formData.linkedCreatorIds, creatorId];
-        const linkedCreators = newLinkedIds.map(id => creators.find(c => c.id === id)).filter(Boolean) as Creator[];
-        const creatorNames = linkedCreators.map(c => c.name).join(' + ');
-        const categories = [...new Set(linkedCreators.map(c => c.category))].join(', ');
+        const newDeliverable: StrategyDeliverable = {
+            creatorId,
+            format: defaultFormat,
+            price: initialPrice,
+            quantity: 1,
+            status: 'pending'
+        };
+
+        const newDeliverables = [...formData.deliverables, newDeliverable];
+        const uniqueCreatorIds = [...new Set(newDeliverables.map(d => d.creatorId))];
+
+        // Update Name/Description based on cart?
+        // Maybe minimal updates to avoid overwriting user edits.
 
         setFormData(prev => ({
             ...prev,
-            linkedCreatorIds: newLinkedIds,
-            name: linkedCreators.length === 1 ? `Parceria: ${creator.name}` : `Parceria: ${creatorNames}`,
-            responsible: linkedCreators.map(c => c.name).join(', '),
-            description: `Parceria com ${linkedCreators.length} influenciador(es) do nicho ${categories}.\n\nPerfis:\n${linkedCreators.map(c => `• ${c.name}: ${c.instagram_url || c.youtube_url || 'N/A'}`).join('\n')}`,
+            deliverables: newDeliverables,
+            linkedCreatorIds: uniqueCreatorIds, // Keep synced for legacy
             channelType: 'influencer'
         }));
     };
 
-    const handleCreatorRemove = (creatorId: string) => {
-        setFormData(prev => ({
-            ...prev,
-            linkedCreatorIds: prev.linkedCreatorIds.filter(id => id !== creatorId)
-        }));
-    };
+    const handleCreatorRemove = useCallback((index: number) => {
+        setFormData(prev => {
+            const newDeliverables = [...prev.deliverables];
+            newDeliverables.splice(index, 1);
+            const uniqueCreatorIds = [...new Set(newDeliverables.map(d => d.creatorId))];
+
+            return {
+                ...prev,
+                deliverables: newDeliverables,
+                linkedCreatorIds: uniqueCreatorIds
+            }
+        });
+    }, []);
+
+    const handleDeliverableUpdate = useCallback((index: number, updated: StrategyDeliverable) => {
+        setFormData(prev => {
+            const newDeliverables = [...prev.deliverables];
+            newDeliverables[index] = updated;
+            return { ...prev, deliverables: newDeliverables };
+        });
+    }, []);
 
     const handleGenerateAI = async () => {
         if (!formData.channelType) return;
@@ -213,6 +332,14 @@ export function StrategyForm({
                 agencyFeePercentage: editingStrategy.agencyFeePercentage || 0,
                 taxRate: editingStrategy.taxRate || 0,
                 mediaBudget: editingStrategy.mediaBudget || editingStrategy.budget,
+                contentFormat: '', // Default to empty on edit for now
+                // Hydrate Cart
+                deliverables: editingStrategy.deliverables || (editingStrategy.linkedCreatorIds || []).map(id => ({
+                    creatorId: id,
+                    format: 'story', // Default legacy format
+                    price: 0,
+                    status: 'pending'
+                })),
             });
         } else {
             setFormData({
@@ -229,10 +356,11 @@ export function StrategyForm({
                 campaignId: defaultCampaignId,
                 startDate: defaultDate ? defaultDate.toISOString().split('T')[0] : '',
                 endDate: '',
-                linkedCreatorIds: [],
+                deliverables: [],
                 agencyFeePercentage: 0,
                 taxRate: 6,
                 mediaBudget: 0,
+                contentFormat: '',
             });
         }
     }, [editingStrategy, open, defaultCampaignId, defaultDate]);
@@ -263,29 +391,19 @@ export function StrategyForm({
             startDate: formData.startDate ? new Date(formData.startDate) : null,
             endDate: formData.endDate ? new Date(formData.endDate) : null,
             // @ts-ignore
-            creator_snapshots: creatorSnapshots
+            creator_snapshots: creatorSnapshots,
+            deliverables: formData.deliverables // Save Cart 🛒
         });
         onClose();
     };
 
-    const TabContainer = ({ children, value }: { children: React.ReactNode; value: string }) => (
-        <TabsContent value={value} className="mt-0 focus-visible:ring-0">
-            <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.2 }}
-                className="space-y-6 pt-4 px-1"
-            >
-                {children}
-            </motion.div>
-        </TabsContent>
-    );
+    // Moved outside to prevent re-renders
+
 
     return (
         <Dialog open={open} onOpenChange={onClose}>
-            <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col p-0 gap-0 bg-background/95 backdrop-blur-xl border-white/10 overflow-hidden">
-                <DialogHeader className="p-6 pb-2 border-b border-white/5">
+            <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col p-0 gap-0 bg-background border-border overflow-hidden">
+                <DialogHeader className="p-6 pb-2 border-b border-border">
                     <DialogTitle className="font-display text-2xl flex items-center justify-between">
                         <span className="text-gradient-premium">
                             {editingStrategy ? 'Editar Estratégia' : 'Nova Estratégia'}
@@ -297,9 +415,9 @@ export function StrategyForm({
                                     size="sm"
                                     onClick={handleGenerateAI}
                                     disabled={aiLoading}
-                                    className="h-8 text-xs border-purple-500/20 hover:border-purple-500/50 hover:bg-purple-500/10"
+                                    className="h-8 text-xs border-primary/20 hover:border-primary/50 hover:bg-primary/10 text-primary"
                                 >
-                                    {aiLoading ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Sparkles className="w-3 h-3 mr-1 text-purple-400" />}
+                                    {aiLoading ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Sparkles className="w-3 h-3 mr-1 text-primary" />}
                                     IA Magic
                                 </Button>
                             )}
@@ -308,18 +426,18 @@ export function StrategyForm({
                 </DialogHeader>
 
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden flex flex-col">
-                    <div className="px-6 pt-4 border-b border-white/5">
-                        <TabsList className="bg-muted/30 p-1 border border-white/5 w-full justify-start h-auto">
-                            <TabsTrigger value="general" className="data-[state=active]:bg-white/10 data-[state=active]:backdrop-blur px-4 py-2">
+                    <div className="px-6 pt-4 border-b border-border">
+                        <TabsList className="bg-muted/30 p-1 border border-border w-full justify-start h-auto">
+                            <TabsTrigger value="general" className="data-[state=active]:bg-background data-[state=active]:shadow-sm px-4 py-2">
                                 <LayoutGrid className="w-4 h-4 mr-2" /> Geral
                             </TabsTrigger>
-                            <TabsTrigger value="details" className="data-[state=active]:bg-white/10 data-[state=active]:backdrop-blur px-4 py-2">
+                            <TabsTrigger value="details" className="data-[state=active]:bg-background data-[state=active]:shadow-sm px-4 py-2">
                                 <AlignLeft className="w-4 h-4 mr-2" /> Detalhes
                             </TabsTrigger>
-                            <TabsTrigger value="timeline" className="data-[state=active]:bg-white/10 data-[state=active]:backdrop-blur px-4 py-2">
+                            <TabsTrigger value="timeline" className="data-[state=active]:bg-background data-[state=active]:shadow-sm px-4 py-2">
                                 <Clock className="w-4 h-4 mr-2" /> Cronograma
                             </TabsTrigger>
-                            <TabsTrigger value="financial" className="data-[state=active]:bg-white/10 data-[state=active]:backdrop-blur px-4 py-2">
+                            <TabsTrigger value="financial" className="data-[state=active]:bg-background data-[state=active]:shadow-sm px-4 py-2">
                                 <DollarSign className="w-4 h-4 mr-2" /> Financeiro
                             </TabsTrigger>
                         </TabsList>
@@ -329,10 +447,10 @@ export function StrategyForm({
                         <AnimatePresence mode="wait">
                             <TabContainer value="general">
                                 <div className="grid grid-cols-2 gap-6">
-                                    <GlassInput
+                                    <DebouncedGlassInput
                                         label="Nome da Ação"
                                         value={formData.name}
-                                        onChange={e => {
+                                        onChange={(e: any) => {
                                             setFormData(prev => ({ ...prev, name: e.target.value }));
                                             if (errors.name) setErrors(prev => { const n = { ...prev }; delete n.name; return n; });
                                         }}
@@ -346,7 +464,7 @@ export function StrategyForm({
                                             value={formData.channelType}
                                             onValueChange={(v: ChannelType) => setFormData(prev => ({ ...prev, channelType: v }))}
                                         >
-                                            <SelectTrigger className="h-12 bg-white/5 border-white/10 backdrop-blur-md">
+                                            <SelectTrigger className="h-12 bg-background border-input hover:bg-muted/50 transition-colors">
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -362,10 +480,10 @@ export function StrategyForm({
                                     </div>
                                 </div>
 
-                                <GlassInput
+                                <DebouncedGlassInput
                                     label="Responsável"
                                     value={formData.responsible}
-                                    onChange={e => setFormData(prev => ({ ...prev, responsible: e.target.value }))}
+                                    onChange={(e: any) => setFormData(prev => ({ ...prev, responsible: e.target.value }))}
                                     icon={<Users className="w-4 h-4" />}
                                 />
 
@@ -376,7 +494,7 @@ export function StrategyForm({
                                             value={formData.campaignId || 'none'}
                                             onValueChange={(v) => setFormData(prev => ({ ...prev, campaignId: v === 'none' ? null : v }))}
                                         >
-                                            <SelectTrigger className="h-12 bg-white/5 border-white/10 backdrop-blur-md">
+                                            <SelectTrigger className="h-12 bg-background border-input hover:bg-muted/50 transition-colors">
                                                 <SelectValue placeholder="Selecione..." />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -389,48 +507,87 @@ export function StrategyForm({
                                     </div>
                                 )}
 
-                                {/* Creator Linking Section */}
-                                <div className="p-4 rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm space-y-3">
+                                {/* Creator Cart Section 🛒 */}
+                                <div className="space-y-4">
                                     <div className="flex items-center justify-between">
-                                        <Label className="flex items-center gap-2 text-primary">
+                                        <Label className="flex items-center gap-2 text-primary uppercase text-xs font-semibold tracking-wider">
                                             <Users className="w-4 h-4 text-accent" />
-                                            {formData.channelType === 'influencer' ? 'Influenciadores Vinculados' : 'Parceiros'}
+                                            {formData.channelType === 'influencer' ? 'Carrinho de Influenciadores' : 'Parceiros'}
                                         </Label>
-                                        <span className="text-xs text-muted-foreground">{formData.linkedCreatorIds.length} selecionados</span>
+                                        <span className="text-xs text-muted-foreground">{formData.deliverables.length} itens</span>
                                     </div>
 
-                                    <div className="flex flex-wrap gap-2 min-h-[40px]">
-                                        {formData.linkedCreatorIds.map(id => {
-                                            const c = creators.find(cr => cr.id === id);
-                                            return (
-                                                <motion.div
-                                                    initial={{ scale: 0 }}
-                                                    animate={{ scale: 1 }}
-                                                    key={id}
-                                                    className="pl-3 pr-1 py-1 rounded-full bg-accent/20 border border-accent/20 text-xs font-medium flex items-center gap-2 text-accent-foreground"
-                                                >
-                                                    {c?.name}
-                                                    <button onClick={() => handleCreatorRemove(id)} className="p-1 hover:bg-black/20 rounded-full">×</button>
-                                                </motion.div>
-                                            )
-                                        })}
-                                        {formData.linkedCreatorIds.length === 0 && (
-                                            <p className="text-sm text-muted-foreground italic py-2">Nenhum parceiro selecionado.</p>
-                                        )}
+                                    {/* Creator Filter Chips */}
+                                    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                                        <button
+                                            type="button"
+                                            onClick={() => setCreatorFilter('all')}
+                                            className={`px-3 py-1 rounded-full text-xs whitespace-nowrap transition-colors border ${creatorFilter === 'all' ? 'bg-primary text-primary-foreground border-primary' : 'bg-transparent text-muted-foreground border-border hover:border-primary/50'}`}
+                                        >
+                                            Todos
+                                        </button>
+                                        {PROFILE_CATEGORIES.map(cat => (
+                                            <button
+                                                key={cat.id}
+                                                type="button"
+                                                onClick={() => setCreatorFilter(cat.id)}
+                                                className={`px-3 py-1 rounded-full text-xs whitespace-nowrap transition-colors border flex items-center gap-1 ${creatorFilter === cat.id ? 'bg-accent/20 text-accent border-accent' : 'bg-transparent text-muted-foreground border-border hover:border-primary/50'}`}
+                                            >
+                                                <span>{cat.icon}</span>
+                                                {cat.label}
+                                            </button>
+                                        ))}
                                     </div>
 
+                                    {/* Action: Add Creator */}
                                     <Select onValueChange={handleCreatorSelect}>
-                                        <SelectTrigger className="bg-transparent border-white/10 hover:bg-white/5">
-                                            <SelectValue placeholder="Adicionar parceiro..." />
+                                        <SelectTrigger className="bg-background border-input hover:bg-accent/5 h-12">
+                                            <SelectValue placeholder="Adicionar ao carrinho..." />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {creators.map(c => (
-                                                <SelectItem key={c.id} value={c.id} disabled={formData.linkedCreatorIds.includes(c.id)}>
+                                            {filteredCreators.map(c => (
+                                                <SelectItem key={c.id} value={c.id}>
                                                     {c.name} ({c.category})
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
                                     </Select>
+
+                                    {/* Cart List */}
+                                    <div className="space-y-2 mt-2">
+                                        {formData.deliverables.map((item, index) => {
+                                            const creator = creators.find(c => c.id === item.creatorId);
+                                            if (!creator) return null;
+                                            return (
+                                                <CreatorCartItem
+                                                    key={`${item.creatorId}-${index}`}
+                                                    creator={creator}
+                                                    deliverable={item}
+                                                    onRemove={() => handleCreatorRemove(index)}
+                                                    onUpdate={(updated) => handleDeliverableUpdate(index, updated)}
+                                                />
+                                            );
+                                        })}
+
+                                        {formData.deliverables.length === 0 && (
+                                            <div className="text-center py-8 border border-dashed border-border rounded-xl bg-muted/20">
+                                                <p className="text-sm text-muted-foreground">Seu carrinho está vazio.</p>
+                                                <p className="text-xs text-muted-foreground/50">Selecione influenciadores acima para configurar ações.</p>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Cart Total Preview */}
+                                    {formData.deliverables.length > 0 && (
+                                        <div className="flex justify-end pt-2">
+                                            <div className="text-right">
+                                                <p className="text-xs text-muted-foreground uppercase">Subtotal do Carrinho</p>
+                                                <p className="text-lg font-bold text-accent">
+                                                    {formatCurrency(formData.deliverables.reduce((acc, item) => acc + item.price, 0))}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </TabContainer>
 
@@ -438,28 +595,28 @@ export function StrategyForm({
                                 <div className="space-y-4">
                                     <div className="space-y-2">
                                         <Label className="uppercase text-xs font-semibold text-muted-foreground ml-1">Descrição Detalhada</Label>
-                                        <Textarea
+                                        <DebouncedTextarea
                                             value={formData.description}
-                                            onChange={e => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                                            onChange={(e: any) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                                             placeholder="Descreva o conceito criativo..."
-                                            className="min-h-[120px] bg-white/5 border-white/10 backdrop-blur-md focus-visible:ring-accent/50"
+                                            className="min-h-[120px] bg-background border-input focus-visible:ring-primary/50"
                                         />
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
                                             <Label className="uppercase text-xs font-semibold text-muted-foreground ml-1">Como Fazer?</Label>
-                                            <Textarea
+                                            <DebouncedTextarea
                                                 value={formData.howToDo}
-                                                onChange={e => setFormData(prev => ({ ...prev, howToDo: e.target.value }))}
-                                                className="bg-white/5 border-white/10 backdrop-blur-md"
+                                                onChange={(e: any) => setFormData(prev => ({ ...prev, howToDo: e.target.value }))}
+                                                className="bg-background border-input"
                                             />
                                         </div>
                                         <div className="space-y-2">
                                             <Label className="uppercase text-xs font-semibold text-muted-foreground ml-1">Por Que Fazer?</Label>
-                                            <Textarea
+                                            <DebouncedTextarea
                                                 value={formData.whyToDo}
-                                                onChange={e => setFormData(prev => ({ ...prev, whyToDo: e.target.value }))}
-                                                className="bg-white/5 border-white/10 backdrop-blur-md"
+                                                onChange={(e: any) => setFormData(prev => ({ ...prev, whyToDo: e.target.value }))}
+                                                className="bg-background border-input"
                                             />
                                         </div>
                                     </div>
@@ -473,7 +630,7 @@ export function StrategyForm({
                                             <Label className="uppercase text-xs font-semibold text-muted-foreground ml-1">Início</Label>
                                             <Popover>
                                                 <PopoverTrigger asChild>
-                                                    <Button variant="outline" className={cn("w-full h-12 justify-start text-left font-normal bg-white/5 border-white/10", !formData.startDate && "text-muted-foreground")}>
+                                                    <Button variant="outline" className={cn("w-full h-12 justify-start text-left font-normal bg-background border-input", !formData.startDate && "text-muted-foreground")}>
                                                         <CalendarIcon className="mr-2 h-4 w-4 opacity-50" />
                                                         {formData.startDate ? format(new Date(formData.startDate), "PPP", { locale: ptBR }) : <span>Selecione data...</span>}
                                                     </Button>
@@ -492,7 +649,7 @@ export function StrategyForm({
                                             <Label className="uppercase text-xs font-semibold text-muted-foreground ml-1">Fim</Label>
                                             <Popover>
                                                 <PopoverTrigger asChild>
-                                                    <Button variant="outline" className={cn("w-full h-12 justify-start text-left font-normal bg-white/5 border-white/10", !formData.endDate && "text-muted-foreground")}>
+                                                    <Button variant="outline" className={cn("w-full h-12 justify-start text-left font-normal bg-background border-input", !formData.endDate && "text-muted-foreground")}>
                                                         <CalendarIcon className="mr-2 h-4 w-4 opacity-50" />
                                                         {formData.endDate ? format(new Date(formData.endDate), "PPP", { locale: ptBR }) : <span>Selecione data...</span>}
                                                     </Button>
@@ -531,7 +688,7 @@ export function StrategyForm({
                                             value={formData.status}
                                             onValueChange={(v: any) => setFormData(prev => ({ ...prev, status: v }))}
                                         >
-                                            <SelectTrigger className="h-12 bg-white/5 border-white/10 backdrop-blur-md">
+                                            <SelectTrigger className="h-12 bg-background border-input">
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -568,7 +725,7 @@ export function StrategyForm({
                                             <CurrencyInput
                                                 value={formData.budget}
                                                 onChange={v => setFormData(prev => ({ ...prev, budget: v }))}
-                                                className="bg-white/5 border-white/10"
+                                                className="bg-background border-input"
                                             />
                                         </div>
                                         <div className="space-y-1.5 relative">
@@ -595,7 +752,7 @@ export function StrategyForm({
                                         </div>
                                     </div>
 
-                                    <div className="p-4 rounded-lg bg-orange-500/10 border border-orange-500/20 text-orange-200 text-sm flex gap-3">
+                                    <div className="p-4 rounded-lg bg-orange-500/10 border border-orange-500/20 text-orange-700 dark:text-orange-200 text-sm flex gap-3">
                                         <AlertTriangle className="w-5 h-5 shrink-0 text-orange-500" />
                                         <p>Lembre-se: O valor de <strong>Mídia Líquida</strong> é calculado automaticamente subtraindo o Fee da Agência e os Impostos do Budget Total.</p>
                                     </div>
@@ -605,8 +762,8 @@ export function StrategyForm({
                     </div>
                 </Tabs>
 
-                <DialogFooter className="p-6 pt-4 border-t border-white/5 bg-background/50 backdrop-blur-md sticky bottom-0 z-10 flex flex-row justify-between items-center sm:justify-between w-full">
-                    <Button variant="ghost" onClick={onClose} className="hover:bg-white/5">
+                <DialogFooter className="p-6 pt-4 border-t border-border bg-background sticky bottom-0 z-10 flex flex-row justify-between items-center sm:justify-between w-full">
+                    <Button variant="ghost" onClick={onClose} className="hover:bg-muted">
                         Cancelar
                     </Button>
                     <div className="flex gap-2">
@@ -625,6 +782,6 @@ export function StrategyForm({
                     </div>
                 </DialogFooter>
             </DialogContent>
-        </Dialog>
+        </Dialog >
     );
 }

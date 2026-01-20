@@ -2,6 +2,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { CreatorFormData } from "@/types/creatorForm";
+import { PRICING_FIELDS_BY_TYPE } from "@/types/profileTypes";
 
 interface PricingStepProps {
     formData: CreatorFormData;
@@ -138,7 +139,27 @@ export function PricingStep({ formData, setFormData }: PricingStepProps) {
                     />
                 </div>
             </div>
+            {/* Dynamic Specialized Pricing (Gossip, Press, etc) */}
+            {formData.profile_type && formData.profile_type !== 'influencer' && (
+                <div className="p-4 glass rounded-xl border border-white/10 space-y-4 col-span-1 md:col-span-2">
+                    <h3 className="font-medium text-white flex items-center gap-2">
+                        {/* Need to import getProfileTypeIcon/Label or just hardcode for now to avoid complexity */}
+                        🏷️ Precificação Especial: <span className="text-accent">{formData.profile_type.toUpperCase()}</span>
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {PRICING_FIELDS_BY_TYPE[formData.profile_type]?.map((field) => (
+                            <PriceInput
+                                key={field.id}
+                                label={field.label}
+                                value={(formData.admin_metadata as any)[field.id] || ''}
+                                onChange={v => handleCurrencyChange(field.id, v)}
+                            />
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
+
     );
 }
 
