@@ -1,0 +1,99 @@
+@page {
+    margin: 2.5cm 2.5cm 3cm 2.5cm;
+    size: A4;
+}
+
+body {
+    font-family: "Times New Roman", Times, serif;
+    font-size: 11pt;
+    /* Slightly smaller is more standard for contracts */
+    line-height: 1.4;
+    color: #000;
+    text-align: justify;
+}
+
+/* Titles */
+h1 {
+    font-size: 14pt;
+    text-align: center;
+    font-weight: bold;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+    margin-top: 0;
+}
+
+h2 {
+    font-size: 12pt;
+    text-align: center;
+    font-weight: bold;
+    text-transform: uppercase;
+    margin-top: 5px;
+    margin-bottom: 30px;
+    border: none;
+    /* Removed the underline line */
+}
+
+/* Clauses e.g. "CLÁUSULA PRIMEIRA" */
+h2[id^="clausula"],
+h3 {
+    font-size: 11pt;
+    text-align: center;
+    font-weight: bold;
+    text-transform: uppercase;
+    margin-top: 25px;
+    margin-bottom: 15px;
+}
+
+hr {
+    border: 0;
+    border-top: 1px solid #000;
+    margin: 20px 0;
+    width: 100%;
+}
+
+p {
+    margin-bottom: 12px;
+    text-align: justify;
+    text-indent: 0;
+    /* Removing indented first line for cleaner look */
+}
+
+/* Lists */
+ul {
+    margin: 10px 0;
+    padding-left: 20px;
+}
+
+li {
+    margin-bottom: 8px;
+    text-align: justify;
+    list-style-type: none;
+    /* Removing bullets, we rely on a/b/c in text or handle differently */
+}
+
+/* Specific Legal Formatting */
+strong {
+    font-weight: bold;
+}
+
+/* Remove text indent for the parties section specifically to avoid weird alignment */
+p strong {
+    /* Ensure keys like "CONTRATANTE:" stand out */
+}
+
+/* Signature Section */
+.signature-section {
+    margin-top: 60px;
+    page-break-inside: avoid;
+}
+
+.signature-block {
+    margin-top: 40px;
+    text-align: center;
+}
+
+.signature-line {
+    border-top: 1px solid #000;
+    width: 60%;
+    margin: 0 auto 5px auto;
+}

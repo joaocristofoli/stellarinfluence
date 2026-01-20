@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Loader2, FileDown, ArrowLeft, Link2, Copy, Check, Calendar, LayoutGrid } from 'lucide-react';
+import { Plus, Loader2, FileDown, ArrowLeft, Link2, Copy, Check, Calendar, LayoutGrid, ClipboardList, Building2, Rocket } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { formatCurrency } from '@/utils/formatters';
 import {
@@ -18,6 +18,8 @@ import { StatsOverview } from '@/components/marketing/StatsOverview';
 import { CompanySelector } from '@/components/marketing/CompanySelector';
 import { CompanyForm } from '@/components/marketing/CompanyForm';
 import { ContractPreviewDialog } from '@/components/marketing/ContractPreviewDialog';
+import { PremiumEmptyState } from '@/components/ui/premium-empty-state'; // Added
+import { GlassSkeleton } from '@/components/ui/glass-skeleton'; // Added
 import { CampaignSelector } from '@/components/marketing/CampaignSelector';
 import { CampaignForm } from '@/components/marketing/CampaignForm';
 import { CampaignStats } from '@/components/marketing/CampaignStats';
@@ -39,7 +41,8 @@ import { supabase } from '@/integrations/supabase/client';
 
 const MarketingPlanner = () => {
     const { toast } = useToast();
-    const [searchParams] = useSearchParams();
+    const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
     const urlCompanyId = searchParams.get('companyId');
     const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
     const [companyFormOpen, setCompanyFormOpen] = useState(false);
@@ -129,19 +132,52 @@ const MarketingPlanner = () => {
     const deleteCampaign = useDeleteCampaign();
     const updateFlyerEvent = useUpdateFlyerEvent();
 
-    // Auto-select company from URL or first available
+    // Auto-select company from URL, LocalStorage, or first available
     useEffect(() => {
         if (companies.length > 0 && !selectedCompany) {
+            // 1. Try URL Param
             if (urlCompanyId) {
                 const found = companies.find(c => c.id === urlCompanyId);
                 if (found) {
                     setSelectedCompany(found);
+                    localStorage.setItem('marketing-planner-last-company-id', found.id);
                     return;
                 }
             }
-            setSelectedCompany(companies[0]);
+
+            // 2. Try LocalStorage (The Amnesia Cure)
+            const lastId = localStorage.getItem('marketing-planner-last-company-id');
+            if (lastId) {
+                const found = companies.find(c => c.id === lastId);
+                if (found) {
+                    setSelectedCompany(found);
+                    // Sync URL immediately to match state
+                    setSearchParams(prev => {
+                        prev.set('companyId', found.id);
+                        return prev;
+                    });
+                    return;
+                }
+            }
+
+            // 3. Fallback to first
+            if (companies[0]) {
+                setSelectedCompany(companies[0]);
+                // Set URL to be explicit
+                setSearchParams(prev => {
+                    prev.set('companyId', companies[0].id);
+                    return prev;
+                });
+            }
         }
-    }, [companies, selectedCompany, urlCompanyId]);
+    }, [companies, selectedCompany, urlCompanyId, setSearchParams]);
+
+    // Update LocalStorage on change
+    useEffect(() => {
+        if (selectedCompany) {
+            localStorage.setItem('marketing-planner-last-company-id', selectedCompany.id);
+        }
+    }, [selectedCompany]);
 
     // Reset campaign selection when company changes
     useEffect(() => {
@@ -461,6 +497,29 @@ const MarketingPlanner = () => {
         }
     };
 
+    const handleEventDrop = async ({ event, start, end }: any) => {
+        if (!selectedCompany) return;
+        const strategy = event.resource as MarketingStrategy;
+        try {
+            await updateStrategy.mutateAsync({
+                id: strategy.id,
+                companyId: selectedCompany.id,
+                startDate: start,
+                endDate: end,
+            });
+            toast({
+                title: 'Data atualizada!',
+                description: `"${strategy.name}" movido para ${start.toLocaleDateString()}.`,
+            });
+        } catch (error) {
+            toast({
+                title: 'Erro ao mover',
+                description: 'Não foi possível atualizar a data.',
+                variant: 'destructive',
+            });
+        }
+    };
+
     if (loadingCompanies) {
         return (
             <div className="min-h-screen bg-background flex items-center justify-center">
@@ -488,25 +547,26 @@ const MarketingPlanner = () => {
                                     <ArrowLeft className="w-5 h-5" />
                                 </Button>
                             </Link>
-                            {selectedCompany?.logoUrl && (
-                                <img
-                                    src={selectedCompany.logoUrl}
-                                    alt={selectedCompany.name}
-                                    className="h-10 w-10 rounded-lg object-cover border-2"
-                                    style={{ borderColor: 'var(--company-primary)' }}
-                                />
-                            )}
                             <div>
-                                <h1 className="font-display font-bold text-xl flex items-center gap-2">
-                                    <span
-                                        className="w-3 h-3 rounded-full"
-                                        style={{ background: 'var(--company-gradient)' }}
-                                    />
-                                    Planejamento de Marketing
-                                </h1>
+                                <CompanySelector
+                                    companies={companies}
+                                    selectedCompany={selectedCompany}
+                                    onNewCompany={handleNewCompany}
+                                    onEditCompany={handleEditCompany}
+                                    onSelectCompany={(company) => {
+                                        setSelectedCompany(company);
+                                        // BRG-001: Sync Context to URL (Context Bridge)
+                                        if (company) {
+                                            setSearchParams(prev => {
+                                                prev.set('companyId', company.id);
+                                                return prev;
+                                            });
+                                        }
+                                    }}
+                                />
                                 {selectedCompany && (
-                                    <p className="text-sm text-muted-foreground">
-                                        {selectedCompany.name} • {strategies.length} estratégias • {formatCurrency(totalBudget)}
+                                    <p className="text-xs text-muted-foreground mt-1 ml-1">
+                                        {strategies.length} estratégias • {formatCurrency(totalBudget)}
                                     </p>
                                 )}
                             </div>
@@ -562,13 +622,10 @@ const MarketingPlanner = () => {
 
             <main className="container mx-auto px-4 py-8 space-y-8">
                 <div className="flex items-center justify-between">
-                    <CompanySelector
-                        companies={companies}
-                        selectedCompany={selectedCompany}
-                        onSelectCompany={setSelectedCompany}
-                        onNewCompany={handleNewCompany}
-                        onEditCompany={handleEditCompany}
-                    />
+                    {/* CompanySelector moved to Header for persistence */}
+                    <div className="flex items-center gap-2 text-2xl font-bold text-foreground">
+                        Planejamento & Estratégia
+                    </div>
                 </div>
 
                 {selectedCompany ? (
@@ -643,42 +700,33 @@ const MarketingPlanner = () => {
                         </div>
 
                         {loadingStrategies ? (
-                            <div className="flex items-center justify-center py-16">
-                                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {[1, 2, 3, 4, 5, 6].map((i) => (
+                                    <div key={i} className="space-y-4">
+                                        <GlassSkeleton className="h-[200px] w-full rounded-xl" />
+                                        <div className="space-y-2">
+                                            <GlassSkeleton className="h-4 w-[250px]" />
+                                            <GlassSkeleton className="h-4 w-[200px]" />
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         ) : filteredStrategies.length === 0 ? (
-                            <div className="text-center py-16">
-                                <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-muted flex items-center justify-center">
-                                    <span className="text-4xl">📋</span>
-                                </div>
-                                <h3 className="font-display text-xl font-semibold text-foreground mb-2">
-                                    {strategies.length === 0
-                                        ? 'Nenhuma estratégia ainda'
-                                        : 'Nenhuma estratégia encontrada'
-                                    }
-                                </h3>
-                                <p className="text-muted-foreground mb-6">
-                                    {strategies.length === 0
-                                        ? `Comece criando sua primeira estratégia de marketing para ${selectedCompany.name}!`
-                                        : 'Tente ajustar os filtros para ver outras estratégias.'
-                                    }
-                                </p>
-                                {strategies.length === 0 && (
-                                    <Button
-                                        onClick={() => setFormOpen(true)}
-                                        className="gap-2 gradient-primary"
-                                    >
-                                        <Plus className="w-4 h-4" />
-                                        Criar Primeira Estratégia
-                                    </Button>
-                                )}
-                            </div>
+                            <PremiumEmptyState
+                                icon={ClipboardList}
+                                title={strategies.length === 0 ? 'Planejamento em branco' : 'Nenhuma estratégia encontrada'}
+                                description={strategies.length === 0
+                                    ? `Comece criando sua primeira estratégia de marketing para ${selectedCompany.name} e domine seu mercado.`
+                                    : 'Tente ajustar os filtros para encontrar o que procura.'
+                                }
+                                actionLabel={strategies.length === 0 ? 'Criar Primeira Estratégia' : undefined}
+                                onAction={strategies.length === 0 ? () => setFormOpen(true) : undefined}
+                            />
                         ) : viewMode === 'calendar' ? (
                             <BigCalendarView
                                 strategies={filteredStrategies}
                                 onStrategyClick={handleEditStrategy}
                                 onDateClick={(date) => {
-                                    // Open form with pre-filled date
                                     setEditingStrategy(null);
                                     setSelectedDate(date);
                                     setFormOpen(true);
@@ -686,6 +734,7 @@ const MarketingPlanner = () => {
                                 showCosts={true}
                                 currentDate={new Date()}
                                 onNavigate={() => { }}
+                                onEventDrop={handleEventDrop}
                             />
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -702,24 +751,14 @@ const MarketingPlanner = () => {
                         )}
                     </>
                 ) : (
-                    <div className="text-center py-16">
-                        <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-muted flex items-center justify-center">
-                            <span className="text-4xl">🏢</span>
-                        </div>
-                        <h3 className="font-display text-xl font-semibold text-foreground mb-2">
-                            Nenhuma empresa cadastrada
-                        </h3>
-                        <p className="text-muted-foreground mb-6">
-                            Cadastre sua primeira empresa para começar o planejamento de marketing.
-                        </p>
-                        <Button
-                            onClick={handleNewCompany}
-                            className="gap-2 gradient-primary"
-                        >
-                            <Plus className="w-4 h-4" />
-                            Cadastrar Primeira Empresa
-                        </Button>
-                    </div>
+                    <PremiumEmptyState
+                        icon={Building2}
+                        title="Bem-vindo ao Command Center"
+                        description="Cadastre sua primeira empresa para desbloquear o poder do planejamento de marketing estratégico."
+                        actionLabel="Cadastrar Primeira Empresa"
+                        onAction={handleNewCompany}
+                        className="min-h-[60vh]"
+                    />
                 )}
             </main>
 

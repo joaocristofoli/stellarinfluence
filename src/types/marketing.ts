@@ -20,6 +20,7 @@ export interface Company {
     logoUrl: string | null;
     city: string | null;
     state: string | null;
+    type?: 'agency' | 'client' | 'partner'; // Phase 3
     cnpj?: string | null;
     address?: string | null;
     representativeName?: string | null;
@@ -57,6 +58,12 @@ export interface MarketingStrategy {
     // Calendar fields
     startDate?: Date | null;
     endDate?: Date | null;
+    // Phase 3: Detailed Financials
+    mediaBudget?: number;
+    agencyFeePercentage?: number;
+    agencyFeeValue?: number;
+    taxRate?: number;
+    version?: number;
     // Multi-influencer support
     linkedCreatorIds?: string[];
     // Vinculação com eventos de panfletagem (para channelType: 'flyers')

@@ -53,6 +53,10 @@ export interface Creator {
     agency_id?: string;
     parent_creator_id?: string;
 
+    // Location (for filtering)
+    city?: string;
+    state?: string;
+
     // Outdoor/BTL specific
     location?: string;
     dimensions?: string;

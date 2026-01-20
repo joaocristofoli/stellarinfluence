@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Company, MarketingStrategy } from '@/types/marketing';
 import { generateDefaultContract } from '@/utils/contractTemplate';
-import { Printer } from 'lucide-react';
+import { Printer, Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ContractPreviewDialogProps {
     open: boolean;
@@ -15,12 +16,42 @@ interface ContractPreviewDialogProps {
 
 export function ContractPreviewDialog({ open, onClose, company, strategies }: ContractPreviewDialogProps) {
     const [contractText, setContractText] = useState('');
+    const [agencyName, setAgencyName] = useState('AGÊNCIA ETERNIZAR'); // Fallback default
+    const [loadingBranding, setLoadingBranding] = useState(true);
+
+    // Fetch branding on mount/open
+    useEffect(() => {
+        if (!open) return;
+
+        const fetchBranding = async () => {
+            setLoadingBranding(true);
+            try {
+                const { data, error } = await supabase
+                    .from('agency_settings')
+                    .select('branding')
+                    .limit(1)
+                    .maybeSingle();
+
+                if (!error && data?.branding) {
+                    // @ts-ignore
+                    const name = data.branding.agency_name || 'AGÊNCIA ETERNIZAR';
+                    setAgencyName(name.toUpperCase());
+                }
+            } catch (err) {
+                console.error("Error fetching branding for contract:", err);
+            } finally {
+                setLoadingBranding(false);
+            }
+        };
+
+        fetchBranding();
+    }, [open]);
 
     useEffect(() => {
-        if (company && open) {
-            setContractText(generateDefaultContract(company, strategies, "AGÊNCIA ETERNIZAR"));
+        if (company && open && !loadingBranding) {
+            setContractText(generateDefaultContract(company, strategies, agencyName));
         }
-    }, [company, strategies, open]);
+    }, [company, strategies, open, agencyName, loadingBranding]);
 
     const handlePrint = () => {
         const printWindow = window.open('', '_blank');
@@ -104,7 +135,7 @@ export function ContractPreviewDialog({ open, onClose, company, strategies }: Co
             </head>
             <body>
                 <div class="header">
-                    <div class="logo">Agência Eternizar</div>
+                    <div class="logo">${agencyName}</div>
                     <h1>Contrato de Prestação de Serviços</h1>
                 </div>
 
@@ -112,7 +143,7 @@ export function ContractPreviewDialog({ open, onClose, company, strategies }: Co
 
                 <div class="signature-section">
                     <div class="signature-block">
-                        <strong>AGÊNCIA ETERNIZAR</strong><br>
+                        <strong>${agencyName}</strong><br>
                         CONTRATADA
                     </div>
                     <div class="signature-block">
@@ -138,7 +169,12 @@ export function ContractPreviewDialog({ open, onClose, company, strategies }: Co
                     <DialogTitle>Editor de Contrato</DialogTitle>
                 </DialogHeader>
 
-                <div className="flex-1 min-h-0 bg-muted/30 p-4 rounded-md border border-border">
+                <div className="flex-1 min-h-0 bg-muted/30 p-4 rounded-md border border-border relative">
+                    {loadingBranding && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm z-10 text-muted-foreground gap-2">
+                            <Loader2 className="w-5 h-5 animate-spin" /> Carregando modelo...
+                        </div>
+                    )}
                     <Textarea
                         value={contractText}
                         onChange={(e) => setContractText(e.target.value)}
@@ -154,7 +190,7 @@ export function ContractPreviewDialog({ open, onClose, company, strategies }: Co
                         <Button variant="outline" onClick={onClose}>
                             Cancelar
                         </Button>
-                        <Button onClick={handlePrint} className="gap-2">
+                        <Button onClick={handlePrint} className="gap-2" disabled={loadingBranding}>
                             <Printer className="w-4 h-4" />
                             Imprimir / Salvar PDF
                         </Button>

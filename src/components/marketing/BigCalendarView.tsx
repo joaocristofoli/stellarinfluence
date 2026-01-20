@@ -1,5 +1,7 @@
 import { useMemo, useCallback, useState } from 'react';
 import { Calendar, dateFnsLocalizer, Views, EventProps } from 'react-big-calendar';
+import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
+import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import { format, parse, startOfWeek, getDay, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
@@ -65,7 +67,10 @@ interface BigCalendarViewProps {
     showCosts?: boolean;
     currentDate: Date;
     onNavigate: (date: Date) => void;
+    onEventDrop: (data: { event: CalendarEvent; start: Date; end: Date; allDay: boolean }) => void;
 }
+
+const DnDCalendar = withDragAndDrop(Calendar);
 
 // Componente de evento customizado premium com cores semânticas
 const CustomEvent = ({ event }: EventProps<CalendarEvent>) => {
@@ -104,6 +109,7 @@ export function BigCalendarView({
     showCosts = true,
     currentDate: initialDate,
     onNavigate,
+    onEventDrop,
 }: BigCalendarViewProps) {
     // Estado local para data atual
     const [currentDate, setCurrentDate] = useState(initialDate);
@@ -180,11 +186,11 @@ export function BigCalendarView({
 
     return (
         <div className="premium-calendar-container h-[700px]">
-            <Calendar
+            <DnDCalendar
                 localizer={localizer}
                 events={events}
-                startAccessor="start"
-                endAccessor="end"
+                startAccessor={(event: any) => event.start}
+                endAccessor={(event: any) => event.end}
                 style={{ height: '100%' }}
                 views={[Views.MONTH, Views.WEEK, Views.DAY]}
                 defaultView={Views.MONTH}
@@ -200,7 +206,12 @@ export function BigCalendarView({
                 messages={messages}
                 popup
                 culture="pt-BR"
+                onEventDrop={onEventDrop}
+                resizable={false}
             />
         </div>
     );
 }
+
+
+

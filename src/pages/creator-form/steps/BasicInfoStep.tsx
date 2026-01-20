@@ -19,6 +19,7 @@ interface BasicInfoStepProps {
     duplicates: any[];
     onMerge?: () => void;
     onIgnoreDuplicate?: () => void;
+    onValidationCheck?: () => void;
 }
 
 export function BasicInfoStep({
@@ -27,7 +28,8 @@ export function BasicInfoStep({
     isAdmin,
     duplicates,
     onMerge,
-    onIgnoreDuplicate
+    onIgnoreDuplicate,
+    onValidationCheck
 }: BasicInfoStepProps) {
 
     // Helper to extract handle from slug/url
@@ -66,31 +68,30 @@ export function BasicInfoStep({
             )}
 
             {/* Profile Type Selector - Admin Only */}
-            {isAdmin && (
-                <div className="space-y-3">
-                    <Label className="text-sm font-medium">Tipo de Perfil</Label>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                        {PROFILE_CATEGORIES.map((type) => (
-                            <button
-                                key={type.id}
-                                type="button"
-                                onClick={() => setFormData({ ...formData, profile_type: type.id as ProfileType, category: '' })}
-                                className={`
-                                    p-3 rounded-xl border-2 transition-all text-left
-                                    ${formData.profile_type === type.id
-                                        ? 'border-accent bg-accent/10 shadow-lg'
-                                        : 'border-white/10 hover:border-white/30 bg-black/20'
-                                    }
-                                `}
-                            >
-                                <span className="text-2xl block mb-1">{type.icon}</span>
-                                <span className="text-sm font-medium block">{type.label}</span>
-                                <span className="text-xs text-muted-foreground block truncate">{type.description}</span>
-                            </button>
-                        ))}
-                    </div>
+            {/* Profile Type Selector - Now Open for Everyone (Phase 2 Fix) */}
+            <div className="space-y-3">
+                <Label className="text-sm font-medium">Tipo de Perfil</Label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                    {PROFILE_CATEGORIES.map((type) => (
+                        <button
+                            key={type.id}
+                            type="button"
+                            onClick={() => setFormData({ ...formData, profile_type: type.id as ProfileType, category: '' })}
+                            className={`
+                                p-3 rounded-xl border-2 transition-all text-left
+                                ${formData.profile_type === type.id
+                                    ? 'border-accent bg-accent/10 shadow-lg'
+                                    : 'border-white/10 hover:border-white/30 bg-black/20'
+                                }
+                            `}
+                        >
+                            <span className="text-2xl block mb-1">{type.icon}</span>
+                            <span className="text-sm font-medium block">{type.label}</span>
+                            <span className="text-xs text-muted-foreground block truncate">{type.description}</span>
+                        </button>
+                    ))}
                 </div>
-            )}
+            </div>
 
             <ImageUpload
                 currentImage={formData.image_url}
@@ -108,36 +109,41 @@ export function BasicInfoStep({
                     />
                 </div>
 
-                {isAdmin ? (
-                    <div className="space-y-2">
-                        <Label>@ do Instagram (Identificador Principal)</Label>
-                        <div className="flex items-center gap-2">
-                            <span className="text-sm text-muted-foreground whitespace-nowrap bg-white/5 px-2 py-2 rounded-md border border-white/10">@</span>
-                            <Input
-                                value={formData.instagram_url?.replace(/^https?:\/\/(www\.)?instagram\.com\//, '').replace(/\/$/, '') || formData.slug}
-                                onChange={e => {
-                                    const handle = e.target.value.replace('@', '').toLowerCase();
+                <div className="space-y-2">
+                    <Label>Identificador (Slug / Instagram)</Label>
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground whitespace-nowrap bg-white/5 px-2 py-2 rounded-md border border-white/10">
+                            {formData.profile_type === 'influencer' ? '@' : 'url/'}
+                        </span>
+                        <Input
+                            // Smart logic: show instagram handle if influencer, otherwise slug
+                            value={formData.profile_type === 'influencer'
+                                ? (formData.instagram_url?.replace(/^https?:\/\/(www\.)?instagram\.com\//, '').replace(/\/$/, '') || formData.slug)
+                                : formData.slug
+                            }
+                            onBlur={() => onValidationCheck && onValidationCheck()}
+                            onChange={e => {
+                                const value = e.target.value.toLowerCase().replace(/\s+/g, '-');
+
+                                if (formData.profile_type === 'influencer') {
+                                    // Instagram logic
+                                    const handle = value.replace('@', '');
                                     setFormData({
                                         ...formData,
                                         slug: handle,
                                         instagram_url: handle ? `https://instagram.com/${handle}` : '',
-                                        instagram_active: handle ? true : formData.instagram_active
+                                        instagram_active: true
                                     });
-                                }}
-                                placeholder="ex: joaosilva"
-                                className="flex-1"
-                            />
-                        </div>
+                                } else {
+                                    // Standard Slug logic
+                                    setFormData({ ...formData, slug: value });
+                                }
+                            }}
+                            placeholder={formData.profile_type === 'influencer' ? "ex: joaosilva" : "ex: seu-local-premium"}
+                            className="flex-1"
+                        />
                     </div>
-                ) : (
-                    <div className="space-y-2">
-                        <Label>Link Personalizado</Label>
-                        <div className="flex items-center gap-2">
-                            <span className="text-sm text-muted-foreground whitespace-nowrap">seu-site.com/</span>
-                            <Input value={formData.slug} onChange={handleSlugChange} placeholder="ex: joao-silva" className="flex-1" />
-                        </div>
-                    </div>
-                )}
+                </div>
 
                 <div className="space-y-2">
                     <Label>Categoria</Label>
@@ -161,7 +167,8 @@ export function BasicInfoStep({
                 </div>
 
                 {/* Dynamic Fields based on Profile Type */}
-                {isAdmin && formData.profile_type && (
+                {/* Dynamic Fields based on Profile Type - Now Open for Everyone */}
+                {formData.profile_type && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-white/5 rounded-lg border border-white/10">
                         {extraFields.company && (
                             <div className="space-y-2">

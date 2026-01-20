@@ -132,10 +132,17 @@ export function useStrategyStats(
 
         targetStrategies.forEach(s => {
             if (!s?.channelType) return; // Skip invalid entries
+
+            // FIXME-PHASE1: Usar MoneyService para normalizar moedas mistas
+            const rawBudget = safeBudget(s);
+            // Assumindo por enquanto que tudo é BRL até migrarmos o banco para ter coluna currency
+            // Futuramente: MoneyService.normalizeToBRL(rawBudget, s.currency)
+            const normalizedBudget = rawBudget;
+
             const current = channelMap.get(s.channelType) || { count: 0, budget: 0 };
             channelMap.set(s.channelType, {
                 count: current.count + 1,
-                budget: current.budget + safeBudget(s),
+                budget: current.budget + normalizedBudget,
             });
         });
 

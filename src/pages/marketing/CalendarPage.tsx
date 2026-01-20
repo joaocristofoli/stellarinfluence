@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { ChannelType } from '@/types/marketing';
 import { cn } from '@/lib/utils';
+import { formatCurrency } from '@/utils/formatters';
 
 /**
  * CalendarPage - Página Dedicada do Calendário
@@ -200,7 +201,7 @@ export default function CalendarPage() {
                     onFlyerEventClick={(event) => {
                         toast({
                             title: `Panfletagem: ${event.location}`,
-                            description: `${event.numPeople} pessoas • R$ ${event.dayCost.toFixed(2)}`,
+                            description: `${event.numPeople} pessoas • ${formatCurrency(event.dayCost)}`,
                         });
                     }}
                 />

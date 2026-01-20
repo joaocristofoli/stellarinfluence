@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
+import { useNavigate, useLocation, Outlet } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -12,98 +12,109 @@ import { UserManagement } from "@/components/admin/UserManagement";
 import { ThemeConfigManager } from "@/components/admin/ThemeConfigManager";
 import { HomepageEditor } from "@/components/admin/HomepageEditor";
 import { CalendarIntegration } from "@/components/admin/CalendarIntegration";
+import { MergeProfilesDialog } from "@/components/admin/MergeProfilesDialog";
+import { LuxuryDashboard } from "@/components/admin/LuxuryDashboard";
 import { CommandPalette } from "@/components/CommandPalette";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useCreatorsRealtime } from "@/hooks/useCreatorsRealtime";
 import {
   Users, DollarSign, Megaphone, Calendar, LogOut, Plus,
   Image as ImageIcon, Settings, UserCog, Palette, LayoutDashboard,
-  Building2, Landmark, ChevronRight, Menu, X, Home, FileText, Command
+  Building2, Landmark, ChevronRight, Menu, X, Home, FileText, Command,
+  Briefcase
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/components/ThemeProvider";
 
 // Menu items with hierarchical structure
+// Menu items with semantic hierarchical structure
 const menuItems = [
   {
-    id: "dashboard",
-    label: "Dashboard",
-    icon: LayoutDashboard,
-    path: "/admin/dashboard",
-    external: true,
+    category: "Core",
+    items: [
+      {
+        id: "dashboard",
+        label: "Command Center",
+        icon: LayoutDashboard,
+        path: "/admin",
+      },
+      {
+        id: "creators",
+        label: "Parceiros de Mídia",
+        icon: Users,
+        path: "/admin/creators",
+      },
+      {
+        id: "marketing",
+        label: "Marketing Planner",
+        icon: Building2,
+        path: "/admin/marketing",
+      },
+    ]
   },
   {
-    id: "influencers",
-    label: "Influenciadores",
-    icon: Users,
-    children: [
-      { id: "creators-list", label: "Lista de Criadores", content: "creators" },
-      { id: "creators-new", label: "Novo Criador", path: "/admin/creators/new", external: true },
-      { id: "banners", label: "Gerador de Banners", path: "/admin/banners", external: true },
-    ],
+    category: "Tools",
+    items: [
+      {
+        id: "bookings",
+        label: "Reservas",
+        icon: Calendar,
+        path: "/admin/bookings",
+      },
+      {
+        id: "banners",
+        label: "Gerador de Banners",
+        icon: Megaphone,
+        path: "/admin/banners",
+      },
+      {
+        id: "calendar",
+        label: "Calendário Unificado",
+        icon: Calendar,
+        path: "/admin/calendar",
+      },
+    ]
   },
   {
-    id: "marketing",
-    label: "Marketing & Empresas",
-    icon: Building2,
-    children: [
-      { id: "dashboard", label: "📊 Dashboard KPIs", path: "/admin/dashboard", external: true },
-      { id: "planner", label: "📅 Planejador de Marketing", path: "/admin/marketing", external: true },
-      // REMOVIDO: Panfletagem agora integrada no calendário unificado (toggle "📄 Panfletagem")
-    ],
-  },
-  {
-    id: "toledo",
-    label: "Prefeitura Toledo",
-    icon: Landmark,
-    path: "/admin/toledo",
-    external: true,
-  },
-  {
-    id: "bookings",
-    label: "Reservas",
-    icon: Calendar,
-    content: "bookings",
-  },
-  {
-    id: "users",
-    label: "Usuários",
-    icon: UserCog,
-    content: "users",
-  },
-  {
-    id: "settings",
-    label: "Configurações",
-    icon: Settings,
-    children: [
-      { id: "homepage", label: "Homepage", content: "homepage" },
-      { id: "branding", label: "Branding", content: "branding" },
-      { id: "platforms", label: "Plataformas", content: "platforms" },
-      { id: "themes", label: "🎬 Animações", content: "themes" },
-      { id: "theme-colors", label: "🎨 Cores & Fontes", path: "/admin/themes", external: true },
-      { id: "calendar", label: "📅 Calendário (Apple/Google)", content: "calendar" },
-    ],
-  },
-  {
-    id: "pricing",
-    label: "Preços",
-    icon: DollarSign,
-    content: "pricing",
-  },
+    category: "System",
+    items: [
+      {
+        id: "settings",
+        label: "Configurações",
+        icon: Settings,
+        children: [
+          { id: "homepage", label: "Homepage CMS", path: "/admin/homepage" },
+          { id: "branding", label: "Branding", path: "/admin/branding" },
+          { id: "platforms", label: "Plataformas", path: "/admin/platforms" },
+          { id: "themes", label: "Personalização", path: "/admin/themes-config" },
+          { id: "users", label: "Gestão de Usuários", path: "/admin/users" },
+          { id: "pricing", label: "Tabelas de Preço", path: "/admin/pricing" },
+        ],
+      },
+      {
+        id: "projects",
+        label: "Projetos Ativos",
+        icon: Landmark,
+        children: [
+          { id: "toledo", label: "Prefeitura Toledo", path: "/admin/toledo" },
+        ],
+      },
+    ]
+  }
 ];
 
 export default function Admin() {
   const { user, loading, isAdmin, isCreator, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const activeSection = searchParams.get("tab") || "creators";
+  // const [searchParams, setSearchParams] = useSearchParams();
+  // const activeSection = searchParams.get("tab") || "creators";
 
-  const setActiveSection = (section: string) => {
-    setSearchParams({ tab: section });
-  };
-  const [expandedMenus, setExpandedMenus] = useState<string[]>(["influencers"]);
+  // const setActiveSection = (section: string) => {
+  //   setSearchParams({ tab: section });
+  // };
+  const [expandedMenus, setExpandedMenus] = useState<string[]>(["settings", "projects"]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
@@ -146,10 +157,12 @@ export default function Admin() {
   };
 
   const handleMenuClick = (item: any) => {
-    if (item.external && item.path) {
-      navigate(item.path);
-    } else if (item.content) {
-      setActiveSection(item.content);
+    if (item.path) {
+      // BRG-001: Preserve Context (companyId) on navigation
+      navigate({
+        pathname: item.path,
+        search: location.search
+      });
       setMobileMenuOpen(false);
     } else if (item.children) {
       toggleMenu(item.id);
@@ -169,48 +182,8 @@ export default function Admin() {
 
   if (!user || !isAdmin) return null;
 
-  const renderContent = () => {
-    switch (activeSection) {
-      case "creators":
-        return (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-bold">Gerenciar Influenciadores</h2>
-                <p className="text-muted-foreground">Adicione, edite ou remova criadores de conteúdo</p>
-              </div>
-              <Button onClick={() => navigate("/admin/creators/new")} className="bg-accent hover:bg-accent/90">
-                <Plus className="w-4 h-4 mr-2" />
-                Novo Criador
-              </Button>
-            </div>
-            <CreatorsTable />
-          </div>
-        );
-      case "bookings":
-        return <BookingsManager />;
-      case "users":
-        return <UserManagement />;
-      case "pricing":
-        return <PricingManager />;
-      case "homepage":
-        return <HomepageEditor />;
-      case "branding":
-        return <AgencyBrandingManager />;
-      case "platforms":
-        return <PlatformSettingsManager />;
-      case "themes":
-        return <ThemeConfigManager />;
-      case "calendar":
-        return <CalendarIntegration />;
-      default:
-        return (
-          <div className="flex items-center justify-center h-64 text-muted-foreground">
-            Selecione uma opção no menu
-          </div>
-        );
-    }
-  };
+  // Removed manual renderContent switch - using Outlet now
+  // This drastically simplifies the component and enables true Nested Routing
 
   const SidebarContent = () => {
     const { theme, setTheme } = useTheme();
@@ -242,64 +215,71 @@ export default function Admin() {
         {/* Menu */}
         <ScrollArea className="flex-1 py-4">
           <nav className="px-3 space-y-1">
-            {menuItems.map((item) => (
-              <div key={item.id}>
-                <button
-                  onClick={() => handleMenuClick(item)}
-                  className={cn(
-                    "w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
-                    "hover:bg-accent/10 hover:text-accent",
-                    (item.content === activeSection || item.children?.some(c => c.content === activeSection))
-                      ? "bg-accent/10 text-accent"
-                      : "text-muted-foreground"
-                  )}
-                >
-                  <div className="flex items-center gap-3">
-                    <item.icon className="w-5 h-5" />
-                    <span>{item.label}</span>
-                  </div>
-                  {item.children && (
-                    <ChevronRight className={cn(
-                      "w-4 h-4 transition-transform",
-                      expandedMenus.includes(item.id) && "rotate-90"
-                    )} />
-                  )}
-                  {item.external && !item.children && (
-                    <span className="text-xs bg-accent/20 text-accent px-2 py-0.5 rounded">Abrir</span>
-                  )}
-                </button>
+            {menuItems.map((group, index) => (
+              <div key={index} className="mb-6">
+                <h3 className="px-3 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  {group.category}
+                </h3>
+                <div className="space-y-1">
+                  {group.items.map((item) => (
+                    <div key={item.id}>
+                      <button
+                        onClick={() => handleMenuClick(item)}
+                        className={cn(
+                          "w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200",
+                          "hover:bg-accent/10 hover:text-accent group",
+                          (location.pathname === item.path || item.children?.some(c => location.pathname === c.path))
+                            ? "bg-accent/10 text-accent font-semibold shadow-sm ring-1 ring-accent/20"
+                            : "text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        <div className="flex items-center gap-3">
+                          <item.icon className={cn(
+                            "w-4 h-4 transition-colors",
+                            (location.pathname === item.path || item.children?.some(c => location.pathname === c.path))
+                              ? "text-accent"
+                              : "text-muted-foreground group-hover:text-accent"
+                          )} />
+                          <span>{item.label}</span>
+                        </div>
+                        {item.children && (
+                          <ChevronRight className={cn(
+                            "w-4 h-4 transition-transform opacity-50",
+                            expandedMenus.includes(item.id) && "rotate-90"
+                          )} />
+                        )}
+                      </button>
 
-                {/* Submenu */}
-                <AnimatePresence>
-                  {item.children && expandedMenus.includes(item.id) && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      className="overflow-hidden ml-4 mt-1 space-y-1"
-                    >
-                      {item.children.map((child) => (
-                        <button
-                          key={child.id}
-                          onClick={() => handleMenuClick(child)}
-                          className={cn(
-                            "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all",
-                            "hover:bg-accent/10 hover:text-accent",
-                            child.content === activeSection
-                              ? "bg-accent/10 text-accent"
-                              : "text-muted-foreground"
-                          )}
-                        >
-                          <div className="w-1.5 h-1.5 rounded-full bg-current" />
-                          <span>{child.label}</span>
-                          {child.external && (
-                            <span className="ml-auto text-xs bg-accent/20 text-accent px-1.5 py-0.5 rounded">→</span>
-                          )}
-                        </button>
-                      ))}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                      {/* Submenu */}
+                      <AnimatePresence>
+                        {item.children && expandedMenus.includes(item.id) && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="overflow-hidden ml-4 mt-1 space-y-1 pl-3 border-l border-border/50"
+                          >
+                            {item.children.map((child) => (
+                              <button
+                                key={child.id}
+                                onClick={() => handleMenuClick(child)}
+                                className={cn(
+                                  "w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-all duration-200",
+                                  "hover:bg-accent/10 hover:text-accent hover:translate-x-1",
+                                  location.pathname === child.path
+                                    ? "text-accent font-medium bg-accent/5"
+                                    : "text-muted-foreground"
+                                )}
+                              >
+                                <span>{child.label}</span>
+                              </button>
+                            ))}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  ))}
+                </div>
               </div>
             ))}
           </nav>
@@ -393,7 +373,10 @@ export default function Admin() {
             <div className="flex items-center justify-between">
               <div className="lg:hidden" /> {/* Spacer for mobile menu button */}
               <h1 className="text-lg font-semibold hidden lg:block">
-                {menuItems.find(m => m.content === activeSection || m.children?.some(c => c.content === activeSection))?.label || "Dashboard"}
+                {/* Dynamic Header based on route */}
+                <span className="capitalize">
+                  {(location.pathname.split('/').pop() || 'Dashboard').replace(/-/g, ' ')}
+                </span>
               </h1>
               <div className="flex items-center gap-4">
                 <span className="text-sm text-muted-foreground hidden sm:block">
@@ -409,12 +392,12 @@ export default function Admin() {
           {/* Page Content */}
           <div className="p-6">
             <motion.div
-              key={activeSection}
+              key={location.pathname}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.2 }}
             >
-              {renderContent()}
+              <Outlet />
             </motion.div>
           </div>
         </main>

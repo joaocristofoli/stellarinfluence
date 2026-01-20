@@ -95,13 +95,34 @@ export function useSoftDelete(config: SoftDeleteConfig) {
                 // Check for array contains (for fields like linkedCreatorIds)
                 const { data: arrayData } = await (supabase as any)
                     .from(table)
-                    .select('id')
+                    .select('id, channel_type, status') // Select additional fields for the special check
                     .contains(field, [id])
                     .limit(1);
 
                 if (arrayData && arrayData.length > 0) {
-                    linkedIn.push(table);
+                    // SPECIAL CHECK: Physical Media Integrity
+                    // If we are checking strategies, we must see if they are active physical media
+                    if (table === 'marketing_strategies') {
+                        const activePhysicalStrategies = arrayData.filter((s: any) =>
+                            (s.channel_type === 'outdoor' || s.channel_type === 'event') &&
+                            s.status !== 'completed' && s.status !== 'cancelled'
+                        );
+
+                        if (activePhysicalStrategies.length > 0) {
+                            // We found active physical media linked to this creator. 
+                            // We return a special marker or just the table name to block deletion.
+                            linkedIn.push(`${table} (Mídia Física Ativa)`);
+                            continue;
+                        }
+
+                        // If only digital or completed strategies, we might allow deletion (or warn differently)
+                        // For Phase 1 strictness, we still report it, but the distinction is made in the logic above
+                        linkedIn.push(table);
+                    } else {
+                        linkedIn.push(table);
+                    }
                 }
+
             } catch {
                 // Ignore errors for tables that don't have the field
             }

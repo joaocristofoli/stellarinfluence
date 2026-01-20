@@ -25,8 +25,19 @@ const ThemeManager = lazy(() => import("./pages/admin/ThemeManager"));
 const ToledoAdmin = lazy(() => import("./pages/admin/ToledoAdmin"));
 const MarketingPlanner = lazy(() => import("./pages/marketing/MarketingPlanner"));
 const CalendarPage = lazy(() => import("./pages/marketing/CalendarPage"));
-const ProjectsDashboard = lazy(() => import("./pages/admin/ProjectsDashboard"));
 const ClientPortalPage = lazy(() => import("./pages/public/ClientPortalPage"));
+
+// Admin Internal Components (Lazy Loaded for SPA)
+const LuxuryDashboard = lazy(() => import("./components/admin/LuxuryDashboard"));
+const CreatorsPage = lazy(() => import("./pages/admin/CreatorsPage"));
+const BookingsManager = lazy(() => import("./components/admin/BookingsManager").then(module => ({ default: module.BookingsManager })));
+const PricingManager = lazy(() => import("./components/admin/PricingManager").then(module => ({ default: module.PricingManager })));
+const UserManagement = lazy(() => import("./components/admin/UserManagement").then(module => ({ default: module.UserManagement })));
+const HomepageEditor = lazy(() => import("./components/admin/HomepageEditor").then(module => ({ default: module.HomepageEditor })));
+const AgencyBrandingManager = lazy(() => import("./components/admin/AgencyBrandingManager").then(module => ({ default: module.AgencyBrandingManager })));
+const PlatformSettingsManager = lazy(() => import("./components/admin/PlatformSettingsManager").then(module => ({ default: module.PlatformSettingsManager })));
+const ThemeConfigManager = lazy(() => import("./components/admin/ThemeConfigManager").then(module => ({ default: module.ThemeConfigManager })));
+const CalendarIntegration = lazy(() => import("./components/admin/CalendarIntegration").then(module => ({ default: module.CalendarIntegration })));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -70,17 +81,35 @@ const App = () => (
                 <Route path="/creator/dashboard" element={<CreatorDashboard />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/creator/setup" element={<CreatorForm />} />
-                <Route path="/admin" element={<Admin />} />
-                <Route path="/admin/creators/new" element={<CreatorForm />} />
-                <Route path="/admin/creators/:id" element={<CreatorForm />} />
-                <Route path="/admin/creators/:id/landing" element={<EditLanding />} />
-                <Route path="/admin/banners" element={<BannerGenerator />} />
-                <Route path="/admin/themes" element={<ThemeManager />} />
-                <Route path="/admin/toledo" element={<ToledoAdmin />} />
-                <Route path="/admin/marketing" element={<MarketingPlanner />} />
-                <Route path="/admin/calendar/:companyId" element={<CalendarPage />} />
-                <Route path="/admin/flyers" element={<Navigate to="/admin/marketing" replace />} />
-                <Route path="/admin/dashboard" element={<ProjectsDashboard />} />
+                <Route path="/admin" element={<Admin />}>
+                  <Route index element={<LuxuryDashboard />} />
+                  <Route path="dashboard" element={<Navigate to="/admin" replace />} />
+
+                  {/* Core Modules */}
+                  <Route path="creators" element={<CreatorsPage />} />
+                  <Route path="creators/new" element={<CreatorForm />} />
+                  <Route path="creators/:id" element={<CreatorForm />} />
+                  <Route path="creators/:id/landing" element={<EditLanding />} />
+                  <Route path="marketing" element={<MarketingPlanner />} />
+
+                  {/* Management Modules */}
+                  <Route path="bookings" element={<BookingsManager />} />
+                  <Route path="pricing" element={<PricingManager />} />
+                  <Route path="users" element={<UserManagement />} />
+                  <Route path="banners" element={<BannerGenerator />} />
+                  <Route path="calendar" element={<CalendarIntegration />} />
+                  <Route path="calendar/:companyId" element={<CalendarPage />} />
+
+                  {/* System Modules */}
+                  <Route path="homepage" element={<HomepageEditor />} />
+                  <Route path="branding" element={<AgencyBrandingManager />} />
+                  <Route path="platforms" element={<PlatformSettingsManager />} />
+                  <Route path="themes-config" element={<ThemeConfigManager />} />
+                  <Route path="themes" element={<ThemeManager />} />
+                  <Route path="toledo" element={<ToledoAdmin />} />
+
+                  <Route path="flyers" element={<Navigate to="/admin/marketing" replace />} />
+                </Route>
                 {/* Portal do Cliente - Link compartilhável público */}
                 <Route path="/cliente/:id" element={<ClientPortalPage />} />
                 {/* Rota legada - redirect para nova página */}

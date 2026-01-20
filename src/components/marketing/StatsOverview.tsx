@@ -4,12 +4,26 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { MarketingStrategy, channelTypeLabels, channelTypeIcons, channelTypeColors } from '@/types/marketing';
 import { formatCurrency } from '@/utils/formatters';
 
+import { MoneyService } from '@/services/MoneyService';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
+
 interface StatsOverviewProps {
     strategies: MarketingStrategy[];
 }
 
 export function StatsOverview({ strategies }: StatsOverviewProps) {
-    const totalBudget = strategies.reduce((sum, s) => sum + s.budget, 0);
+    // Phase 1: Use MoneyService for normalization (Fixes AUDIT-001)
+    const totalBudget = strategies.reduce((sum, s) => {
+        // Fallback: assume BRL if currency missing (migration Phase 1)
+        const currency = (s as any).currency || 'BRL';
+        return sum + MoneyService.normalizeToBRL(s.budget, currency);
+    }, 0);
+
     const completedCount = strategies.filter(s => s.status === 'completed').length;
     const inProgressCount = strategies.filter(s => s.status === 'in_progress').length;
 
@@ -34,7 +48,21 @@ export function StatsOverview({ strategies }: StatsOverviewProps) {
         },
         {
             label: 'Orçamento Total',
-            value: formatCurrency(totalBudget),
+            value: (
+                <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <span className="cursor-help border-b border-dashed border-primary/30">
+                                {MoneyService.format(totalBudget, 'BRL')}
+                            </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p className="font-semibold">Normalizado para BRL</p>
+                            <p className="text-xs text-muted-foreground">Soma de todas as moedas convertidas.</p>
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+            ),
             icon: DollarSign,
             useTheme: true,
             opacity: 0.85,

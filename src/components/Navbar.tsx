@@ -23,13 +23,13 @@ export function Navbar({ simplified = false }: NavbarProps) {
       try {
         const { data, error } = await supabase
           .from("agency_settings")
-          .select("value")
-          .eq("key", "branding")
+          .select("branding")
+          .limit(1)
           .maybeSingle();
 
         if (error) throw error;
-        if (data?.value) {
-          setBranding(data.value as AgencyBranding);
+        if (data?.branding) {
+          setBranding(data.branding as AgencyBranding);
         }
       } catch (error) {
         console.error("Error fetching branding:", error);
@@ -76,7 +76,7 @@ export function Navbar({ simplified = false }: NavbarProps) {
                 }}
               />
             ) : (
-              <span className="text-gradient">{branding?.agency_name || "AGENCY"}</span>
+              <span className="text-gradient font-display tracking-tight">{branding?.agency_name || "Agência Eternizar"}</span>
             )}
           </motion.div>
         </Link>

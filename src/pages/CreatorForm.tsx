@@ -174,17 +174,29 @@ export default function CreatorForm() {
       if (!finalSlug) throw new Error("Slug é obrigatório");
 
       // Prepare payload
+      // FIX: Calculate total_followers from platform followers
+      const totalFollowers = (
+        parseFormattedNumber(formData.instagram_followers || '0') +
+        parseFormattedNumber(formData.youtube_subscribers || '0') +
+        parseFormattedNumber(formData.tiktok_followers || '0') +
+        parseFormattedNumber(formData.twitter_followers || '0') +
+        parseFormattedNumber(formData.kwai_followers || '0')
+      );
+
       const payload = {
         ...formData,
         slug: finalSlug,
+        // FIX: Set total_followers as formatted string
+        total_followers: totalFollowers > 0 ? totalFollowers.toString() : '0',
         // Parse numbers for DB
         instagram_followers: parseFormattedNumber(formData.instagram_followers || '0'),
         tiktok_followers: parseFormattedNumber(formData.tiktok_followers || '0'),
         youtube_subscribers: parseFormattedNumber(formData.youtube_subscribers || '0'),
         twitter_followers: parseFormattedNumber(formData.twitter_followers || '0'),
         kwai_followers: parseFormattedNumber(formData.kwai_followers || '0'),
-        engagement_rate: parseFormattedNumber(formData.engagement_rate || '0'),
-        stories_views: parseFormattedNumber(formData.stories_views || '0'),
+        // Keep these as strings to match DB schema
+        engagement_rate: formData.engagement_rate || '',
+        stories_views: formData.stories_views || '',
 
         // Add approval status for new creators (self-signup)
         ...(!id && !isAdmin && { approval_status: 'pending' }),
@@ -286,6 +298,7 @@ export default function CreatorForm() {
                 duplicates={duplicates}
                 onIgnoreDuplicate={() => clearDuplicates()}
                 onMerge={() => console.log('Merge requested')}
+                onValidationCheck={handleDuplicateCheck}
               />
             )}
             {currentStep === 2 && (

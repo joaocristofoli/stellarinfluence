@@ -74,7 +74,7 @@ export function CommandPalette({ isOpen, onClose, customCommands = [] }: Command
         {
             id: 'nav-creators',
             label: 'Criadores',
-            description: 'Gerenciar influenciadores',
+            description: 'Gerenciar parceiros de mídia',
             icon: <Users className="w-4 h-4" />,
             shortcut: 'C',
             action: () => { navigate('/admin?tab=creators'); onClose(); },
@@ -264,8 +264,8 @@ export function CommandPalette({ isOpen, onClose, customCommands = [] }: Command
                                                     onClick={cmd.action}
                                                     onMouseEnter={() => setSelectedIndex(globalIndex)}
                                                     className={`w-full flex items-center gap-3 px-4 py-2 text-left transition-colors ${isSelected
-                                                            ? 'bg-accent/10 text-accent'
-                                                            : 'hover:bg-muted'
+                                                        ? 'bg-accent/10 text-accent'
+                                                        : 'hover:bg-muted'
                                                         }`}
                                                 >
                                                     <span className={isSelected ? 'text-accent' : 'text-muted-foreground'}>

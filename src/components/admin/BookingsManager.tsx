@@ -14,6 +14,12 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
     Select,
     SelectContent,
     SelectItem,
@@ -161,8 +167,17 @@ export function BookingsManager() {
             }
         >
             {bookings.length === 0 ? (
-                <div className="text-center py-12">
-                    <p className="text-muted-foreground">Nenhuma solicitação encontrada</p>
+                <div className="flex flex-col items-center justify-center py-20 text-center animate-in fade-in zoom-in-95 duration-500">
+                    <div className="bg-gradient-to-br from-accent/20 to-accent/5 p-8 rounded-full mb-6 ring-1 ring-accent/20 shadow-[0_0_50px_-10px_hsla(var(--accent)/0.3)] backdrop-blur-sm">
+                        <Mail className="w-16 h-16 text-accent" />
+                    </div>
+                    <h3 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/60 mb-3 tracking-tight">
+                        Caixa de Entrada Vazia
+                    </h3>
+                    <p className="max-w-md mb-8 text-lg text-muted-foreground font-light leading-relaxed">
+                        Nenhuma solicitação de colaboração pendente.<br />
+                        Tudo tranquilo por aqui.
+                    </p>
                 </div>
             ) : (
                 <Table>
@@ -200,32 +215,54 @@ export function BookingsManager() {
                                     {new Date(booking.created_at).toLocaleDateString("pt-BR")}
                                 </TableCell>
                                 <TableCell className="text-right">
-                                    <div className="flex items-center justify-end gap-2">
-                                        <Button size="sm" variant="ghost">
-                                            <Eye className="w-4 h-4" />
-                                        </Button>
-                                        {booking.status === "pending" && (
-                                            <>
-                                                <Button
-                                                    size="sm"
-                                                    variant="ghost"
-                                                    onClick={() => updateStatus(booking.id, "accepted")}
-                                                >
-                                                    <Check className="w-4 h-4 text-green-500" />
-                                                </Button>
-                                                <Button
-                                                    size="sm"
-                                                    variant="ghost"
-                                                    onClick={() => updateStatus(booking.id, "rejected")}
-                                                >
-                                                    <X className="w-4 h-4 text-red-500" />
-                                                </Button>
-                                            </>
-                                        )}
-                                        <Button size="sm" variant="ghost">
-                                            <Mail className="w-4 h-4" />
-                                        </Button>
-                                    </div>
+                                    <TooltipProvider>
+                                        <div className="flex items-center justify-end gap-2">
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <Button size="sm" variant="ghost">
+                                                        <Eye className="w-4 h-4" />
+                                                    </Button>
+                                                </TooltipTrigger>
+                                                <TooltipContent>Ver detalhes</TooltipContent>
+                                            </Tooltip>
+                                            {booking.status === "pending" && (
+                                                <>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <Button
+                                                                size="sm"
+                                                                variant="ghost"
+                                                                onClick={() => updateStatus(booking.id, "accepted")}
+                                                            >
+                                                                <Check className="w-4 h-4 text-green-500" />
+                                                            </Button>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>Aprovar</TooltipContent>
+                                                    </Tooltip>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <Button
+                                                                size="sm"
+                                                                variant="ghost"
+                                                                onClick={() => updateStatus(booking.id, "rejected")}
+                                                            >
+                                                                <X className="w-4 h-4 text-red-500" />
+                                                            </Button>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>Rejeitar</TooltipContent>
+                                                    </Tooltip>
+                                                </>
+                                            )}
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <Button size="sm" variant="ghost">
+                                                        <Mail className="w-4 h-4" />
+                                                    </Button>
+                                                </TooltipTrigger>
+                                                <TooltipContent>Enviar e-mail</TooltipContent>
+                                            </Tooltip>
+                                        </div>
+                                    </TooltipProvider>
                                 </TableCell>
                             </TableRow>
                         ))}

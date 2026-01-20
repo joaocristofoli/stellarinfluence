@@ -11,26 +11,32 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { X, SlidersHorizontal } from "lucide-react";
+import { X, SlidersHorizontal, MapPin, Layers } from "lucide-react";
 
 interface FilterBarProps {
     onFilterChange: (filters: FilterState) => void;
     categories: string[];
+    /** Available cities for city filter (extracted from creators) */
+    cities?: string[];
 }
 
 export interface FilterState {
     search: string;
     category: string;
+    city: string;
+    mediaType: string;
     minFollowers: string;
     engagementMin: string;
     platforms: string[];
 }
 
-export function FilterBar({ onFilterChange, categories }: FilterBarProps) {
+export function FilterBar({ onFilterChange, categories, cities = [] }: FilterBarProps) {
     const [isExpanded, setIsExpanded] = useState(false);
     const [filters, setFilters] = useState<FilterState>({
         search: "",
         category: "all",
+        city: "",
+        mediaType: "",
         minFollowers: "",
         engagementMin: "",
         platforms: [],
@@ -56,6 +62,8 @@ export function FilterBar({ onFilterChange, categories }: FilterBarProps) {
         const emptyFilters: FilterState = {
             search: "",
             category: "all",
+            city: "",
+            mediaType: "",
             minFollowers: "",
             engagementMin: "",
             platforms: [],
@@ -67,6 +75,8 @@ export function FilterBar({ onFilterChange, categories }: FilterBarProps) {
     const hasActiveFilters =
         filters.search ||
         filters.category !== "all" ||
+        filters.city ||
+        filters.mediaType ||
         filters.minFollowers ||
         filters.engagementMin ||
         filters.platforms.length > 0;
@@ -104,6 +114,28 @@ export function FilterBar({ onFilterChange, categories }: FilterBarProps) {
                         className="overflow-hidden"
                     >
                         <div className="glass rounded-2xl p-4 space-y-4">
+                            {/* Media Type Filter - First Priority */}
+                            <div className="space-y-2">
+                                <Label className="flex items-center gap-2">
+                                    <Layers className="w-4 h-4 text-accent" />
+                                    Tipo de Mídia
+                                </Label>
+                                <Select
+                                    value={filters.mediaType}
+                                    onValueChange={(value) => updateFilters({ mediaType: value })}
+                                >
+                                    <SelectTrigger className="hover:scale-[1.01] transition-transform">
+                                        <SelectValue placeholder="Todos os tipos" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="">Todos</SelectItem>
+                                        <SelectItem value="digital">📱 Mídia Digital</SelectItem>
+                                        <SelectItem value="physical">🪧 Mídia Física</SelectItem>
+                                        <SelectItem value="traditional">📺 Mídia Tradicional</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
                             {/* Category */}
                             <div className="space-y-2">
                                 <Label>Categoria</Label>
@@ -124,6 +156,32 @@ export function FilterBar({ onFilterChange, categories }: FilterBarProps) {
                                     </SelectContent>
                                 </Select>
                             </div>
+
+                            {/* City Filter - Luxury OS styled */}
+                            {cities.length > 0 && (
+                                <div className="space-y-2">
+                                    <Label className="flex items-center gap-2">
+                                        <MapPin className="w-4 h-4 text-accent" />
+                                        Cidade
+                                    </Label>
+                                    <Select
+                                        value={filters.city}
+                                        onValueChange={(value) => updateFilters({ city: value })}
+                                    >
+                                        <SelectTrigger className="hover:scale-[1.01] transition-transform">
+                                            <SelectValue placeholder="Todas as cidades" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="">Todas</SelectItem>
+                                            {cities.map((city) => (
+                                                <SelectItem key={city} value={city}>
+                                                    {city}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )}
 
                             {/* Min Followers */}
                             <div className="space-y-2">
@@ -193,6 +251,12 @@ export function FilterBar({ onFilterChange, categories }: FilterBarProps) {
                     {filters.category !== "all" && (
                         <Badge variant="secondary" className="text-xs">
                             {filters.category}
+                        </Badge>
+                    )}
+                    {filters.city && (
+                        <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                            <MapPin className="w-3 h-3" />
+                            {filters.city}
                         </Badge>
                     )}
                     {filters.minFollowers && (

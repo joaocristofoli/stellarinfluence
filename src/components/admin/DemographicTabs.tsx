@@ -1,5 +1,6 @@
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { PercentageInput, NumberInput } from "@/components/ui/MaskedInput";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -115,23 +116,38 @@ export function DemographicTabs({ currentStep, formData, setFormData }: Demograp
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <Label className="text-sm">13-17 anos</Label>
-                            <Input type="number" min="0" max="100" value={formData.audience_age_13_17} onChange={(e) => setFormData({ ...formData, audience_age_13_17: e.target.value })} />
+                            <PercentageInput
+                                value={parseFloat(formData.audience_age_13_17) || 0}
+                                onChange={(v) => setFormData({ ...formData, audience_age_13_17: v.toString() })}
+                            />
                         </div>
                         <div>
                             <Label className="text-sm">18-24 anos</Label>
-                            <Input type="number" min="0" max="100" value={formData.audience_age_18_24} onChange={(e) => setFormData({ ...formData, audience_age_18_24: e.target.value })} />
+                            <PercentageInput
+                                value={parseFloat(formData.audience_age_18_24) || 0}
+                                onChange={(v) => setFormData({ ...formData, audience_age_18_24: v.toString() })}
+                            />
                         </div>
                         <div>
                             <Label className="text-sm">25-34 anos</Label>
-                            <Input type="number" min="0" max="100" value={formData.audience_age_25_34} onChange={(e) => setFormData({ ...formData, audience_age_25_34: e.target.value })} />
+                            <PercentageInput
+                                value={parseFloat(formData.audience_age_25_34) || 0}
+                                onChange={(v) => setFormData({ ...formData, audience_age_25_34: v.toString() })}
+                            />
                         </div>
                         <div>
                             <Label className="text-sm">35-44 anos</Label>
-                            <Input type="number" min="0" max="100" value={formData.audience_age_35_44} onChange={(e) => setFormData({ ...formData, audience_age_35_44: e.target.value })} />
+                            <PercentageInput
+                                value={parseFloat(formData.audience_age_35_44) || 0}
+                                onChange={(v) => setFormData({ ...formData, audience_age_35_44: v.toString() })}
+                            />
                         </div>
                         <div>
                             <Label className="text-sm">45+ anos</Label>
-                            <Input type="number" min="0" max="100" value={formData.audience_age_45_plus} onChange={(e) => setFormData({ ...formData, audience_age_45_plus: e.target.value })} />
+                            <PercentageInput
+                                value={parseFloat(formData.audience_age_45_plus) || 0}
+                                onChange={(v) => setFormData({ ...formData, audience_age_45_plus: v.toString() })}
+                            />
                         </div>
                     </div>
                 </div>
@@ -141,15 +157,24 @@ export function DemographicTabs({ currentStep, formData, setFormData }: Demograp
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <Label className="text-sm">Masculino</Label>
-                            <Input type="number" min="0" max="100" value={formData.audience_male_percent} onChange={(e) => setFormData({ ...formData, audience_male_percent: e.target.value })} />
+                            <PercentageInput
+                                value={parseFloat(formData.audience_male_percent) || 0}
+                                onChange={(v) => setFormData({ ...formData, audience_male_percent: v.toString() })}
+                            />
                         </div>
                         <div>
                             <Label className="text-sm">Feminino</Label>
-                            <Input type="number" min="0" max="100" value={formData.audience_female_percent} onChange={(e) => setFormData({ ...formData, audience_female_percent: e.target.value })} />
+                            <PercentageInput
+                                value={parseFloat(formData.audience_female_percent) || 0}
+                                onChange={(v) => setFormData({ ...formData, audience_female_percent: v.toString() })}
+                            />
                         </div>
                         <div>
                             <Label className="text-sm">Outros</Label>
-                            <Input type="number" min="0" max="100" value={formData.audience_other_percent} onChange={(e) => setFormData({ ...formData, audience_other_percent: e.target.value })} />
+                            <PercentageInput
+                                value={parseFloat(formData.audience_other_percent) || 0}
+                                onChange={(v) => setFormData({ ...formData, audience_other_percent: v.toString() })}
+                            />
                         </div>
                     </div>
                 </div>
@@ -223,19 +248,35 @@ export function DemographicTabs({ currentStep, formData, setFormData }: Demograp
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <Label className="text-sm">Instagram</Label>
-                            <Input type="number" step="0.01" min="0" value={formData.instagram_engagement_rate} onChange={(e) => setFormData({ ...formData, instagram_engagement_rate: e.target.value })} placeholder="Ex: 3.5" />
+                            <PercentageInput
+                                value={parseFloat(formData.instagram_engagement_rate) || 0}
+                                onChange={(v) => setFormData({ ...formData, instagram_engagement_rate: v.toString() })}
+                                placeholder="Ex: 3,5%"
+                            />
                         </div>
                         <div>
                             <Label className="text-sm">TikTok</Label>
-                            <Input type="number" step="0.01" min="0" value={formData.tiktok_engagement_rate} onChange={(e) => setFormData({ ...formData, tiktok_engagement_rate: e.target.value })} placeholder="Ex: 8.2" />
+                            <PercentageInput
+                                value={parseFloat(formData.tiktok_engagement_rate) || 0}
+                                onChange={(v) => setFormData({ ...formData, tiktok_engagement_rate: v.toString() })}
+                                placeholder="Ex: 8,2%"
+                            />
                         </div>
                         <div>
                             <Label className="text-sm">YouTube</Label>
-                            <Input type="number" step="0.01" min="0" value={formData.youtube_engagement_rate} onChange={(e) => setFormData({ ...formData, youtube_engagement_rate: e.target.value })} placeholder="Ex: 5.1" />
+                            <PercentageInput
+                                value={parseFloat(formData.youtube_engagement_rate) || 0}
+                                onChange={(v) => setFormData({ ...formData, youtube_engagement_rate: v.toString() })}
+                                placeholder="Ex: 5,1%"
+                            />
                         </div>
                         <div>
                             <Label className="text-sm">Twitter/X</Label>
-                            <Input type="number" step="0.01" min="0" value={formData.twitter_engagement_rate} onChange={(e) => setFormData({ ...formData, twitter_engagement_rate: e.target.value })} placeholder="Ex: 2.3" />
+                            <PercentageInput
+                                value={parseFloat(formData.twitter_engagement_rate) || 0}
+                                onChange={(v) => setFormData({ ...formData, twitter_engagement_rate: v.toString() })}
+                                placeholder="Ex: 2,3%"
+                            />
                         </div>
                     </div>
                 </div>
@@ -245,15 +286,27 @@ export function DemographicTabs({ currentStep, formData, setFormData }: Demograp
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <Label className="text-sm">Visualizações Médias</Label>
-                            <Input type="number" min="0" value={formData.average_views} onChange={(e) => setFormData({ ...formData, average_views: e.target.value })} placeholder="Ex: 50000" />
+                            <NumberInput
+                                value={parseInt(formData.average_views) || 0}
+                                onChange={(v) => setFormData({ ...formData, average_views: v.toString() })}
+                                placeholder="50.000"
+                            />
                         </div>
                         <div>
                             <Label className="text-sm">Curtidas Médias</Label>
-                            <Input type="number" min="0" value={formData.average_likes} onChange={(e) => setFormData({ ...formData, average_likes: e.target.value })} placeholder="Ex: 5000" />
+                            <NumberInput
+                                value={parseInt(formData.average_likes) || 0}
+                                onChange={(v) => setFormData({ ...formData, average_likes: v.toString() })}
+                                placeholder="5.000"
+                            />
                         </div>
                         <div>
                             <Label className="text-sm">Comentários Médios</Label>
-                            <Input type="number" min="0" value={formData.average_comments} onChange={(e) => setFormData({ ...formData, average_comments: e.target.value })} placeholder="Ex: 200" />
+                            <NumberInput
+                                value={parseInt(formData.average_comments) || 0}
+                                onChange={(v) => setFormData({ ...formData, average_comments: v.toString() })}
+                                placeholder="200"
+                            />
                         </div>
                     </div>
                 </div>

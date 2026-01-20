@@ -398,9 +398,12 @@ export default function ClientPortalPage() {
             {/* Footer */}
             <footer className="bg-white/5 backdrop-blur-xl border-t border-white/10 mt-8 sm:mt-12">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6 text-center">
-                    <p className="text-white/40 text-xs sm:text-sm">
-                        🔒 Link protegido por UUID único • Planejamento gerado por Agência Eternizar • {new Date().getFullYear()}
-                    </p>
+                    <div className="flex flex-col items-center justify-center gap-2">
+                        <img src="/logo-eternizar.png" alt="Agência Eternizar" className="h-8 opacity-50 grayscale hover:grayscale-0 transition-all duration-500" />
+                        <p className="text-white/40 text-xs sm:text-sm">
+                            🔒 Link protegido por UUID único • {new Date().getFullYear()}
+                        </p>
+                    </div>
                 </div>
             </footer>
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Input } from '@/components/ui/input';
+import { GlassInput } from '@/components/ui/glass-input';
 import { cn } from '@/lib/utils';
 
 interface CurrencyInputProps {
@@ -9,6 +9,7 @@ interface CurrencyInputProps {
     required?: boolean;
     className?: string;
     id?: string;
+    disabled?: boolean;
 }
 
 /**
@@ -24,6 +25,7 @@ export function CurrencyInput({
     required,
     className,
     id,
+    disabled,
 }: CurrencyInputProps) {
     const [displayValue, setDisplayValue] = useState('');
     const inputRef = useRef<HTMLInputElement>(null);
@@ -87,7 +89,7 @@ export function CurrencyInput({
     };
 
     return (
-        <Input
+        <GlassInput
             ref={inputRef}
             id={id}
             type="text"
@@ -97,8 +99,9 @@ export function CurrencyInput({
             onFocus={handleFocus}
             placeholder={placeholder}
             required={required}
+            disabled={disabled}
             className={cn('text-right tabular-nums', className)}
+            icon={<span className="text-xs font-semibold text-muted-foreground mr-1">R$</span>}
         />
     );
 }
-

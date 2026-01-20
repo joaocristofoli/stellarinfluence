@@ -1,7 +1,10 @@
-import { useEffect, useState, useMemo, useCallback } from "react";
-import { Creator } from "@/types/creator";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { Creator } from "@/types/creator";
+import { useSoftDelete } from "@/hooks/useSoftDelete";
+import { useCityFilter } from "@/hooks/useCityFilter";
+import { getSafeFollowerDisplay } from "@/utils/followers";
 import { useToast } from "@/hooks/use-toast";
 import {
   Table,
@@ -12,7 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Pencil, Trash2, Loader2, ExternalLink, Palette, AlertTriangle, CheckCircle, GitMerge } from "lucide-react";
+import { Pencil, Trash2, Loader2, ExternalLink, Palette, AlertTriangle, CheckCircle, GitMerge, CheckCircle2, Users, Plus } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,7 +34,10 @@ import {
 import {
   PROFILE_CATEGORIES,
   getProfileTypeIcon,
-  getProfileTypeLabel
+  getProfileTypeLabel,
+  getProfileTypeColor,
+  MEDIA_GROUPS,
+  ProfileType,
 } from "@/types/profileTypes";
 import {
   Tooltip,
@@ -41,7 +47,6 @@ import {
 } from "@/components/ui/tooltip";
 import { MobileCreatorCard } from "./MobileCreatorCard";
 import { FilterBar, FilterState } from "./FilterBar";
-import { useSoftDelete } from "@/hooks/useSoftDelete";
 
 /**
  * CreatorsTable - Admin component for managing content creators
@@ -58,6 +63,8 @@ export function CreatorsTable() {
   const [filters, setFilters] = useState<FilterState>({
     search: "",
     category: "all",
+    city: "",
+    mediaType: "",
     minFollowers: "",
     engagementMin: "",
     platforms: [],
@@ -181,6 +188,20 @@ export function CreatorsTable() {
         return false;
       }
 
+      // City filter - case insensitive match
+      if (filters.city && creator.city?.toLowerCase() !== filters.city.toLowerCase()) {
+        return false;
+      }
+
+      // Media type filter using MEDIA_GROUPS
+      if (filters.mediaType) {
+        const creatorProfileType = (creator.profile_type || 'influencer') as ProfileType;
+        const mediaGroup = MEDIA_GROUPS[filters.mediaType as keyof typeof MEDIA_GROUPS];
+        if (mediaGroup && !mediaGroup.includes(creatorProfileType)) {
+          return false;
+        }
+      }
+
       // Platform filters
       if (filters.platforms.length > 0) {
         const hasMatchingPlatform = filters.platforms.some(platform => {
@@ -216,6 +237,9 @@ export function CreatorsTable() {
     });
   }, [creators, filters]);
 
+  // Extract unique cities for filter - MUST be called before any early returns (Rules of Hooks)
+  const { uniqueCities } = useCityFilter(creators);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -226,15 +250,24 @@ export function CreatorsTable() {
 
   if (creators.length === 0) {
     return (
-      <div className="text-center py-12 glass rounded-3xl">
-        <p className="text-muted-foreground mb-4">
-          Nenhum criador cadastrado ainda
+      <div className="flex flex-col items-center justify-center py-20 text-center animate-in fade-in zoom-in-95 duration-500">
+        <div className="bg-gradient-to-br from-accent/20 to-accent/5 p-8 rounded-full mb-6 ring-1 ring-accent/20 shadow-[0_0_50px_-10px_hsla(var(--accent)/0.3)] backdrop-blur-sm">
+          <Users className="w-16 h-16 text-accent" />
+        </div>
+        <h3 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-white/60 mb-3 tracking-tight">
+          Comece sua jornada
+        </h3>
+        <p className="max-w-md mb-8 text-lg text-muted-foreground font-light leading-relaxed">
+          Nenhum parceiro de mídia cadastrado ainda.<br />
+          Adicione talentos para começar a gerenciar seu ecossistema.
         </p>
         <Button
           onClick={() => navigate("/admin/creators/new")}
-          className="bg-accent hover:bg-accent/90"
+          size="lg"
+          className="bg-accent hover:bg-accent/90 hover:scale-105 transition-all duration-300 btn-glow shadow-xl shadow-accent/20 rounded-xl px-10 h-14 text-lg font-semibold"
         >
-          Cadastrar primeiro criador
+          <Plus className="w-6 h-6 mr-2" />
+          Adicionar Primeiro Parceiro
         </Button>
       </div>
     );
@@ -243,8 +276,47 @@ export function CreatorsTable() {
   return (
     <>
       {/* Filter Bar */}
-      <div className="mb-6">
-        <FilterBar onFilterChange={setFilters} categories={categories} />
+      <div className="mb-6 flex items-center justify-between gap-4 flex-wrap">
+        <FilterBar
+          onFilterChange={setFilters}
+          categories={categories}
+          cities={uniqueCities}
+        />
+        {/* QW-001: Bulk Approve All Pending */}
+        {filteredCreators.filter(c => (c as any).approval_status === 'pending').length > 0 && (
+          <Button
+            onClick={async () => {
+              const pendingIds = filteredCreators
+                .filter(c => (c as any).approval_status === 'pending')
+                .map(c => c.id);
+
+              const { error } = await supabase
+                .from('creators')
+                .update({ approval_status: 'approved', approved_at: new Date().toISOString() } as any)
+                .in('id', pendingIds);
+
+              if (error) {
+                toast({ title: "Erro", description: error.message, variant: "destructive" });
+                return;
+              }
+
+              // Optimistic update
+              setCreators(prev => prev.map(c =>
+                pendingIds.includes(c.id) ? { ...c, approval_status: 'approved' } : c
+              ));
+
+              toast({
+                title: "Aprovação em Massa",
+                description: `${pendingIds.length} criadores aprovados com sucesso!`
+              });
+            }}
+            variant="outline"
+            className="gap-2 border-green-500/50 text-green-600 hover:bg-green-500/10"
+          >
+            <CheckCircle2 className="w-4 h-4" />
+            Aprovar Todos ({filteredCreators.filter(c => (c as any).approval_status === 'pending').length})
+          </Button>
+        )}
       </div>
 
       {/* Mobile View - Cards */}
@@ -291,21 +363,19 @@ export function CreatorsTable() {
                       <div className="flex items-center gap-2">
                         {creator.image_url && <img src={creator.image_url} className="w-8 h-8 rounded-full object-cover" />}
                         {creator.name}
-                        {/* VISIBILITY: Profile Type Badge */}
-                        {creator.profile_type && creator.profile_type !== 'influencer' && (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger>
-                                <span className="text-xs bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded border border-purple-500/30 flex items-center gap-1">
-                                  {getProfileTypeIcon(creator.profile_type as any)}
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                {getProfileTypeLabel(creator.profile_type as any)}
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        )}
+                        {/* VISIBILITY: Profile Type Badge - ALWAYS VISIBLE with dynamic colors */}
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <span className={`text-xs px-1.5 py-0.5 rounded border flex items-center gap-1 ${getProfileTypeColor((creator.profile_type || 'influencer') as ProfileType)}`}>
+                                {getProfileTypeIcon((creator.profile_type || 'influencer') as ProfileType)}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {getProfileTypeLabel((creator.profile_type || 'influencer') as ProfileType)}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </div>
                     </div>
                   </TableCell>
@@ -321,7 +391,9 @@ export function CreatorsTable() {
                     )}
                   </TableCell>
                   <TableCell>{creator.category}</TableCell>
-                  <TableCell>{creator.total_followers}</TableCell>
+                  <TableCell className="font-medium tabular-nums">
+                    {getSafeFollowerDisplay(creator)}
+                  </TableCell>
                   <TableCell>{creator.engagement_rate}</TableCell>
                   <TableCell>
                     <div className="flex gap-1">

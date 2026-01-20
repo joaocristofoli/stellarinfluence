@@ -3,6 +3,8 @@ import { Trash2, Edit2, ChevronDown, ChevronUp, Link2, ListTodo } from 'lucide-r
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useCreators } from '@/hooks/useCreators';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -54,6 +56,14 @@ export function StrategyCard({ strategy, allStrategies, onEdit, onDelete }: Stra
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
     const { data: tasks = [] } = useStrategyTasks(strategy.id);
 
+    // CA-000: Fetch creators to resolve avatars (Cached by React Query)
+    const { data: creators = [] } = useCreators();
+
+    // Resolve linked creator (Primary)
+    const linkedCreator = strategy.channelType === 'influencer' && strategy.linkedCreatorIds && strategy.linkedCreatorIds.length > 0
+        ? creators.find(c => strategy.linkedCreatorIds![0] === c.id)
+        : null;
+
     // Calculate task progress
     const completedTasks = tasks.filter(t => t.completed).length;
     const taskProgress = tasks.length > 0 ? Math.round((completedTasks / tasks.length) * 100) : 0;
@@ -78,9 +88,9 @@ export function StrategyCard({ strategy, allStrategies, onEdit, onDelete }: Stra
 
     return (
         <>
-            {/* CARD-001: Borda lateral colorida + CARD-005: Hover float */}
+            {/* CARD-001: Borda lateral colorida + CARD-005: Hover float + QW-002: Glass Premium */}
             <Card
-                className="overflow-hidden animate-fade-in relative transition-all duration-300 hover:-translate-y-1 hover:shadow-xl group"
+                className="overflow-hidden animate-fade-in relative transition-all duration-300 hover:-translate-y-1 hover:shadow-xl group glass-premium"
                 style={{ borderLeft: `4px solid ${getChannelColor(strategy.channelType)}` }}
             >
                 {/* CARD-002: Header com gradiente sutil */}
@@ -92,21 +102,52 @@ export function StrategyCard({ strategy, allStrategies, onEdit, onDelete }: Stra
                 >
                     <div className="flex items-start justify-between gap-4">
                         <div className="flex items-center gap-3">
-                            {/* CARD-003: Ícone com glow */}
-                            <div
-                                className={`w-12 h-12 rounded-xl ${channelTypeColors[strategy.channelType]} flex items-center justify-center text-2xl shadow-lg transition-all duration-300 group-hover:scale-110`}
-                                style={{
-                                    boxShadow: `0 8px 24px ${getChannelColor(strategy.channelType)}40`
-                                }}
-                            >
-                                {channelTypeIcons[strategy.channelType]}
-                            </div>
+                            {/* CA-001: Face-First Logic - Show Avatar if Influencer */}
+                            {linkedCreator ? (
+                                <div
+                                    className="relative w-12 h-12 rounded-xl shadow-lg transition-all duration-300 group-hover:scale-110 overflow-hidden border-2 border-white/20"
+                                    style={{
+                                        boxShadow: `0 8px 24px ${getChannelColor(strategy.channelType)}40`
+                                    }}
+                                >
+                                    <Avatar className="w-full h-full rounded-none">
+                                        <AvatarImage src={linkedCreator.image_url || ''} className="object-cover" />
+                                        <AvatarFallback className={`${channelTypeColors[strategy.channelType]} text-white`}>
+                                            {linkedCreator.name.substring(0, 2).toUpperCase()}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                    {/* Small badge to indicate it's an influencer channel type */}
+                                    <div className={`absolute bottom-0 right-0 w-4 h-4 rounded-tl-lg ${channelTypeColors[strategy.channelType]} flex items-center justify-center`}>
+                                        <span className="text-[10px] text-white">
+                                            {channelTypeIcons[strategy.channelType]}
+                                        </span>
+                                    </div>
+                                </div>
+                            ) : (
+                                /* Standard Icon Fallback */
+                                <div
+                                    className={`w-12 h-12 rounded-xl ${channelTypeColors[strategy.channelType]} flex items-center justify-center text-2xl shadow-lg transition-all duration-300 group-hover:scale-110`}
+                                    style={{
+                                        boxShadow: `0 8px 24px ${getChannelColor(strategy.channelType)}40`
+                                    }}
+                                >
+                                    {channelTypeIcons[strategy.channelType]}
+                                </div>
+                            )}
+
                             <div>
-                                <h3 className="font-display font-bold text-lg text-card-foreground group-hover:text-primary transition-colors">
+                                <h3 className="font-display font-bold text-lg text-card-foreground group-hover:text-primary transition-colors line-clamp-1">
                                     {strategy.name}
                                 </h3>
-                                <p className="text-sm text-muted-foreground font-medium">
-                                    {channelTypeLabels[strategy.channelType]}
+                                {/* CA-002: Show Creator Name if linked, otherwise Channel Label */}
+                                <p className="text-sm text-muted-foreground font-medium flex items-center gap-1">
+                                    {linkedCreator ? (
+                                        <span className="text-primary font-semibold flex items-center gap-1">
+                                            @{linkedCreator.slug || linkedCreator.name}
+                                        </span>
+                                    ) : (
+                                        channelTypeLabels[strategy.channelType]
+                                    )}
                                 </p>
                             </div>
                         </div>
@@ -149,10 +190,10 @@ export function StrategyCard({ strategy, allStrategies, onEdit, onDelete }: Stra
                 </CardHeader>
 
                 <CardContent className="space-y-4 pt-2">
-                    {/* CARD-004: Budget com destaque 2xl */}
+                    {/* CARD-004: Budget com destaque 2xl + tabular-nums para financeiro */}
                     <div className="flex items-center justify-between p-3 rounded-lg bg-primary/5 border border-primary/10">
                         <span className="text-sm text-muted-foreground font-medium">Orçamento</span>
-                        <span className="font-display font-black text-2xl text-primary">
+                        <span className="font-display font-black text-2xl text-primary tabular-nums">
                             {formatCurrency(strategy.budget)}
                         </span>
                     </div>

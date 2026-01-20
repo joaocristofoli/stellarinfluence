@@ -55,16 +55,16 @@ function CreatorCard({ creator, index, scrollYProgress }: { creator: Creator; in
     >
       <Card className="glass-premium border-white/10 overflow-hidden group cursor-pointer h-full hover:border-accent/30 transition-colors duration-500">
         {/* Image with Parallax */}
-        <div className="relative h-64 overflow-hidden">
+        <div className="relative h-80 overflow-hidden bg-black/50">
           <motion.img
             src={creator.image_url || "https://images.unsplash.com/photo-1649972904349-6e44c42644a7"}
             alt={creator.name}
-            className="w-full h-full object-cover"
-            whileHover={{ scale: 1.1 }}
+            className="w-full h-full object-contain"
+            whileHover={{ scale: 1.05 }}
             transition={{ duration: 0.6 }}
           />
-          {/* Gradient Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+          {/* Gradient Overlay - Darker at bottom */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
 
           {/* Floating Badge */}
           <motion.div
@@ -194,6 +194,7 @@ export function CreatorsGrid() {
       const { data, error } = await supabase
         .from('creators')
         .select('*')
+        .eq('approval_status', 'approved')
         .limit(6);
 
       if (error) throw error;

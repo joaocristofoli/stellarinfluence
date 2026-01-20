@@ -15,6 +15,31 @@ export const PROFILE_CATEGORIES = [
 
 export type ProfileType = typeof PROFILE_CATEGORIES[number]['id'];
 
+// Cores para badges de tipo de perfil (distinção visual de relance)
+export const PROFILE_TYPE_COLORS: Record<ProfileType, string> = {
+    influencer: 'bg-pink-500/20 text-pink-300 border-pink-500/30',
+    press: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+    tv: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+    celebrity: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+    gossip: 'bg-red-500/20 text-red-300 border-red-500/30',
+    podcast: 'bg-green-500/20 text-green-300 border-green-500/30',
+    other: 'bg-gray-500/20 text-gray-300 border-gray-500/30',
+    outdoor: 'bg-orange-500/20 text-orange-300 border-orange-500/30',
+    btl: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
+};
+
+// Grupos de mídia para filtro inteligente
+export const MEDIA_GROUPS = {
+    digital: ['influencer', 'podcast', 'gossip'] as ProfileType[],
+    physical: ['outdoor', 'btl'] as ProfileType[],
+    traditional: ['press', 'tv', 'celebrity'] as ProfileType[],
+};
+
+// Helper para obter cor do tipo de perfil
+export function getProfileTypeColor(type: ProfileType): string {
+    return PROFILE_TYPE_COLORS[type] || PROFILE_TYPE_COLORS.other;
+}
+
 // Categorias por tipo de perfil
 export const CATEGORIES_BY_PROFILE_TYPE: Record<ProfileType, string[]> = {
     influencer: [
