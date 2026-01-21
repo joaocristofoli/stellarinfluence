@@ -34,8 +34,20 @@ import {
 import { generateMarketingIdeas, AIStrategySuggestion } from '@/utils/aiGenerator';
 import {
     Sparkles, Loader2, Users, FolderKanban, Calendar as CalendarIcon,
-    AlertTriangle, DollarSign, PieChart, Clock, AlignLeft, LayoutGrid, Lock
+    AlertTriangle, DollarSign, PieChart, Clock, AlignLeft, LayoutGrid, Lock, Trash2
 } from 'lucide-react';
+
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 import { useToast } from "@/hooks/use-toast";
 import { useCreators } from "@/hooks/useCreators";
@@ -58,6 +70,7 @@ interface StrategyFormProps {
     open: boolean;
     onClose: () => void;
     onSave: (strategy: Omit<MarketingStrategy, 'id' | 'createdAt' | 'updatedAt'>) => void;
+    onDelete?: () => void;
     editingStrategy?: MarketingStrategy | null;
     existingStrategies: MarketingStrategy[];
     companyId: string;
@@ -140,6 +153,13 @@ const TabContainer = ({ children, value }: { children: React.ReactNode; value: s
     </TabsContent>
 );
 
+// Helper to prevent Timezone shifts (Forces Local Midnight)
+const parseLocalDate = (dateStr: string | null | undefined): Date | undefined => {
+    if (!dateStr) return undefined;
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return new Date(year, month - 1, day);
+};
+
 export function StrategyForm({
     open,
     onClose,
@@ -150,6 +170,7 @@ export function StrategyForm({
     campaigns = [],
     defaultCampaignId = null,
     defaultDate = null,
+    onDelete,
 }: StrategyFormProps) {
     const [formData, setFormData] = useState({
         name: '',
@@ -356,6 +377,7 @@ export function StrategyForm({
                 campaignId: defaultCampaignId,
                 startDate: defaultDate ? defaultDate.toISOString().split('T')[0] : '',
                 endDate: '',
+                linkedCreatorIds: [],
                 deliverables: [],
                 agencyFeePercentage: 0,
                 taxRate: 6,
@@ -388,8 +410,8 @@ export function StrategyForm({
         onSave({
             ...formData,
             companyId,
-            startDate: formData.startDate ? new Date(formData.startDate) : null,
-            endDate: formData.endDate ? new Date(formData.endDate) : null,
+            startDate: parseLocalDate(formData.startDate) || null,
+            endDate: parseLocalDate(formData.endDate) || null,
             // @ts-ignore
             creator_snapshots: creatorSnapshots,
             deliverables: formData.deliverables // Save Cart 🛒
@@ -423,6 +445,8 @@ export function StrategyForm({
                             )}
                         </div>
                     </DialogTitle>
+                    {/* Accessiblity Fix: Hidden Description for Screen Readers */}
+                    <div className="sr-only">Formulário para criar ou editar estratégias de marketing.</div>
                 </DialogHeader>
 
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden flex flex-col">
@@ -445,7 +469,7 @@ export function StrategyForm({
 
                     <div className="flex-1 overflow-y-auto p-6 scrollbar-hide">
                         <AnimatePresence mode="wait">
-                            <TabContainer value="general">
+                            <TabContainer key="general" value="general">
                                 <div className="grid grid-cols-2 gap-6">
                                     <DebouncedGlassInput
                                         label="Nome da Ação"
@@ -591,7 +615,7 @@ export function StrategyForm({
                                 </div>
                             </TabContainer>
 
-                            <TabContainer value="details">
+                            <TabContainer key="details" value="details">
                                 <div className="space-y-4">
                                     <div className="space-y-2">
                                         <Label className="uppercase text-xs font-semibold text-muted-foreground ml-1">Descrição Detalhada</Label>
@@ -623,23 +647,33 @@ export function StrategyForm({
                                 </div>
                             </TabContainer>
 
-                            <TabContainer value="timeline">
+                            <TabContainer key="timeline" value="timeline">
                                 <div className="space-y-6">
                                     <div className="grid grid-cols-2 gap-6">
                                         <div className="space-y-1.5">
+                                            <Label className="uppercase text-xs font-semibold text-muted-foreground ml-1">Início</Label>
                                             <Label className="uppercase text-xs font-semibold text-muted-foreground ml-1">Início</Label>
                                             <Popover>
                                                 <PopoverTrigger asChild>
                                                     <Button variant="outline" className={cn("w-full h-12 justify-start text-left font-normal bg-background border-input", !formData.startDate && "text-muted-foreground")}>
                                                         <CalendarIcon className="mr-2 h-4 w-4 opacity-50" />
-                                                        {formData.startDate ? format(new Date(formData.startDate), "PPP", { locale: ptBR }) : <span>Selecione data...</span>}
+                                                        {formData.startDate ? format(parseLocalDate(formData.startDate)!, "PPP", { locale: ptBR }) : <span>Selecione data...</span>}
                                                     </Button>
                                                 </PopoverTrigger>
                                                 <PopoverContent className="w-auto p-0" align="start">
                                                     <Calendar
                                                         mode="single"
-                                                        selected={formData.startDate ? new Date(formData.startDate) : undefined}
-                                                        onSelect={(d) => setFormData(prev => ({ ...prev, startDate: d ? d.toISOString().split('T')[0] : '' }))}
+                                                        selected={parseLocalDate(formData.startDate)}
+                                                        onSelect={(d) => setFormData(prev => {
+                                                            const newStart = d ? format(d, 'yyyy-MM-dd') : '';
+                                                            let newEnd = prev.endDate;
+                                                            // Auto-fix: if start > end, reset end
+                                                            const currentEnd = parseLocalDate(prev.endDate);
+                                                            if (d && currentEnd && currentEnd < d) {
+                                                                newEnd = '';
+                                                            }
+                                                            return { ...prev, startDate: newStart, endDate: newEnd };
+                                                        })}
                                                         initialFocus
                                                     />
                                                 </PopoverContent>
@@ -651,14 +685,18 @@ export function StrategyForm({
                                                 <PopoverTrigger asChild>
                                                     <Button variant="outline" className={cn("w-full h-12 justify-start text-left font-normal bg-background border-input", !formData.endDate && "text-muted-foreground")}>
                                                         <CalendarIcon className="mr-2 h-4 w-4 opacity-50" />
-                                                        {formData.endDate ? format(new Date(formData.endDate), "PPP", { locale: ptBR }) : <span>Selecione data...</span>}
+                                                        {formData.endDate ? format(parseLocalDate(formData.endDate)!, "PPP", { locale: ptBR }) : <span>Selecione data...</span>}
                                                     </Button>
                                                 </PopoverTrigger>
                                                 <PopoverContent className="w-auto p-0" align="start">
                                                     <Calendar
                                                         mode="single"
-                                                        selected={formData.endDate ? new Date(formData.endDate) : undefined}
-                                                        onSelect={(d) => setFormData(prev => ({ ...prev, endDate: d ? d.toISOString().split('T')[0] : '' }))}
+                                                        selected={parseLocalDate(formData.endDate)}
+                                                        disabled={(date) => {
+                                                            const start = parseLocalDate(formData.startDate);
+                                                            return !!start && date < start;
+                                                        }}
+                                                        onSelect={(d) => setFormData(prev => ({ ...prev, endDate: d ? format(d, 'yyyy-MM-dd') : '' }))}
                                                         initialFocus
                                                     />
                                                 </PopoverContent>
@@ -675,7 +713,14 @@ export function StrategyForm({
                                             <div>
                                                 <p className="text-sm font-semibold text-accent">Duração da Campanha</p>
                                                 <p className="text-xs text-muted-foreground">
-                                                    {Math.ceil((new Date(formData.endDate).getTime() - new Date(formData.startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1} dias de ativação
+                                                    {(() => {
+                                                        const start = parseLocalDate(formData.startDate);
+                                                        const end = parseLocalDate(formData.endDate);
+                                                        if (start && end) {
+                                                            return `${Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1} dias de ativação`;
+                                                        }
+                                                        return '';
+                                                    })()}
                                                 </p>
                                             </div>
                                             <div className="ml-auto text-2xl font-bold opacity-20">2026</div>
@@ -701,7 +746,7 @@ export function StrategyForm({
                                 </div>
                             </TabContainer>
 
-                            <TabContainer value="financial">
+                            <TabContainer key="financial" value="financial">
                                 <div className="grid gap-6">
                                     {/* Summary Card */}
                                     <div className="grid grid-cols-2 gap-4 p-4 rounded-xl bg-gradient-premium text-white shadow-premium">
@@ -780,6 +825,29 @@ export function StrategyForm({
                             {editingStrategy ? 'Salvar Alterações' : 'Criar Estratégia'}
                         </Button>
                     </div>
+                    {editingStrategy && onDelete && (
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-red-500 hover:bg-red-500/10 absolute left-6 bottom-6 sm:static">
+                                    <Trash2 className="w-4 h-4" />
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent className="bg-background border-border">
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle className="text-red-500">Excluir Estratégia?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        Esta ação não pode ser desfeita. Isso excluirá permanentemente a estratégia <strong>{editingStrategy.name}</strong> e removerá os dados de nossas servidores.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                    <AlertDialogAction onClick={onDelete} className="bg-red-500 hover:bg-red-600 text-white border-0">
+                                        Sim, excluir estratégia
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    )}
                 </DialogFooter>
             </DialogContent>
         </Dialog >

@@ -236,6 +236,87 @@ export type Database = {
                 }
                 Relationships: []
             }
+            strategies: {
+                Row: {
+                    id: string
+                    company_id: string
+                    campaign_id: string | null
+                    name: string
+                    channel_type: string
+                    budget: number
+                    responsible: string
+                    description: string
+                    how_to_do: string
+                    when_to_do: string
+                    why_to_do: string
+                    connections: string[] | null
+                    status: 'planned' | 'in_progress' | 'completed'
+                    start_date: string | null
+                    end_date: string | null
+                    linked_creator_ids: string[] | null
+                    linked_flyer_event_ids: string[] | null
+                    created_at: string
+                    updated_at: string
+                    // Phase 24 & 25 Fields
+                    deliverables: Json | null
+                    media_budget: number | null
+                    agency_fee_percentage: number | null
+                    tax_rate: number | null
+                }
+                Insert: {
+                    id?: string
+                    company_id: string
+                    campaign_id?: string | null
+                    name: string
+                    channel_type: string
+                    budget?: number
+                    responsible: string
+                    description: string
+                    how_to_do: string
+                    when_to_do: string
+                    why_to_do: string
+                    connections?: string[] | null
+                    status?: 'planned' | 'in_progress' | 'completed'
+                    start_date?: string | null
+                    end_date?: string | null
+                    linked_creator_ids?: string[] | null
+                    linked_flyer_event_ids?: string[] | null
+                    created_at?: string
+                    updated_at?: string
+                    // Phase 24 & 25 Fields
+                    deliverables?: Json | null
+                    media_budget?: number | null
+                    agency_fee_percentage?: number | null
+                    tax_rate?: number | null
+                }
+                Update: {
+                    id?: string
+                    company_id?: string
+                    campaign_id?: string | null
+                    name?: string
+                    channel_type?: string
+                    budget?: number
+                    responsible?: string
+                    description?: string
+                    how_to_do?: string
+                    when_to_do?: string
+                    why_to_do?: string
+                    connections?: string[] | null
+                    status?: 'planned' | 'in_progress' | 'completed'
+                    start_date?: string | null
+                    end_date?: string | null
+                    linked_creator_ids?: string[] | null
+                    linked_flyer_event_ids?: string[] | null
+                    created_at?: string
+                    updated_at?: string
+                    // Phase 24 & 25 Fields
+                    deliverables?: Json | null
+                    media_budget?: number | null
+                    agency_fee_percentage?: number | null
+                    tax_rate?: number | null
+                }
+                Relationships: []
+            }
         }
         Views: {
             [_ in never]: never

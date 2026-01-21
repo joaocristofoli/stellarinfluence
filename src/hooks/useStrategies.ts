@@ -27,6 +27,11 @@ interface DbStrategyRow {
     linked_flyer_event_ids: string[] | null;
     created_at: string;
     updated_at: string;
+    // Phase 24 & 25 Fields
+    deliverables: any[] | null; // JSONB
+    media_budget: number | null;
+    agency_fee_percentage: number | null;
+    tax_rate: number | null;
 }
 
 /**
@@ -63,6 +68,11 @@ const mapDbToStrategy = (row: DbStrategyRow): MarketingStrategy => ({
     endDate: parseDateSafe(row.end_date),
     linkedCreatorIds: row.linked_creator_ids || [],
     linkedFlyerEventIds: row.linked_flyer_event_ids || [],
+    // New Fields Persistence
+    deliverables: row.deliverables || [],
+    mediaBudget: Number(row.media_budget) || Number(row.budget),
+    agencyFeePercentage: Number(row.agency_fee_percentage) || 0,
+    taxRate: Number(row.tax_rate) || 0,
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
 });
@@ -81,7 +91,8 @@ export function useStrategies(companyId: string | null) {
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
-            return data.map(mapDbToStrategy);
+            // Force cast to DbStrategyRow[] because Supabase Json type is strict
+            return (data as unknown as DbStrategyRow[]).map(mapDbToStrategy);
         },
         enabled: !!companyId,
     });
@@ -155,12 +166,18 @@ export function useCreateStrategy() {
                     start_date: strategy.startDate ? new Date(strategy.startDate).toISOString().split('T')[0] : null,
                     end_date: strategy.endDate ? new Date(strategy.endDate).toISOString().split('T')[0] : null,
                     linked_creator_ids: strategy.linkedCreatorIds || [],
+                    // Persistence
+                    // @ts-ignore
+                    deliverables: strategy.deliverables || [],
+                    media_budget: strategy.mediaBudget,
+                    agency_fee_percentage: strategy.agencyFeePercentage,
+                    tax_rate: strategy.taxRate,
                 })
                 .select()
                 .single();
 
             if (error) throw error;
-            return mapDbToStrategy(data);
+            return mapDbToStrategy(data as unknown as DbStrategyRow);
         },
         onSuccess: (data) => {
             queryClient.invalidateQueries({ queryKey: ['strategies', data.companyId] });
@@ -195,6 +212,12 @@ export function useUpdateStrategy() {
                         ? (strategy.endDate ? new Date(strategy.endDate).toISOString().split('T')[0] : null)
                         : undefined,
                     linked_creator_ids: strategy.linkedCreatorIds,
+                    // Persistence
+                    // @ts-ignore
+                    deliverables: strategy.deliverables,
+                    media_budget: strategy.mediaBudget,
+                    agency_fee_percentage: strategy.agencyFeePercentage,
+                    tax_rate: strategy.taxRate,
                 })
                 .eq('id', id)
                 .select()

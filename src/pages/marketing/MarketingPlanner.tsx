@@ -84,6 +84,9 @@ const MarketingPlanner = () => {
         }
     });
 
+    // Calendar View State (Synced with BigCalendarView)
+    const [calendarView, setCalendarView] = useState<'month' | 'week' | 'day' | 'agenda'>('month');
+
     // Selected date for pre-filling form when clicking on calendar
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [currentDate, setCurrentDate] = useState<Date>(new Date());
@@ -731,18 +734,23 @@ const MarketingPlanner = () => {
                                 <CalendarToolbar
                                     totalBudget={activeCampaign ? (activeCampaign as any).totalBudget || totalBudget : totalBudget}
                                     onExport={handleExport}
-                                    onViewChange={(v) => console.log(v)}
-                                    currentView="month"
+                                    onViewChange={(v) => setCalendarView(v)}
+                                    currentView={calendarView}
                                     date={currentDate}
                                     onNavigate={(action) => {
                                         const newDate = new Date(currentDate);
                                         if (action === 'TODAY') {
                                             setCurrentDate(new Date());
                                         } else if (action === 'PREV') {
-                                            newDate.setMonth(newDate.getMonth() - 1);
+                                            // Ajustar navegação baseado na view
+                                            if (calendarView === 'week') newDate.setDate(newDate.getDate() - 7);
+                                            else if (calendarView === 'day') newDate.setDate(newDate.getDate() - 1);
+                                            else newDate.setMonth(newDate.getMonth() - 1);
                                             setCurrentDate(newDate);
                                         } else if (action === 'NEXT') {
-                                            newDate.setMonth(newDate.getMonth() + 1);
+                                            if (calendarView === 'week') newDate.setDate(newDate.getDate() + 7);
+                                            else if (calendarView === 'day') newDate.setDate(newDate.getDate() + 1);
+                                            else newDate.setMonth(newDate.getMonth() + 1);
                                             setCurrentDate(newDate);
                                         }
                                     }}
@@ -754,6 +762,8 @@ const MarketingPlanner = () => {
                                     currentDate={currentDate}
                                     onNavigate={(date) => setCurrentDate(date)}
                                     onStrategyClick={handleEditStrategy}
+                                    view={calendarView}
+                                    onViewChange={setCalendarView}
                                     onCreateRange={(start, end) => {
                                         setEditingStrategy(null);
                                         setSelectedDate(start);
@@ -805,6 +815,13 @@ const MarketingPlanner = () => {
                             campaigns={campaigns}
                             defaultCampaignId={activeCampaign?.id || null}
                             defaultDate={selectedDate}
+                            onDelete={() => {
+                                if (editingStrategy) {
+                                    handleDeleteStrategy(editingStrategy.id);
+                                    setFormOpen(false);
+                                    setEditingStrategy(null);
+                                }
+                            }}
                         />
                         <ContractPreviewDialog
                             open={contractPreviewOpen}

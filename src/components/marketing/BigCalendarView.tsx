@@ -66,6 +66,8 @@ interface BigCalendarViewProps {
     onCreateRange: (start: Date, end: Date) => void;
     currentDate: Date;
     onNavigate: (date: Date) => void;
+    view: 'month' | 'week' | 'day' | 'agenda';
+    onViewChange: (view: 'month' | 'week' | 'day' | 'agenda') => void;
 }
 
 // --- HELPER: WHATSAPP TRIGGER ---
@@ -186,7 +188,9 @@ export function BigCalendarView({
     onStrategyClick,
     onCreateRange,
     currentDate,
-    onNavigate
+    onNavigate,
+    view,
+    onViewChange
 }: BigCalendarViewProps) {
     const { strategies, setStrategies, updateStrategy: updateStoreStrategy, addStrategy } = useCalendarStore();
     const { undo } = useCalendarUndo();
@@ -318,7 +322,8 @@ export function BigCalendarView({
 
                 // Views Configuration (Mobile Support)
                 views={['month', 'week', 'day', 'agenda']}
-                defaultView={Views.MONTH}
+                view={view}
+                onView={onViewChange}
                 toolbar={false}
 
                 // Navigation
