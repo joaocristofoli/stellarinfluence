@@ -1,9 +1,15 @@
 import { useState } from 'react';
-import { Trash2, Edit2, ChevronDown, ChevronUp, Link2, ListTodo } from 'lucide-react';
+import { Trash2, Edit2, Users, Calendar } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useCreators } from '@/hooks/useCreators';
 import {
     AlertDialog,
@@ -16,20 +22,20 @@ import {
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { formatCurrency } from '@/utils/formatters';
+import { parseFollowerCount } from '@/utils/numberParsers';
 import {
     MarketingStrategy,
     channelTypeLabels,
     channelTypeIcons,
     channelTypeColors
 } from '@/types/marketing';
-import { TaskList } from './TaskList';
-import { useStrategyTasks } from '@/hooks/useStrategyTasks';
 
 interface StrategyCardProps {
     strategy: MarketingStrategy;
     allStrategies: MarketingStrategy[];
     onEdit: (strategy: MarketingStrategy) => void;
     onDelete: (id: string) => void;
+    onViewDetails: (strategy: MarketingStrategy) => void;
 }
 
 // Cores hex para estilos inline (glow, borda, gradiente)
@@ -50,25 +56,36 @@ const getChannelColor = (channelType: string): string => {
     return colors[channelType] || '#6b7280';
 };
 
-export function StrategyCard({ strategy, allStrategies, onEdit, onDelete }: StrategyCardProps) {
-    const [expanded, setExpanded] = useState(false);
+// ... imports cleaned up in next step, just logic first
+
+export function StrategyCard({ strategy, allStrategies, onEdit, onDelete, onViewDetails }: StrategyCardProps & { onViewDetails: (s: MarketingStrategy) => void }) {
     // CRIT-001 fix: Estado para confirmação de delete
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-    const { data: tasks = [] } = useStrategyTasks(strategy.id);
+
+    // REMOVED: useStrategyTasks (Lag source)
 
     // CA-000: Fetch creators to resolve avatars (Cached by React Query)
     const { data: creators = [] } = useCreators();
 
-    // Resolve linked creator (Primary)
-    const linkedCreator = strategy.channelType === 'influencer' && strategy.linkedCreatorIds && strategy.linkedCreatorIds.length > 0
-        ? creators.find(c => strategy.linkedCreatorIds![0] === c.id)
-        : null;
+    // Resolve linked creators (Multiple) & Sort by Followers Descending
+    const linkedCreators = strategy.channelType === 'influencer' && strategy.linkedCreatorIds && strategy.linkedCreatorIds.length > 0
+        ? creators
+            .filter(c => strategy.linkedCreatorIds!.includes(c.id))
+            .sort((a, b) => parseFollowerCount(b.total_followers) - parseFollowerCount(a.total_followers))
+        : [];
 
-    // Calculate task progress
-    const completedTasks = tasks.filter(t => t.completed).length;
-    const taskProgress = tasks.length > 0 ? Math.round((completedTasks / tasks.length) * 100) : 0;
+    // Date Formatter
+    const formatDateRange = (start?: Date | null, end?: Date | null) => {
+        if (!start) return 'Sem data';
+        const s = new Date(start);
+        const e = end ? new Date(end) : null;
 
-    // formatCurrency importado de @/utils/formatters
+        const options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' };
+        if (!e) return s.toLocaleDateString('pt-BR', options);
+        return `${s.toLocaleDateString('pt-BR', options)} - ${e.toLocaleDateString('pt-BR', options)}`;
+    };
+
+    // REMOVED: Completion calculation (moved to Modal or simplified)
 
     const statusLabels = {
         planned: 'Planejado',
@@ -82,217 +99,154 @@ export function StrategyCard({ strategy, allStrategies, onEdit, onDelete }: Stra
         completed: 'bg-success/20 text-success border-success',
     };
 
-    const connectedStrategies = allStrategies.filter(s =>
-        strategy.connections.includes(s.id)
-    );
-
     return (
         <>
-            {/* CARD-001: Borda lateral colorida + CARD-005: Hover float + QW-002: Glass Premium */}
             <Card
-                className="overflow-hidden animate-fade-in relative transition-all duration-300 hover:-translate-y-1 hover:shadow-xl group glass-premium"
-                style={{ borderLeft: `4px solid ${getChannelColor(strategy.channelType)}` }}
+                // REVERTED: Removed break-inside-avoid-column, inline-block, mb-6
+                className="overflow-hidden animate-fade-in relative transition-all duration-300 hover:-translate-y-1 hover:shadow-xl group glass-premium border-l-[4px] cursor-pointer"
+                style={{ borderLeftColor: getChannelColor(strategy.channelType) }}
+                onClick={() => onViewDetails(strategy)} // Click card to open modal
             >
-                {/* CARD-002: Header com gradiente sutil */}
-                <CardHeader
-                    className="pb-3 relative"
-                    style={{
-                        background: `linear-gradient(135deg, ${getChannelColor(strategy.channelType)}08 0%, transparent 100%)`
-                    }}
-                >
+                {/* ... Header and shimmer same ... */}
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] pointer-events-none z-0" />
+
+                <CardHeader className="pb-3 relative z-10">
+                    {/* ... Content Same ... */}
                     <div className="flex items-start justify-between gap-4">
-                        <div className="flex items-center gap-3">
-                            {/* CA-001: Face-First Logic - Show Avatar if Influencer */}
-                            {linkedCreator ? (
-                                <div
-                                    className="relative w-12 h-12 rounded-xl shadow-lg transition-all duration-300 group-hover:scale-110 overflow-hidden border-2 border-white/20"
-                                    style={{
-                                        boxShadow: `0 8px 24px ${getChannelColor(strategy.channelType)}40`
-                                    }}
-                                >
-                                    <Avatar className="w-full h-full rounded-none">
-                                        <AvatarImage src={linkedCreator.image_url || ''} className="object-cover" />
-                                        <AvatarFallback className={`${channelTypeColors[strategy.channelType]} text-white`}>
-                                            {linkedCreator.name.substring(0, 2).toUpperCase()}
-                                        </AvatarFallback>
-                                    </Avatar>
-                                    {/* Small badge to indicate it's an influencer channel type */}
-                                    <div className={`absolute bottom-0 right-0 w-4 h-4 rounded-tl-lg ${channelTypeColors[strategy.channelType]} flex items-center justify-center`}>
-                                        <span className="text-[10px] text-white">
-                                            {channelTypeIcons[strategy.channelType]}
-                                        </span>
-                                    </div>
+                        <div className="flex items-center gap-3 overflow-hidden">
+                            {/* ... Avatar Group Same ... */}
+                            {linkedCreators.length > 0 ? (
+                                <div className="flex -space-x-3 hover:space-x-1 transition-all duration-300 p-1">
+                                    {linkedCreators.slice(0, 3).map((creator, i) => (
+                                        <div
+                                            key={creator.id}
+                                            className="relative w-12 h-12 rounded-xl shadow-lg transition-transform duration-300 hover:scale-110 hover:z-10 overflow-hidden border-2 border-white/20 shrink-0 bg-background"
+                                            style={{
+                                                zIndex: 3 - i,
+                                                boxShadow: `0 4px 12px ${getChannelColor(strategy.channelType)}30`
+                                            }}
+                                            title={`${creator.name} (${creator.total_followers})`}
+                                        >
+                                            <Avatar className="w-full h-full rounded-none">
+                                                <AvatarImage src={creator.image_url || ''} className="object-cover" />
+                                                <AvatarFallback className={`${channelTypeColors[strategy.channelType]} text-white text-[10px]`}>
+                                                    {creator.name.substring(0, 2).toUpperCase()}
+                                                </AvatarFallback>
+                                            </Avatar>
+                                        </div>
+                                    ))}
+                                    {linkedCreators.length > 3 && (
+                                        <TooltipProvider>
+                                            <Tooltip delayDuration={0}>
+                                                <TooltipTrigger asChild>
+                                                    <div className="relative w-12 h-12 rounded-xl shadow-lg flex items-center justify-center bg-secondary text-secondary-foreground font-bold text-xs border-2 border-white/20 shrink-0 z-0 cursor-help">
+                                                        +{linkedCreators.length - 3}
+                                                    </div>
+                                                </TooltipTrigger>
+                                                <TooltipContent className="bg-background/95 backdrop-blur-xl border-white/20 text-foreground">
+                                                    <p className="font-semibold mb-1 text-xs text-primary">Todos os {linkedCreators.length} creators:</p>
+                                                    <ul className="text-xs space-y-1">
+                                                        {linkedCreators.map(c => (
+                                                            <li key={c.id} className="flex items-center justify-between gap-4">
+                                                                <div className="flex items-center gap-1">
+                                                                    <span className="w-1 h-1 rounded-full bg-primary" />
+                                                                    {c.name}
+                                                                </div>
+                                                                <span className="text-muted-foreground text-[10px]">{c.total_followers}</span>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </TooltipProvider>
+                                    )}
                                 </div>
                             ) : (
                                 /* Standard Icon Fallback */
                                 <div
-                                    className={`w-12 h-12 rounded-xl ${channelTypeColors[strategy.channelType]} flex items-center justify-center text-2xl shadow-lg transition-all duration-300 group-hover:scale-110`}
+                                    className={`w-12 h-12 rounded-xl ${channelTypeColors[strategy.channelType]} flex items-center justify-center text-2xl shadow-lg transition-all duration-300 group-hover:scale-105 shrink-0`}
                                     style={{
-                                        boxShadow: `0 8px 24px ${getChannelColor(strategy.channelType)}40`
+                                        boxShadow: `0 8px 24px ${getChannelColor(strategy.channelType)}30`
                                     }}
                                 >
                                     {channelTypeIcons[strategy.channelType]}
                                 </div>
                             )}
 
-                            <div>
-                                <h3 className="font-display font-bold text-lg text-card-foreground group-hover:text-primary transition-colors line-clamp-1">
+                            <div className="min-w-0 flex-1">
+                                {/* Improved Title: Reduced line-height for better density with line-clamp */}
+                                <h3 className="font-display font-bold text-base text-foreground group-hover:text-primary transition-colors line-clamp-2 leading-tight tracking-tight mb-1" title={strategy.name}>
                                     {strategy.name}
                                 </h3>
-                                {/* CA-002: Show Creator Name if linked, otherwise Channel Label */}
-                                <p className="text-sm text-muted-foreground font-medium flex items-center gap-1">
-                                    {linkedCreator ? (
-                                        <span className="text-primary font-semibold flex items-center gap-1">
-                                            @{linkedCreator.slug || linkedCreator.name}
-                                        </span>
-                                    ) : (
-                                        channelTypeLabels[strategy.channelType]
-                                    )}
-                                </p>
+
+                                {/* Date Display (New) */}
+                                <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-medium bg-background/50 rounded-md px-1.5 py-0.5 w-fit border border-white/5">
+                                    <Calendar className="w-3 h-3 text-primary" />
+                                    {formatDateRange(strategy.startDate, strategy.endDate)}
+                                </div>
                             </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                            {/* CLEAN-003: Badge de alerta para estratégias sem data */}
-                            {!strategy.startDate && (
-                                <Badge
-                                    variant="outline"
-                                    className="bg-yellow-500/20 text-yellow-600 border-yellow-500/50 animate-pulse"
-                                >
-                                    ⚠️ Sem data
-                                </Badge>
-                            )}
-                            <Badge
-                                variant="outline"
-                                className={`${statusColors[strategy.status]} font-medium`}
-                            >
-                                {statusLabels[strategy.status]}
-                            </Badge>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => onEdit(strategy)}
-                                className="h-8 w-8 opacity-60 group-hover:opacity-100 transition-opacity"
-                                aria-label="Editar estratégia"
-                            >
-                                <Edit2 className="w-4 h-4" />
-                            </Button>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => setDeleteConfirmOpen(true)}
-                                className="h-8 w-8 text-destructive hover:text-destructive opacity-60 group-hover:opacity-100 transition-opacity"
-                                aria-label="Excluir estratégia"
-                            >
-                                <Trash2 className="w-4 h-4" />
-                            </Button>
+
+                        {/* Actions (Hover Only) */}
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-4 group-hover:translate-x-0" onClick={e => e.stopPropagation()}>
+                            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onEdit(strategy); }} className="h-8 w-8 text-muted-foreground hover:text-foreground"><Edit2 className="w-4 h-4" /></Button>
+                            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setDeleteConfirmOpen(true); }} className="h-8 w-8 text-muted-foreground hover:text-destructive"><Trash2 className="w-4 h-4" /></Button>
                         </div>
                     </div>
                 </CardHeader>
 
-                <CardContent className="space-y-4 pt-2">
-                    {/* CARD-004: Budget com destaque 2xl + tabular-nums para financeiro */}
-                    <div className="flex items-center justify-between p-3 rounded-lg bg-primary/5 border border-primary/10">
-                        <span className="text-sm text-muted-foreground font-medium">Orçamento</span>
-                        <span className="font-display font-black text-2xl text-primary tabular-nums">
-                            {formatCurrency(strategy.budget)}
-                        </span>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Responsável</span>
-                        <span className="font-medium text-card-foreground">{strategy.responsible}</span>
-                    </div>
-
-                    {/* Task Progress Indicator */}
-                    {tasks.length > 0 && (
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm text-muted-foreground flex items-center gap-1">
-                                <ListTodo className="w-4 h-4" />
-                                Tarefas
-                            </span>
-                            <div className="flex items-center gap-2">
-                                <div className="w-20 h-2 bg-muted rounded-full overflow-hidden">
-                                    <div
-                                        className="h-full bg-primary transition-all"
-                                        style={{ width: `${taskProgress}%` }}
-                                    />
-                                </div>
-                                <span className="text-sm font-medium">{completedTasks}/{tasks.length}</span>
+                <CardContent className="space-y-4 pt-2 relative z-10">
+                    {/* Metadata Grid (Minimalist) */}
+                    <div className="grid grid-cols-2 gap-2">
+                        {/* Budget */}
+                        <div className="bg-secondary/40 rounded-lg p-2.5 flex items-center gap-2.5 transition-colors group-hover:bg-secondary/60">
+                            <div className="w-8 h-8 rounded-full bg-background flex items-center justify-center text-emerald-500 shadow-sm">
+                                <span className="text-xs font-bold">$</span>
+                            </div>
+                            <div>
+                                <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold block">Orçamento</span>
+                                <span className="text-sm font-bold text-foreground tabular-nums leading-none">
+                                    {formatCurrency(strategy.budget)}
+                                </span>
                             </div>
                         </div>
-                    )}
 
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                        {strategy.description}
-                    </p>
-
-                    <Button
-                        variant="ghost"
-                        className="w-full justify-between text-muted-foreground hover:text-foreground"
-                        onClick={() => setExpanded(!expanded)}
-                    >
-                        <span>Ver detalhes</span>
-                        {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                    </Button>
-
-                    {expanded && (
-                        <div className="space-y-4 pt-2 border-t border-border animate-fade-in">
-                            {/* Tasks Section */}
-                            <div>
-                                <h4 className="font-semibold text-sm text-card-foreground mb-3 flex items-center gap-2">
-                                    <ListTodo className="w-4 h-4" />
-                                    Sub-tarefas
-                                </h4>
-                                <TaskList strategyId={strategy.id} strategyName={strategy.name} />
-                            </div>
-
-                            <div className="border-t border-border pt-4">
-                                <h4 className="font-semibold text-sm text-card-foreground mb-1">Como fazer?</h4>
-                                <p className="text-sm text-muted-foreground">{strategy.howToDo}</p>
+                        {/* Status */}
+                        <div className={`rounded-lg p-2.5 flex items-center gap-2.5 border ${statusColors[strategy.status].replace('bg-', 'bg-opacity-20 ')} bg-opacity-20`}>
+                            <div className={`w-8 h-8 rounded-full bg-background flex items-center justify-center shadow-sm`}>
+                                <div className={`w-2 h-2 rounded-full ${statusColors[strategy.status].split(' ')[0].replace('/20', '')}`} />
                             </div>
                             <div>
-                                <h4 className="font-semibold text-sm text-card-foreground mb-1">Quando fazer?</h4>
-                                <p className="text-sm text-muted-foreground">{strategy.whenToDo}</p>
+                                <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold block">Status</span>
+                                <span className="text-sm font-bold text-foreground leading-none">
+                                    {statusLabels[strategy.status]}
+                                </span>
                             </div>
-                            <div>
-                                <h4 className="font-semibold text-sm text-card-foreground mb-1">Por que fazer?</h4>
-                                <p className="text-sm text-muted-foreground">{strategy.whyToDo}</p>
-                            </div>
-
-                            {connectedStrategies.length > 0 && (
-                                <div>
-                                    <h4 className="font-semibold text-sm text-card-foreground mb-2 flex items-center gap-2">
-                                        <Link2 className="w-4 h-4" />
-                                        Conecta com
-                                    </h4>
-                                    <div className="flex flex-wrap gap-2">
-                                        {connectedStrategies.map(connected => (
-                                            <Badge key={connected.id} variant="secondary" className="text-xs">
-                                                {channelTypeIcons[connected.channelType]} {connected.name}
-                                            </Badge>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
                         </div>
-                    )}
+                    </div>
+
+                    <div className="text-[10px] text-center text-muted-foreground font-medium uppercase tracking-widest pt-1 border-t border-border/50">
+                        Clique para detalhes
+                    </div>
                 </CardContent>
             </Card>
 
-            {/* CRIT-001 fix: AlertDialog de confirmação */}
+            {/* Alert Dialog (Delete) */}
             <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+                {/* ... same ... */}
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Excluir estratégia?</AlertDialogTitle>
                         <AlertDialogDescription>
                             Tem certeza que deseja excluir "{strategy.name}"?
-                            Esta ação não pode ser desfeita e todas as tarefas associadas serão removidas.
+                            Esta ação não pode ser desfeita.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogCancel onClick={e => e.stopPropagation()}>Cancelar</AlertDialogCancel>
                         <AlertDialogAction
-                            onClick={() => {
+                            onClick={(e) => {
+                                e.stopPropagation();
                                 onDelete(strategy.id);
                                 setDeleteConfirmOpen(false);
                             }}

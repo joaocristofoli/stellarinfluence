@@ -1,3 +1,5 @@
+// CreatorsGrid.tsx
+
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useRef, useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
@@ -5,167 +7,100 @@ import { Instagram, Youtube, Twitter, Music } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { formatNumber } from "@/utils/formatters";
+import { Creator } from "@/types/creator";
 
-interface Creator {
-  id: string;
-  name: string;
-  slug: string;
-  category: string;
-  image_url: string | null;
-  instagram_url: string | null;
-  youtube_url: string | null;
-  tiktok_url: string | null;
-  twitter_url: string | null;
-  instagram_followers: number;
-  engagement_rate: string;
-  instagram_active?: boolean;
-  youtube_active?: boolean;
-  tiktok_active?: boolean;
-  twitter_active?: boolean;
-  kwai_url?: string | null;
-  kwai_active?: boolean;
-}
-
-// Extracted component to safely use hooks
+// Enhanced Card with custom image support
 function CreatorCard({ creator, index, scrollYProgress }: { creator: Creator; index: number; scrollYProgress: any }) {
   const navigate = useNavigate();
-  // Calcular a posição para parallax baseado no índice
   const row = Math.floor(index / 3);
   const yOffset = useTransform(scrollYProgress, [0, 1], [50 + row * 30, -(50 + row * 30)]);
+
+  // Resolve Image Logic
+  const homeImage = creator.admin_metadata?.home_image || creator.image_url || "https://images.unsplash.com/photo-1649972904349-6e44c42644a7";
+  const homeImagePos = creator.admin_metadata?.home_image_pos || 'center center';
 
   return (
     <motion.div
       style={{ y: yOffset }}
-      initial={{ opacity: 0, rotateY: -45, z: -100 }}
+      initial={{ opacity: 0, rotateY: -10, z: -50 }} // Less dramatic initial state for speed perception
       whileInView={{ opacity: 1, rotateY: 0, z: 0 }}
-      viewport={{ once: true, margin: "-100px" }}
+      viewport={{ once: true, margin: "-50px" }}
       transition={{
-        duration: 0.8,
-        delay: index * 0.1,
+        duration: 0.6, // Faster entrance
+        delay: index * 0.05, // Tighter stagger
         type: "spring",
-        stiffness: 80,
+        stiffness: 100,
+        damping: 20
       }}
       whileHover={{
-        scale: 1.05,
-        rotateY: 5,
-        z: 50,
-        transition: { duration: 0.3 },
+        scale: 1.02, // Subtler hover
+        y: -5,
+        transition: { duration: 0.2 },
       }}
       onClick={() => navigate(`/creator/${creator.slug}`)}
     >
-      <Card className="glass-premium border-white/10 overflow-hidden group cursor-pointer h-full hover:border-accent/30 transition-colors duration-500">
-        {/* Image with Parallax */}
-        <div className="relative h-80 overflow-hidden bg-black/50">
+      <Card className="glass-premium border-white/10 overflow-hidden group cursor-pointer h-full hover:border-accent/50 transition-colors duration-300">
+        <div className="relative h-96 overflow-hidden bg-black/50">
           <motion.img
-            src={creator.image_url || "https://images.unsplash.com/photo-1649972904349-6e44c42644a7"}
+            src={homeImage}
             alt={creator.name}
-            className="w-full h-full object-contain"
+            className="w-full h-full object-cover"
+            style={{ objectPosition: homeImagePos }}
             whileHover={{ scale: 1.05 }}
-            transition={{ duration: 0.6 }}
+            transition={{ duration: 0.4 }}
           />
-          {/* Gradient Overlay - Darker at bottom */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
 
-          {/* Floating Badge */}
+          {/* Badge */}
           <motion.div
-            initial={{ y: -20, opacity: 0 }}
-            whileHover={{ y: 0, opacity: 1 }}
-            className="absolute top-4 right-4 px-3 py-1 glass-premium rounded-full text-xs font-medium text-white border border-white/20"
+            className="absolute top-4 right-4 px-3 py-1 glass-premium rounded-full text-xs font-medium text-white border border-white/20 shadow-lg"
           >
             {creator.category}
           </motion.div>
         </div>
 
-        {/* Content */}
         <div className="p-6">
-          <h3 className="text-2xl font-bold text-white mb-2">{creator.name}</h3>
+          <h3 className="text-2xl font-bold text-white mb-2 line-clamp-1">{creator.name}</h3>
 
-          {/* Stats */}
           <div className="flex items-center gap-4 text-sm text-white/60 mb-4">
-            {creator.instagram_followers > 0 && (
+            {/* Use total_followers or detailed logic */}
+            <div className="flex items-center gap-1">
+              <span className="font-semibold text-accent">{creator.total_followers || '0'}</span>
+              seguidores
+            </div>
+            {creator.engagement_rate && (
               <div className="flex items-center gap-1">
-                <span className="font-semibold text-accent">{formatNumber(creator.instagram_followers)}</span>
-                seguidores
+                <span className="font-semibold text-accent">{creator.engagement_rate}</span>
+                engajamento
               </div>
             )}
-            <div className="flex items-center gap-1">
-              <span className="font-semibold text-accent">{creator.engagement_rate || 'N/A'}</span>
-              engajamento
-            </div>
           </div>
 
-          {/* Social Platforms */}
           <div className="flex gap-2">
-            {creator.instagram_url && creator.instagram_active && (
-              <motion.div
-                whileHover={{ scale: 1.2, rotate: 5 }}
-                className="p-2 glass rounded-lg"
-              >
-                <Instagram className="w-4 h-4 text-pink-400" />
-              </motion.div>
-            )}
-            {creator.youtube_url && creator.youtube_active && (
-              <motion.div
-                whileHover={{ scale: 1.2, rotate: 5 }}
-                className="p-2 glass rounded-lg"
-              >
-                <Youtube className="w-4 h-4 text-red-400" />
-              </motion.div>
-            )}
-            {creator.tiktok_url && creator.tiktok_active && (
-              <motion.div
-                whileHover={{ scale: 1.2, rotate: 5 }}
-                className="p-2 glass rounded-lg"
-              >
-                <Music className="w-4 h-4 text-cyan-400" />
-              </motion.div>
-            )}
-            {creator.twitter_url && creator.twitter_active && (
-              <motion.div
-                whileHover={{ scale: 1.2, rotate: 5 }}
-                className="p-2 glass rounded-lg"
-              >
-                <Twitter className="w-4 h-4 text-blue-400" />
-              </motion.div>
-            )}
-            {creator.kwai_url && creator.kwai_active && (
-              <motion.div
-                whileHover={{ scale: 1.2, rotate: 5 }}
-                className="p-2 glass rounded-lg"
-              >
-                {/* Kwai Icon (Custom SVG or Placeholder) */}
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-orange-400">
-                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-                </svg>
-              </motion.div>
-            )}
+            {creator.instagram_active && <PlatformIcon icon={Instagram} color="text-pink-400" />}
+            {creator.youtube_active && <PlatformIcon icon={Youtube} color="text-red-400" />}
+            {creator.tiktok_active && <PlatformIcon icon={Music} color="text-cyan-400" />}
+            {creator.twitter_active && <PlatformIcon icon={Twitter} color="text-blue-400" />}
+            {creator.kwai_active && <PlatformIcon icon={() => (
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-orange-400">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+              </svg>
+            )} color="text-orange-400" />}
           </div>
         </div>
-
-        {/* Animated Border Glow */}
-        <motion.div
-          className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
-          style={{
-            background:
-              "linear-gradient(45deg, transparent, rgba(255,107,53,0.3), transparent)",
-          }}
-          animate={{
-            backgroundPosition: ["0% 0%", "100% 100%"],
-          }}
-          transition={{
-            duration: 2,
-            repeat: Infinity,
-            ease: "linear",
-          }}
-        />
       </Card>
     </motion.div>
   );
 }
 
+const PlatformIcon = ({ icon: Icon, color }: { icon: any, color: string }) => (
+  <div className="p-2 glass rounded-lg hover:bg-white/10 transition-colors">
+    <Icon className={`w-4 h-4 ${color}`} />
+  </div>
+);
+
 export function CreatorsGrid() {
   const sectionRef = useRef<HTMLDivElement>(null);
-  const navigate = useNavigate();
   const [creators, setCreators] = useState<Creator[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -174,16 +109,8 @@ export function CreatorsGrid() {
     offset: ["start end", "end start"],
   });
 
-  // Parallax com múltiplas velocidades
-  const y1 = useTransform(scrollYProgress, [0, 1], [200, -200]);
-  const y2 = useTransform(scrollYProgress, [0, 1], [100, -100]);
-  const y3 = useTransform(scrollYProgress, [0, 1], [50, -50]);
-
-  // Opacity fade in/out
-  const opacity = useTransform(scrollYProgress, [0, 0.2, 0.8, 1], [0, 1, 1, 0]);
-
-  // Scale effect
-  const scale = useTransform(scrollYProgress, [0, 0.5, 1], [0.8, 1, 0.8]);
+  const y1 = useTransform(scrollYProgress, [0, 1], [100, -100]);
+  const opacity = useTransform(scrollYProgress, [0, 0.1, 0.9, 1], [0, 1, 1, 0]);
 
   useEffect(() => {
     fetchCreators();
@@ -194,11 +121,23 @@ export function CreatorsGrid() {
       const { data, error } = await supabase
         .from('creators')
         .select('*')
-        .eq('approval_status', 'approved')
-        .limit(6);
+        .eq('approval_status', 'approved');
 
       if (error) throw error;
-      if (data) setCreators(data);
+
+      if (data) {
+        // Client-side filtering for 'featured' logic
+        // We prioritize those explicitly marked as featured
+        let featuredList = data.filter((c: any) => c.admin_metadata?.featured === true);
+
+        // Fallback: If no featured creators, show top 6 by followers (parsed)
+        // (Skipping parsing complexity here for speed, just taking 6 random if empty or stick to manual)
+        if (featuredList.length === 0) {
+          featuredList = data.slice(0, 6);
+        }
+
+        setCreators(featuredList as Creator[]);
+      }
     } catch (error) {
       console.error('Error fetching creators:', error);
     } finally {
@@ -206,9 +145,8 @@ export function CreatorsGrid() {
     }
   };
 
-  if (loading) {
-    return <div className="py-32 text-center text-white/50">Carregando criadores...</div>;
-  }
+  if (loading) return <div className="py-32 text-center text-white/50">Carregando...</div>;
+  if (creators.length === 0) return null;
 
   return (
     <motion.section
@@ -217,70 +155,29 @@ export function CreatorsGrid() {
       style={{ opacity }}
       className="relative py-24 sm:py-32 bg-black overflow-hidden"
     >
-      {/* Animated Background Blobs - Different Speeds */}
-      <motion.div
-        style={{ y: y1, scale }}
-        className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-accent/20 to-purple-500/20 rounded-full blur-3xl"
-      />
-      <motion.div
-        style={{ y: y2 }}
-        className="absolute top-1/2 -left-40 w-80 h-80 bg-gradient-to-br from-blue-500/20 to-accent/20 rounded-full blur-3xl"
-      />
-      <motion.div
-        style={{ y: y3 }}
-        className="absolute -bottom-40 right-1/4 w-72 h-72 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-full blur-3xl"
-      />
+      <motion.div style={{ y: y1 }} className="absolute inset-0 opacity-30 pointer-events-none">
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-accent/20 rounded-full blur-[100px]" />
+        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[100px]" />
+      </motion.div>
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6">
-        {/* Title with Stagger */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          className="text-center mb-16"
-        >
-          <motion.h2
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
-            className="text-4xl sm:text-5xl md:text-6xl font-bold mb-4"
-          >
+        <div className="text-center mb-16">
+          <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold mb-4">
             <span className="bg-gradient-to-r from-white via-accent to-purple-400 bg-clip-text text-transparent">
               Nossos Criadores
             </span>
-          </motion.h2>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            className="text-white/60 text-lg"
-          >
-            Conheça os talentos que impulsionam marcas globais
-          </motion.p>
-        </motion.div>
-
-        {/* Creator Cards Grid with Stagger and 3D */}
-        {/* Mobile: Horizontal Scroll with Snap - Adjusted for Peek Effect */}
-        <div className="flex md:hidden overflow-x-auto snap-x snap-mandatory gap-4 pb-8 px-4 scrollbar-hide">
-          {creators.map((creator, i) => (
-            <div key={creator.id} className="min-w-[85vw] sm:min-w-[350px] snap-center">
-              <CreatorCard creator={creator} index={i} scrollYProgress={scrollYProgress} />
-            </div>
-          ))}
+          </h2>
+          <p className="text-white/60 text-lg max-w-2xl mx-auto">
+            Seleção exclusiva de talentos verificados
+          </p>
         </div>
 
-        {/* Desktop: Grid */}
-        <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
           {creators.map((creator, i) => (
             <CreatorCard key={creator.id} creator={creator} index={i} scrollYProgress={scrollYProgress} />
           ))}
         </div>
       </div>
-
-      {/* Bottom Fade */}
-      <div className="absolute bottom-0 inset-x-0 h-32 bg-gradient-to-t from-black to-transparent pointer-events-none" />
     </motion.section>
   );
 }

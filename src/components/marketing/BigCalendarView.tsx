@@ -5,7 +5,7 @@ import { format, parse, startOfWeek, getDay, addDays, differenceInDays } from 'd
 import { ptBR } from 'date-fns/locale';
 import { useCalendarStore, useCalendarUndo } from '@/stores/useCalendarStore';
 import { useStrategies, useUpdateStrategy, useCreateStrategy, useDeleteStrategy } from '@/hooks/useStrategies';
-import { MarketingStrategy, ChannelType } from '@/types/marketing';
+import { MarketingStrategy, ChannelType, channelTypeColors } from '@/types/marketing';
 import { formatCurrency } from '@/utils/formatters';
 import { checkOverlap } from '@/utils/calendarHelpers';
 import { toast } from '@/hooks/use-toast';
@@ -66,20 +66,42 @@ interface BigCalendarViewProps {
     onCreateRange: (start: Date, end: Date) => void;
     currentDate: Date;
     onNavigate: (date: Date) => void;
-    view: 'month' | 'week' | 'day' | 'agenda';
-    onViewChange: (view: 'month' | 'week' | 'day' | 'agenda') => void;
+    view?: 'month' | 'week' | 'day' | 'agenda';
+    onViewChange?: (view: 'month' | 'week' | 'day' | 'agenda') => void;
+    className?: string;
+    onDateSelect?: (date: Date) => void;
 }
+
+// --- COMPONENT: CUSTOM EVENT ---
+const CustomEvent = ({ event }: any) => {
+    const strategy = event.resource as MarketingStrategy;
+    const color = channelTypeColors[strategy.channelType] || 'bg-gray-500';
+
+    // Determine if contrast text is needed (dark backgrounds)
+    const isDark = ['bg-pink-500', 'bg-blue-500', 'bg-violet-500', 'bg-red-500', 'bg-emerald-600'].includes(color);
+
+    return (
+        <div className={cn(
+            "flex items-center gap-1.5 px-2 py-0.5 rounded-md w-full h-full overflow-hidden transition-all hover:brightness-110 shadow-sm",
+            color,
+            "text-white border-l-[3px] border-white/30 backdrop-blur-sm"
+        )}>
+            <div className="w-1.5 h-1.5 rounded-full bg-white/90 shrink-0 shadow-[0_0_4px_rgba(255,255,255,0.5)]" />
+            <span className="text-[11px] font-semibold truncate leading-tight tracking-tight mix-blend-plus-lighter">
+                {strategy.name}
+            </span>
+        </div>
+    );
+};
 
 // --- HELPER: WHATSAPP TRIGGER ---
 const openWhatsApp = (strategy: MarketingStrategy) => {
-    // Em um cenário real, pegaríamos o telefone do creator via linkedCreatorIds
-    // Aqui vamos simular com um prompt ou toast se não tiver phone
+    // Basic simulation
     toast({
         title: "Abrindo WhatsApp 💬",
         description: `Iniciando conversa sobre "${strategy.name}"...`
     });
 
-    // Simulação de URL
     const text = `Oi! Tudo certo para a ação *${strategy.name}* dia ${format(new Date(strategy.startDate!), 'dd/MM')}?`;
     window.open(`https://web.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
 };
@@ -118,10 +140,12 @@ const CustomEventCard = ({ event }: EventProps<CalendarEvent>) => {
     // Styles based on Channel
     const getColors = (type: ChannelType) => {
         switch (type) {
-            case 'influencer': return 'bg-pink-500/10 border-pink-500 text-pink-600 font-semibold';
-            case 'paid_traffic': return 'bg-blue-500/10 border-blue-500 text-blue-600 font-semibold';
-            case 'events': return 'bg-purple-500/10 border-purple-500 text-purple-600 font-semibold';
-            default: return 'bg-emerald-500/10 border-emerald-500 text-emerald-600 font-semibold';
+            case 'influencer': return 'bg-pink-500/20 border-pink-500 text-pink-700 dark:text-pink-300';
+            case 'paid_traffic': return 'bg-blue-500/20 border-blue-500 text-blue-700 dark:text-blue-300';
+            case 'flyers': return 'bg-green-500/20 border-green-500 text-green-700 dark:text-green-300';
+            case 'physical_media': return 'bg-orange-500/20 border-orange-500 text-orange-700 dark:text-orange-300';
+            case 'events': return 'bg-purple-500/20 border-purple-500 text-purple-700 dark:text-purple-300';
+            default: return 'bg-secondary border-muted-foreground/30 text-foreground';
         }
     };
     const colors = getColors(strategy.channelType);
@@ -181,6 +205,8 @@ const CustomEventCard = ({ event }: EventProps<CalendarEvent>) => {
     );
 };
 
+
+
 // --- COMPONENT: BIG CALENDAR VIEW (MAIN) ---
 export function BigCalendarView({
     strategies: initialStrategies,
@@ -190,7 +216,9 @@ export function BigCalendarView({
     currentDate,
     onNavigate,
     view,
-    onViewChange
+    onViewChange,
+    className,
+    onDateSelect
 }: BigCalendarViewProps) {
     const { strategies, setStrategies, updateStrategy: updateStoreStrategy, addStrategy } = useCalendarStore();
     const { undo } = useCalendarUndo();
@@ -290,15 +318,27 @@ export function BigCalendarView({
         }
     }, [updateStoreStrategy, updateMutation, createMutation, addStrategy, undo, companyId]);
 
-    // --- HANDLER: DRAG TO CREATE ---
+    // --- HANDLER: DRAG TO CREATE vs SELECT DAY ---
     const onSelectSlot = useCallback(({ start, end, action }: SlotInfo) => {
-        if (action === 'select' || action === 'click') {
-            // Normalizar End Date (BigCalendar retorna 00:00 do dia seguinte no select)
-            // Se for 'click' (dia único), start == slot, end varies. 
-            // Vamos simplificar: Usar as datas visuais.
+        // Se for um clique simples, apenas seleciona o dia para a Sidebar
+        if (action === 'click' || (action === 'select' && start.getTime() === end.getTime() - 86400000)) { // 1 day diff
+            // BigCal as vezes trata click como select de 1 dia.
+            // Vamos priorizar seleção se for 1 dia ou clique.
+            if (action === 'click') {
+                onDateSelect?.(start);
+                return;
+            }
+            // Handle 1 day selection via drag/click as selection too?
+            // User wants to see sidebar. So yes.
+        }
+
+        if (action === 'click') {
+            onDateSelect?.(start);
+        } else {
+            // Se for arrastar (Range), aí sim abre modal de criação
             onCreateRange(start, processEndDate(end));
         }
-    }, [onCreateRange]);
+    }, [onCreateRange, onDateSelect]);
 
     // Helper para corrigir data final visual do BigCalendar
     const processEndDate = (date: Date) => {
@@ -312,7 +352,7 @@ export function BigCalendarView({
     };
 
     return (
-        <div className="h-[750px] premium-calendar-wrapper">
+        <div className={cn("h-[800px] premium-calendar-wrapper transition-all duration-300", className)}>
             <DnDCalendar
                 localizer={localizer}
                 events={events}
@@ -340,7 +380,7 @@ export function BigCalendarView({
 
                 // Components Override
                 components={{
-                    event: CustomEventCard
+                    event: CustomEvent
                 }}
 
                 // Styling

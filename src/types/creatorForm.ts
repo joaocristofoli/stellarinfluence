@@ -37,6 +37,19 @@ export type CreatorFormData = {
     program_name?: string;
     reach?: string;
 
+    // Financial & Legal
+    legal_name?: string;
+    document_id?: string;
+    pix_key?: string;
+    pix_key_type?: 'cpf' | 'cnpj' | 'email' | 'phone' | 'random';
+    bank_name?: string;
+    bank_agency?: string;
+    bank_account?: string;
+    address_street?: string;
+    address_number?: string;
+    address_zip?: string;
+    contract_status?: 'none' | 'draft' | 'sent' | 'signed';
+
     // Social Media
     instagram_url: string;
     youtube_url: string;
@@ -93,6 +106,11 @@ export type CreatorFormData = {
         pricing_notes: string;
 
         custom_prices: { label: string; price: string }[];
+
+        // Homepage Specifics
+        featured: boolean;
+        home_image: string;
+        home_image_pos: string; // e.g., "center top"
     };
 
     // Legacy/Unused potential fields (keeping for safety or removal)
@@ -138,6 +156,19 @@ export const initialFormData: CreatorFormData = {
     layout: 'default',
     primary_platform: '',
 
+    // Financial Defaults
+    legal_name: '',
+    document_id: '',
+    pix_key: '',
+    pix_key_type: 'cpf',
+    bank_name: '',
+    bank_agency: '',
+    bank_account: '',
+    address_street: '',
+    address_number: '',
+    address_zip: '',
+    contract_status: 'none',
+
     admin_metadata: {
         age: '',
         sexual_orientation: '',
@@ -158,6 +189,9 @@ export const initialFormData: CreatorFormData = {
         price_package_premium: '',
         pricing_notes: '',
         custom_prices: [],
+        featured: false,
+        home_image: '',
+        home_image_pos: 'center center',
     },
 
     music_preferences: [],

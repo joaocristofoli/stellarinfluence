@@ -12,6 +12,7 @@ import {
   MediaStep,
   PricingStep,
   ReviewStep,
+  FinancialStep,
   useDuplicateDetection
 } from "./creator-form";
 import { CreatorFormData, initialFormData } from "@/types/creatorForm";
@@ -28,8 +29,10 @@ export default function CreatorForm() {
   // Duplicate Detection
   const { duplicates, checkDuplicate, clearDuplicates } = useDuplicateDetection();
 
-  // Determine total steps based on user role
-  const TOTAL_STEPS = isAdmin ? 5 : 4;
+  // Determine total steps based on user role (Admin has Pricing + Financial)
+  const TOTAL_STEPS = isAdmin ? 6 : 5; // Increased steps
+
+
 
   // Step Management
   const [currentStep, setCurrentStep] = useState(() => {
@@ -114,6 +117,9 @@ export default function CreatorForm() {
   };
 
   const populateForm = (data: any) => {
+    // Extract Metadata fields to top-level for the form
+    const meta = data.admin_metadata || {};
+
     setFormData({
       ...initialFormData,
       ...data,
@@ -122,10 +128,33 @@ export default function CreatorForm() {
       gallery_urls: data.gallery_urls || [],
       music_preferences: data.music_preferences || [],
       content_genres: data.content_genres || [],
-      // Ensure admin metadata structure
+
+      // Map Financial/Legal from Metadata
+      legal_name: meta.legal_name || '',
+      document_id: meta.document_id || '',
+      pix_key: meta.pix_key || '',
+      pix_key_type: meta.pix_key_type || 'cpf',
+      bank_name: meta.bank_name || '',
+      bank_agency: meta.bank_agency || '',
+      bank_account: meta.bank_account || '',
+      address_street: meta.address_street || '',
+      address_number: meta.address_number || '',
+      address_zip: meta.address_zip || '',
+      contract_status: meta.contract_status || 'none',
+
+      // Map Outdoor/Admin from Metadata
+      outdoor_face: meta.outdoor_face || '',
+      outdoor_lighting: meta.outdoor_lighting || false,
+      min_period: meta.min_period || '',
+      gps_coordinates: meta.gps_coordinates || '',
+      company: meta.company || '',
+      program_name: meta.program_name || '',
+      reach: meta.reach || '',
+
+      // Ensure admin metadata structure (nested)
       admin_metadata: {
         ...initialFormData.admin_metadata,
-        ...data.admin_metadata
+        ...meta
       }
     });
   };
@@ -183,8 +212,23 @@ export default function CreatorForm() {
         parseFormattedNumber(formData.kwai_followers || '0')
       );
 
+      // Clean payload: Remove UI-only fields that are NOT in the database table
+      // We move them into 'admin_metadata' JSONB column
+
+      const {
+        // Extract fields to exclude from top-level
+        legal_name, document_id, pix_key, pix_key_type,
+        bank_name, bank_agency, bank_account,
+        address_street, address_number, address_zip,
+        contract_status,
+        outdoor_face, outdoor_lighting, min_period, gps_coordinates,
+        company, program_name, reach,
+        // Keep the rest
+        ...baseData
+      } = formData;
+
       const payload = {
-        ...formData,
+        ...baseData,
         slug: finalSlug,
         // FIX: Set total_followers as formatted string
         total_followers: totalFollowers > 0 ? totalFollowers.toString() : '0',
@@ -197,6 +241,19 @@ export default function CreatorForm() {
         // Keep these as strings to match DB schema
         engagement_rate: formData.engagement_rate || '',
         stories_views: formData.stories_views || '',
+
+        // Consolidate extra fields into admin_metadata
+        admin_metadata: {
+          ...(formData.admin_metadata || {}),
+          // Financial / Legal
+          legal_name, document_id, pix_key, pix_key_type,
+          bank_name, bank_agency, bank_account,
+          address_street, address_number, address_zip,
+          contract_status,
+          // Outdoor / Admin
+          outdoor_face, outdoor_lighting, min_period, gps_coordinates,
+          company, program_name, reach
+        },
 
         // Add approval status for new creators (self-signup)
         ...(!id && !isAdmin && { approval_status: 'pending' }),
@@ -314,6 +371,7 @@ export default function CreatorForm() {
                 setFormData={setFormData}
               />
             )}
+
             {/* Admin Step 4: Pricing */}
             {currentStep === 4 && isAdmin && (
               <PricingStep
@@ -321,8 +379,17 @@ export default function CreatorForm() {
                 setFormData={setFormData}
               />
             )}
-            {/* User Step 4 or Admin Step 5: Review */}
-            {((!isAdmin && currentStep === 4) || (isAdmin && currentStep === 5)) && (
+
+            {/* Admin Step 5 / User Step 4: Financial & Contract */}
+            {((isAdmin && currentStep === 5) || (!isAdmin && currentStep === 4)) && (
+              <FinancialStep
+                formData={formData}
+                setFormData={setFormData}
+              />
+            )}
+
+            {/* Final Step: Review */}
+            {((!isAdmin && currentStep === 5) || (isAdmin && currentStep === 6)) && (
               <ReviewStep
                 formData={formData}
                 onSubmit={handleSubmit}

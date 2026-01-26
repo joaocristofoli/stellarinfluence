@@ -41,37 +41,7 @@ export interface MarketingCampaign {
     updatedAt: Date;
 }
 
-export interface MarketingStrategy {
-    id: string;
-    companyId: string;
-    campaignId: string | null;
-    name: string;
-    channelType: ChannelType;
-    budget: number;
-    responsible: string;
-    description: string;
-    howToDo: string;
-    whenToDo: string;
-    whyToDo: string;
-    connections: string[];
-    status: 'planned' | 'in_progress' | 'completed';
-    // Calendar fields
-    startDate?: Date | null;
-    endDate?: Date | null;
-    contentFormat?: string; // Phase 23: Format (Story, Feed, etc)
-    is_draft?: boolean; // Phase 24: Ghost Mode
-    // Phase 3: Detailed Financials
-    mediaBudget?: number;
-    agencyFeePercentage?: number;
-    agencyFeeValue?: number;
-    taxRate?: number;
-    version?: number;
-    // Multi-influencer support
-    linkedCreatorIds?: string[];
-    // Vinculação com eventos de panfletagem (para channelType: 'flyers')
-    linkedFlyerEventIds?: string[];
-    updatedAt: Date;
-}
+
 
 export interface StrategyDeliverable {
     creatorId: string;
@@ -118,8 +88,8 @@ export interface MarketingStrategy {
     updatedAt: Date;
 }
 
-// Tarefas de calendário dentro de uma estratégia (para calendário unificado)
-// Nota: NÃO confundir com StrategyTask de src/types/tasks.ts (lista de tarefas simples)
+// Tarefas de calendário dentro de uma estratégia
+// Nota: NÃO confundir com StrategyTask (tasks.ts)
 export interface CalendarTask {
     id: string;
     strategyId: string;
@@ -163,16 +133,36 @@ export const channelTypeIcons: Record<ChannelType, string> = {
     promoters: '👥',
 };
 
-export const channelTypeColors: Record<ChannelType, string> = {
+export type TransactionType = 'inflow' | 'outflow';
+
+export interface MarketingTransaction {
+    id: string;
+    companyId: string;
+    strategyId?: string; // Optional linkage to a strategy
+    type: TransactionType;
+    amount: number;
+    date: Date;
+    description: string;
+    category?: string; // e.g., 'Deposit', 'Influencer Payment', 'Ads'
+    paymentMethod?: 'pix' | 'transfer' | 'credit_card' | 'cash';
+    pixKey?: string; // If 'pix'
+    beneficiary?: string; // Who received the money
+    status: 'pending' | 'completed' | 'cancelled';
+    createdAt: Date;
+}
+
+export const channelTypeColors: Record<string, string> = {
     influencer: 'bg-pink-500',
     paid_traffic: 'bg-blue-500',
+    social_media: 'bg-violet-500',
+    events: 'bg-amber-500',
     flyers: 'bg-green-500',
-    physical_media: 'bg-orange-500',
-    events: 'bg-purple-500',
-    partnerships: 'bg-teal-500',
-    social_media: 'bg-indigo-500',
-    email_marketing: 'bg-yellow-500',
-    radio: 'bg-red-500',
-    sound_car: 'bg-cyan-500',
-    promoters: 'bg-lime-500',
+    email_marketing: 'bg-indigo-500',
+    radio: 'bg-orange-500',
+    sound_car: 'bg-red-500',
+    partnerships: 'bg-yellow-500',
+    physical_media: 'bg-emerald-600',
+    promoters: 'bg-cyan-500'
 };
+
+

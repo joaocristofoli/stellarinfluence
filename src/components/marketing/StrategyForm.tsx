@@ -433,13 +433,13 @@ export function StrategyForm({
                         <div className="flex items-center gap-2">
                             {formData.channelType === 'influencer' && (
                                 <Button
-                                    variant="outline"
+                                    variant="ghost"
                                     size="sm"
                                     onClick={handleGenerateAI}
                                     disabled={aiLoading}
-                                    className="h-8 text-xs border-primary/20 hover:border-primary/50 hover:bg-primary/10 text-primary"
+                                    className="h-8 text-xs font-semibold bg-gradient-to-r from-purple-500/10 to-blue-500/10 hover:from-purple-500/20 hover:to-blue-500/20 text-purple-600 dark:text-purple-300 border border-purple-500/20"
                                 >
-                                    {aiLoading ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Sparkles className="w-3 h-3 mr-1 text-primary" />}
+                                    {aiLoading ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : <Sparkles className="w-3 h-3 mr-2" />}
                                     IA Magic
                                 </Button>
                             )}

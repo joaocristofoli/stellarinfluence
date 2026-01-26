@@ -15,7 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Pencil, Trash2, Loader2, ExternalLink, Palette, AlertTriangle, CheckCircle, GitMerge, CheckCircle2, Users, Plus } from "lucide-react";
+import { Pencil, Trash2, Loader2, ExternalLink, Palette, AlertTriangle, CheckCircle, GitMerge, CheckCircle2, Users, Plus, Star } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -123,6 +123,40 @@ export function CreatorsTable() {
       toast({ title: "Criador Aprovado", description: "O perfil está agora visível no planejamento." });
     } catch (error: any) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const handleToggleFeatured = async (creator: Creator) => {
+    try {
+      const currentMeta = creator.admin_metadata || {};
+      const newFeatured = !currentMeta.featured;
+
+      const { error } = await supabase
+        .from('creators')
+        .update({
+          admin_metadata: {
+            ...currentMeta,
+            featured: newFeatured
+          }
+        } as any)
+        .eq('id', creator.id);
+
+      if (error) throw error;
+
+      // Optimistic Update
+      setCreators(prev => prev.map(c =>
+        c.id === creator.id
+          ? { ...c, admin_metadata: { ...currentMeta, featured: newFeatured } }
+          : c
+      ));
+
+      toast({
+        title: newFeatured ? "Adicionado à Home ⭐" : "Removido da Home",
+        description: newFeatured ? `${creator.name} agora aparece na página inicial.` : `${creator.name} não aparece mais na home.`
+      });
+
+    } catch (error: any) {
+      toast({ title: "Erro ao atualizar", description: error.message, variant: "destructive" });
     }
   };
 
@@ -361,6 +395,19 @@ export function CreatorsTable() {
                   <TableCell className="font-medium">
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center gap-2">
+                        {/* Featured Toggle */}
+                        <div onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleFeatured(creator);
+                        }}>
+                          <Star
+                            className={`w-4 h-4 cursor-pointer transition-all hover:scale-110 ${(creator.admin_metadata as any)?.featured
+                              ? "text-yellow-400 fill-yellow-400"
+                              : "text-muted-foreground/30 hover:text-yellow-400"
+                              }`}
+                          />
+                        </div>
+
                         {creator.image_url && <img src={creator.image_url} className="w-8 h-8 rounded-full object-cover" />}
                         {creator.name}
                         {/* VISIBILITY: Profile Type Badge - ALWAYS VISIBLE with dynamic colors */}
