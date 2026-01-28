@@ -28,7 +28,7 @@ export async function createShareableLink(
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + 24);
 
-    // @ts-ignore - Table will exist after migration is applied
+    // @ts-expect-error - Table will exist after migration is applied
     const { data, error } = await (supabase as any)
         .from('shared_plans')
         .insert({
@@ -53,7 +53,7 @@ export async function createShareableLink(
  * Financial data is filtered SERVER-SIDE when hide_financials is true.
  */
 export async function getSharedPlan(id: string): Promise<SharedPlanData | null> {
-    // @ts-ignore - Table will exist after migration is applied
+    // @ts-expect-error - Table will exist after migration is applied
     const { data, error } = await (supabase as any)
         .from('shared_plans')
         .select('*')
@@ -68,7 +68,7 @@ export async function getSharedPlan(id: string): Promise<SharedPlanData | null> 
     }
 
     // Increment view count
-    // @ts-ignore - Table will exist after migration is applied
+    // @ts-expect-error - Table will exist after migration is applied
     await (supabase as any)
         .from('shared_plans')
         .update({ views: (data.views || 0) + 1 })

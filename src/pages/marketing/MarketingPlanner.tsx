@@ -54,7 +54,7 @@ import { Download } from 'lucide-react'; // Added Download Icon
 // --- COMPONENT: COMPACT SIDEBAR CARD ---
 const SidebarStrategyCard = ({ strategy, onClick }: { strategy: MarketingStrategy, onClick: () => void }) => {
     const color = channelTypeColors[strategy.channelType] || 'bg-gray-500';
-    const Icon = channelTypeIcons[strategy.channelType as any] || Calendar;
+    const Icon = channelTypeIcons[strategy.channelType] || Calendar;
 
     return (
         <div
@@ -807,7 +807,7 @@ export function MarketingPlanner() {
                                     <div className="xl:col-span-9 space-y-4">
                                         <div className="mb-0">
                                             <CalendarToolbar
-                                                totalBudget={activeCampaign ? (activeCampaign as any).totalBudget || totalBudget : totalBudget}
+                                                totalBudget={activeCampaign && 'totalBudget' in activeCampaign ? (activeCampaign as { totalBudget: number }).totalBudget : totalBudget}
                                                 onExport={handleExport}
                                                 onViewChange={(v) => setCalendarView(v)}
                                                 currentView={calendarView}

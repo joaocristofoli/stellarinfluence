@@ -156,7 +156,7 @@ export function formatPercentage(
 ): string {
     const { isDecimal = false, decimals = 1 } = options || {};
 
-    let num = parseNumber(value);
+    const num = parseNumber(value);
 
     if (isDecimal) {
         // Convert 0.15 to 15%
