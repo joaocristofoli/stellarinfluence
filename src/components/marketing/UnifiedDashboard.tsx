@@ -149,22 +149,37 @@ export function UnifiedDashboard({ strategies, campaign }: UnifiedDashboardProps
                 </CardHeader>
                 <CardContent className="px-6 pb-6 space-y-3">
                     {stats.topChannels.map((c, i) => (
-                        <div key={i} className="space-y-1">
-                            <div className="flex justify-between text-xs">
-                                <span className={`font-medium flex items-center gap-1.5 ${c.colors.text}`}>
-                                    <span>{c.icon}</span> {c.label}
-                                </span>
-                                <span className="text-muted-foreground font-mono">
-                                    {c.percentage.toFixed(0)}%
-                                </span>
-                            </div>
-                            <div className="h-1.5 w-full bg-secondary/50 rounded-full overflow-hidden">
-                                <div
-                                    className={`h-full ${c.colors.bg} transition-all duration-500`}
-                                    style={{ width: `${c.percentage}%` }}
-                                />
-                            </div>
-                        </div>
+                        <TooltipProvider key={i}>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <div className="space-y-1 cursor-default">
+                                        <div className="flex justify-between text-xs">
+                                            <span className={`font-medium flex items-center gap-1.5 ${c.colors.text}`}>
+                                                <span>{c.icon}</span> {c.label}
+                                            </span>
+                                            <span className="flex items-center gap-2">
+                                                <span className="text-foreground font-semibold">
+                                                    {formatCurrency(c.budget)}
+                                                </span>
+                                                <span className="text-muted-foreground font-mono text-[10px] bg-secondary px-1.5 py-0.5 rounded">
+                                                    {c.percentage.toFixed(0)}%
+                                                </span>
+                                            </span>
+                                        </div>
+                                        <div className="h-1.5 w-full bg-secondary/50 rounded-full overflow-hidden">
+                                            <div
+                                                className={`h-full ${c.colors.bg} transition-all duration-500`}
+                                                style={{ width: `${c.percentage}%` }}
+                                            />
+                                        </div>
+                                    </div>
+                                </TooltipTrigger>
+                                <TooltipContent side="left">
+                                    <p className="font-semibold">{c.label}</p>
+                                    <p className="text-sm">{formatCurrency(c.budget)} ({c.percentage.toFixed(1)}%)</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
                     ))}
                 </CardContent>
             </Card>

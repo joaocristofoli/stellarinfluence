@@ -29,12 +29,13 @@ import {
     MarketingCampaign,
     ChannelType,
     channelTypeLabels,
-    channelTypeIcons
+    channelTypeIcons,
+    FlyerTimeSlot
 } from '@/types/marketing';
 import { generateMarketingIdeas, AIStrategySuggestion } from '@/utils/aiGenerator';
 import {
     Sparkles, Loader2, Users, FolderKanban, Calendar as CalendarIcon,
-    AlertTriangle, DollarSign, PieChart, Clock, AlignLeft, LayoutGrid, Lock, Trash2
+    AlertTriangle, DollarSign, PieChart, Clock, AlignLeft, LayoutGrid, Lock, Trash2, Plus, MapPin, X
 } from 'lucide-react';
 
 import {
@@ -192,6 +193,7 @@ export function StrategyForm({
         mediaBudget: 0,
         contentFormat: '' as string, // Kept for legacy compatibility
         deliverables: [] as StrategyDeliverable[], // New Cart System 🛒
+        flyerSchedule: [] as FlyerTimeSlot[], // Panfletagem Time Slots
     });
 
     const [activeTab, setActiveTab] = useState("general");
@@ -354,13 +356,13 @@ export function StrategyForm({
                 taxRate: editingStrategy.taxRate || 0,
                 mediaBudget: editingStrategy.mediaBudget || editingStrategy.budget,
                 contentFormat: '', // Default to empty on edit for now
-                // Hydrate Cart
                 deliverables: editingStrategy.deliverables || (editingStrategy.linkedCreatorIds || []).map(id => ({
                     creatorId: id,
                     format: 'story', // Default legacy format
                     price: 0,
                     status: 'pending'
                 })),
+                flyerSchedule: editingStrategy.flyerSchedule || [],
             });
         } else {
             setFormData({
@@ -383,6 +385,7 @@ export function StrategyForm({
                 taxRate: 6,
                 mediaBudget: 0,
                 contentFormat: '',
+                flyerSchedule: [],
             });
         }
     }, [editingStrategy, open, defaultCampaignId, defaultDate]);
@@ -414,7 +417,8 @@ export function StrategyForm({
             endDate: parseLocalDate(formData.endDate) || null,
             // @ts-ignore
             creator_snapshots: creatorSnapshots,
-            deliverables: formData.deliverables // Save Cart 🛒
+            deliverables: formData.deliverables, // Save Cart 🛒
+            flyerSchedule: formData.flyerSchedule, // Save Time Slots
         });
         onClose();
     };
@@ -743,6 +747,236 @@ export function StrategyForm({
                                             </SelectContent>
                                         </Select>
                                     </div>
+
+                                    {/* PANFLETAGEM TIME SLOTS SECTION */}
+                                    {formData.channelType === 'flyers' && (
+                                        <div className="space-y-4 pt-4 border-t border-border">
+                                            <div className="flex items-center justify-between">
+                                                <Label className="flex items-center gap-2 text-primary uppercase text-xs font-semibold tracking-wider">
+                                                    <MapPin className="w-4 h-4 text-green-500" />
+                                                    Escala de Panfletagem
+                                                </Label>
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        console.log('🔥 Adicionar Horário clicked!');
+                                                        console.log('Current flyerSchedule:', formData.flyerSchedule);
+                                                        const newSlot: FlyerTimeSlot = {
+                                                            id: `slot-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+                                                            startTime: '08:00',
+                                                            endTime: '12:00',
+                                                            location: '',
+                                                            assignees: [],
+                                                            notes: ''
+                                                        };
+                                                        console.log('New slot:', newSlot);
+                                                        setFormData(prev => {
+                                                            const updated = {
+                                                                ...prev,
+                                                                flyerSchedule: [...(prev.flyerSchedule || []), newSlot]
+                                                            };
+                                                            console.log('Updated formData.flyerSchedule:', updated.flyerSchedule);
+                                                            return updated;
+                                                        });
+                                                    }}
+                                                    className="gap-1.5 text-xs"
+                                                >
+                                                    <Plus className="w-3 h-3" /> Adicionar Horário
+                                                </Button>
+                                            </div>
+
+                                            {(!formData.flyerSchedule || formData.flyerSchedule.length === 0) && (
+                                                <div className="text-center py-8 border border-dashed border-border rounded-xl bg-muted/20">
+                                                    <MapPin className="w-8 h-8 mx-auto text-muted-foreground/50 mb-2" />
+                                                    <p className="text-sm text-muted-foreground">Nenhum horário adicionado.</p>
+                                                    <p className="text-xs text-muted-foreground/50">Clique em "Adicionar Horário" para definir a escala.</p>
+                                                </div>
+                                            )}
+
+                                            <div className="space-y-3">
+                                                {(formData.flyerSchedule || []).map((slot, index) => (
+                                                    <div key={slot.id} className={`rounded-lg border shadow-sm transition-all ${slot.confirmed ? 'border-green-500/30 bg-green-500/5' : 'border-border bg-card'}`}>
+                                                        {/* COLLAPSED VIEW - When confirmed */}
+                                                        {slot.confirmed ? (
+                                                            <div
+                                                                className="p-3 flex items-center justify-between cursor-pointer hover:bg-accent/5 transition-colors"
+                                                                onClick={() => {
+                                                                    const updated = [...(formData.flyerSchedule || [])];
+                                                                    updated[index] = { ...slot, confirmed: false };
+                                                                    setFormData(prev => ({ ...prev, flyerSchedule: updated }));
+                                                                }}
+                                                            >
+                                                                <div className="flex items-center gap-3">
+                                                                    <div className="w-8 h-8 rounded-full bg-green-500/10 flex items-center justify-center">
+                                                                        <Clock className="w-4 h-4 text-green-600" />
+                                                                    </div>
+                                                                    <div>
+                                                                        <p className="text-sm font-medium">
+                                                                            {slot.startTime} - {slot.endTime}
+                                                                            {slot.date && formData.startDate !== formData.endDate && (
+                                                                                <span className="text-muted-foreground ml-2 text-xs">
+                                                                                    ({new Date(slot.date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })})
+                                                                                </span>
+                                                                            )}
+                                                                        </p>
+                                                                        <p className="text-xs text-muted-foreground">
+                                                                            {slot.location && <span>{slot.location} • </span>}
+                                                                            {Array.isArray(slot.assignees) && slot.assignees.length > 0
+                                                                                ? slot.assignees.join(', ')
+                                                                                : 'Sem equipe definida'}
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-xs text-green-600 font-medium">✓ Salvo</span>
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="h-6 w-6 text-muted-foreground hover:text-red-500"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            setFormData(prev => ({
+                                                                                ...prev,
+                                                                                flyerSchedule: (prev.flyerSchedule || []).filter((_, i) => i !== index)
+                                                                            }));
+                                                                        }}
+                                                                    >
+                                                                        <X className="w-3 h-3" />
+                                                                    </Button>
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            /* EXPANDED VIEW - When editing */
+                                                            <div className="p-4 space-y-3">
+                                                                <div className="flex items-center justify-between">
+                                                                    <span className="text-xs font-semibold text-muted-foreground uppercase">Turno {index + 1}</span>
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="h-6 w-6 text-muted-foreground hover:text-red-500"
+                                                                        onClick={() => {
+                                                                            setFormData(prev => ({
+                                                                                ...prev,
+                                                                                flyerSchedule: (prev.flyerSchedule || []).filter((_, i) => i !== index)
+                                                                            }));
+                                                                        }}
+                                                                    >
+                                                                        <X className="w-3 h-3" />
+                                                                    </Button>
+                                                                </div>
+
+                                                                {/* DATE SELECTOR - only shows if strategy spans multiple days */}
+                                                                {formData.startDate && formData.endDate && formData.startDate !== formData.endDate && (
+                                                                    <div className="space-y-1.5">
+                                                                        <Label className="text-xs text-muted-foreground">Dia</Label>
+                                                                        <GlassInput
+                                                                            type="date"
+                                                                            value={slot.date || formData.startDate}
+                                                                            min={formData.startDate}
+                                                                            max={formData.endDate}
+                                                                            onChange={(e) => {
+                                                                                const updated = [...(formData.flyerSchedule || [])];
+                                                                                updated[index] = { ...slot, date: e.target.value };
+                                                                                setFormData(prev => ({ ...prev, flyerSchedule: updated }));
+                                                                            }}
+                                                                        />
+                                                                    </div>
+                                                                )}
+
+                                                                <div className="grid grid-cols-2 gap-3">
+                                                                    <div className="space-y-1.5">
+                                                                        <Label className="text-xs text-muted-foreground">Hora Início</Label>
+                                                                        <GlassInput
+                                                                            type="time"
+                                                                            value={slot.startTime}
+                                                                            onChange={(e) => {
+                                                                                const updated = [...(formData.flyerSchedule || [])];
+                                                                                updated[index] = { ...slot, startTime: e.target.value };
+                                                                                setFormData(prev => ({ ...prev, flyerSchedule: updated }));
+                                                                            }}
+                                                                        />
+                                                                    </div>
+                                                                    <div className="space-y-1.5">
+                                                                        <Label className="text-xs text-muted-foreground">Hora Fim</Label>
+                                                                        <GlassInput
+                                                                            type="time"
+                                                                            value={slot.endTime}
+                                                                            onChange={(e) => {
+                                                                                const updated = [...(formData.flyerSchedule || [])];
+                                                                                updated[index] = { ...slot, endTime: e.target.value };
+                                                                                setFormData(prev => ({ ...prev, flyerSchedule: updated }));
+                                                                            }}
+                                                                        />
+                                                                    </div>
+                                                                </div>
+                                                                <div className="space-y-1.5">
+                                                                    <Label className="text-xs text-muted-foreground">Local</Label>
+                                                                    <GlassInput
+                                                                        placeholder="Ex: Av. Paulista, 1000"
+                                                                        value={slot.location}
+                                                                        onChange={(e) => {
+                                                                            const updated = [...(formData.flyerSchedule || [])];
+                                                                            updated[index] = { ...slot, location: e.target.value };
+                                                                            setFormData(prev => ({ ...prev, flyerSchedule: updated }));
+                                                                        }}
+                                                                    />
+                                                                </div>
+                                                                <div className="space-y-1.5">
+                                                                    <Label className="text-xs text-muted-foreground">Equipe (nomes ou quantidade)</Label>
+                                                                    <GlassInput
+                                                                        placeholder="Ex: João e Maria ou 3 pessoas"
+                                                                        value={Array.isArray(slot.assignees) ? slot.assignees.join(', ') : (slot.assignees || '')}
+                                                                        onChange={(e) => {
+                                                                            const updated = [...(formData.flyerSchedule || [])];
+                                                                            const value = e.target.value;
+                                                                            const assignees = value.includes(',')
+                                                                                ? value.split(',').map(s => s.trim()).filter(Boolean)
+                                                                                : value ? [value] : [];
+                                                                            updated[index] = { ...slot, assignees };
+                                                                            setFormData(prev => ({ ...prev, flyerSchedule: updated }));
+                                                                        }}
+                                                                    />
+                                                                </div>
+                                                                <div className="space-y-1.5">
+                                                                    <Label className="text-xs text-muted-foreground">Observações</Label>
+                                                                    <GlassInput
+                                                                        placeholder="Notas adicionais..."
+                                                                        value={slot.notes || ''}
+                                                                        onChange={(e) => {
+                                                                            const updated = [...(formData.flyerSchedule || [])];
+                                                                            updated[index] = { ...slot, notes: e.target.value };
+                                                                            setFormData(prev => ({ ...prev, flyerSchedule: updated }));
+                                                                        }}
+                                                                    />
+                                                                </div>
+
+                                                                {/* CONFIRM BUTTON */}
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    className="w-full mt-2 bg-green-500/10 border-green-500/30 text-green-700 hover:bg-green-500/20"
+                                                                    onClick={() => {
+                                                                        const updated = [...(formData.flyerSchedule || [])];
+                                                                        updated[index] = { ...slot, confirmed: true };
+                                                                        setFormData(prev => ({ ...prev, flyerSchedule: updated }));
+                                                                    }}
+                                                                >
+                                                                    ✓ Confirmar Turno
+                                                                </Button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </TabContainer>
 

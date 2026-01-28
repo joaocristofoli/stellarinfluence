@@ -32,6 +32,7 @@ interface DbStrategyRow {
     media_budget: number | null;
     agency_fee_percentage: number | null;
     tax_rate: number | null;
+    flyer_schedule: any[] | null; // JSONB for panfletagem time slots
 }
 
 /**
@@ -70,6 +71,7 @@ const mapDbToStrategy = (row: DbStrategyRow): MarketingStrategy => ({
     linkedFlyerEventIds: row.linked_flyer_event_ids || [],
     // New Fields Persistence
     deliverables: row.deliverables || [],
+    flyerSchedule: row.flyer_schedule || [],
     mediaBudget: Number(row.media_budget) || Number(row.budget),
     agencyFeePercentage: Number(row.agency_fee_percentage) || 0,
     taxRate: Number(row.tax_rate) || 0,
@@ -166,9 +168,10 @@ export function useCreateStrategy() {
                     start_date: strategy.startDate ? new Date(strategy.startDate).toISOString().split('T')[0] : null,
                     end_date: strategy.endDate ? new Date(strategy.endDate).toISOString().split('T')[0] : null,
                     linked_creator_ids: strategy.linkedCreatorIds || [],
-                    // Persistence
                     // @ts-ignore
                     deliverables: strategy.deliverables || [],
+                    // @ts-ignore
+                    flyer_schedule: strategy.flyerSchedule || [],
                     media_budget: strategy.mediaBudget,
                     agency_fee_percentage: strategy.agencyFeePercentage,
                     tax_rate: strategy.taxRate,
@@ -211,10 +214,11 @@ export function useUpdateStrategy() {
                     end_date: strategy.endDate !== undefined
                         ? (strategy.endDate ? new Date(strategy.endDate).toISOString().split('T')[0] : null)
                         : undefined,
-                    linked_creator_ids: strategy.linkedCreatorIds,
                     // Persistence
                     // @ts-ignore
                     deliverables: strategy.deliverables,
+                    // @ts-ignore
+                    flyer_schedule: strategy.flyerSchedule,
                     media_budget: strategy.mediaBudget,
                     agency_fee_percentage: strategy.agencyFeePercentage,
                     tax_rate: strategy.taxRate,
@@ -224,7 +228,7 @@ export function useUpdateStrategy() {
                 .single();
 
             if (error) throw error;
-            return mapDbToStrategy(data);
+            return mapDbToStrategy(data as unknown as DbStrategyRow);
         },
         onSuccess: (data) => {
             queryClient.invalidateQueries({ queryKey: ['strategies', data.companyId] });

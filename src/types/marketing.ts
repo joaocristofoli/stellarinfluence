@@ -84,8 +84,22 @@ export interface MarketingStrategy {
     deliverables?: StrategyDeliverable[];
     // Vinculação com eventos de panfletagem (para channelType: 'flyers')
     linkedFlyerEventIds?: string[];
+    // Panfletagem Schedule (Time Slots + Assignments)
+    flyerSchedule?: FlyerTimeSlot[];
     createdAt: Date;
     updatedAt: Date;
+}
+
+// Time slot for panfletagem with person assignment
+export interface FlyerTimeSlot {
+    id: string; // UUID for React key
+    date?: string; // "2026-01-26" - which day this slot is for
+    startTime: string; // "08:00"
+    endTime: string;   // "12:00"
+    location: string;  // "Av. Paulista, 1000"
+    assignees: string[]; // Names of people
+    notes?: string;
+    confirmed?: boolean; // Whether this slot is saved/collapsed
 }
 
 // Tarefas de calendário dentro de uma estratégia

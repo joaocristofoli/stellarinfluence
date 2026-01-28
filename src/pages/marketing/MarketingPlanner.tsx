@@ -602,7 +602,7 @@ export function MarketingPlanner() {
         }
     };
 
-    const handleEventDrop = async ({ event, start, end }: any) => {
+    const handleEventDrop = async ({ event, start, end }: { event: MarketingStrategy; start: Date; end: Date }) => {
         if (!selectedCompany) return;
         const strategy = event.resource as MarketingStrategy;
         try {
@@ -792,6 +792,10 @@ export function MarketingPlanner() {
                             open={!!detailStrategy}
                             onClose={() => setDetailStrategy(null)}
                             allStrategies={strategies}
+                            onEdit={(s) => {
+                                setEditingStrategy(s);
+                                setFormOpen(true);
+                            }}
                         />
 
                         {viewMode === 'calendar' && (
