@@ -11,11 +11,17 @@ export interface FlyerCampaign {
     updatedAt: string;
 }
 
+export type ActionType = 'flyer' | 'story' | 'reels' | 'other';
+export type PaymentModel = 'hourly' | 'fixed';
+
 export interface FlyerEvent {
     id: string;
     campaignId: string;
     // Vinculação opcional com MarketingStrategy (para integração unificada)
     strategyId?: string;
+    type: ActionType;
+    paymentModel: PaymentModel;
+    fixedPaymentValue?: number;
     eventDate: string; // ISO date
     startTime?: string; // HH:mm
     endTime?: string;
@@ -36,6 +42,7 @@ export interface FlyerAssignment {
     personName: string;
     role: 'distributor' | 'supervisor';
     contact?: string;
+    paymentAmount?: number; // Override value
     createdAt: string;
 }
 

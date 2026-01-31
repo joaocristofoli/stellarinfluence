@@ -19,8 +19,12 @@ import {
     CheckCircle,
     AlertCircle,
     Sparkles,
-    MousePointer2
+    MousePointer2,
+    Camera,
+    FileText,
+    MoreHorizontal
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Company } from '@/types/marketing';
@@ -611,35 +615,47 @@ const FlyerManager = () => {
                                                                 Nenhum evento criado. Clique em "Novo Evento" para começar!
                                                             </p>
                                                         ) : (
-                                                            events.map(event => (
-                                                                <div
-                                                                    key={event.id}
-                                                                    onClick={() => handleEventClick(event)}
-                                                                    className="p-4 border rounded-lg cursor-pointer hover:bg-muted/50 transition-all hover:shadow-sm"
-                                                                    style={{ borderLeftWidth: '4px', borderLeftColor: selectedCampaign.color }}
-                                                                >
-                                                                    <div className="flex items-center justify-between">
-                                                                        <div className="flex items-center gap-3">
-                                                                            <MapPin className="w-4 h-4 text-muted-foreground" />
-                                                                            <div>
-                                                                                <p className="font-medium">{event.location}</p>
-                                                                                <p className="text-sm text-muted-foreground">
-                                                                                    {formatDate(event.eventDate)}
-                                                                                    {event.startTime && ` • ${event.startTime}`}
-                                                                                </p>
-                                                                            </div>
-                                                                        </div>
-                                                                        <div className="text-right">
-                                                                            <p className="font-bold" style={{ color: selectedCampaign.color }}>
-                                                                                {formatCurrency(event.dayCost)}
-                                                                            </p>
-                                                                            <p className="text-sm text-muted-foreground">
-                                                                                {event.numPeople} pessoas
-                                                                            </p>
+                                                        ): (
+                                                                events.map(event => {
+                                                                // Icon selection
+                                                                const Icon = event.type === 'story' ? Camera : (event.type === 'other' ? MoreHorizontal : MapPin);
+
+                                                        return (
+                                                        <div
+                                                            key={event.id}
+                                                            onClick={() => handleEventClick(event)}
+                                                            className="p-4 border rounded-lg cursor-pointer hover:bg-muted/50 transition-all hover:shadow-sm"
+                                                            style={{ borderLeftWidth: '4px', borderLeftColor: selectedCampaign.color }}
+                                                        >
+                                                            <div className="flex items-center justify-between">
+                                                                <div className="flex items-center gap-3">
+                                                                    <div className={cn("p-2 rounded-full",
+                                                                        event.type === 'story' ? "bg-pink-100 text-pink-600" :
+                                                                            event.type === 'other' ? "bg-gray-100 text-gray-600" :
+                                                                                "bg-green-100 text-green-600"
+                                                                    )}>
+                                                                        <Icon className="w-4 h-4" />
+                                                                    </div>
+                                                                    <div>
+                                                                        <p className="font-medium">{event.location}</p>
+                                                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                                            <span>{formatDate(event.eventDate)}</span>
+                                                                            {event.startTime && <span>• {event.startTime}</span>}
+                                                                            {event.type === 'story' && <Badge variant="outline" className="text-[10px] h-5">Story</Badge>}
                                                                         </div>
                                                                     </div>
                                                                 </div>
-                                                            ))
+                                                                <div className="text-right">
+                                                                    <p className="font-bold" style={{ color: selectedCampaign.color }}>
+                                                                        {formatCurrency(event.dayCost || 0)}
+                                                                    </p>
+                                                                    <p className="text-sm text-muted-foreground">
+                                                                        {event.numPeople} {event.type === 'story' ? 'influencers' : 'pessoas'}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                            )})
                                                         )}
                                                     </div>
                                                 )}

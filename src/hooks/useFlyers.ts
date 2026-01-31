@@ -22,6 +22,9 @@ const mapDbToCampaign = (row: any): FlyerCampaign => ({
 const mapDbToEvent = (row: any): FlyerEvent => ({
     id: row.id,
     campaignId: row.campaign_id,
+    type: row.type || 'flyer',
+    paymentModel: row.payment_model || 'hourly',
+    fixedPaymentValue: row.fixed_payment_value ? parseFloat(row.fixed_payment_value) : undefined,
     eventDate: row.event_date,
     startTime: row.start_time,
     endTime: row.end_time,
@@ -42,6 +45,7 @@ const mapDbToAssignment = (row: any): FlyerAssignment => ({
     personName: row.person_name,
     role: row.role,
     contact: row.contact,
+    paymentAmount: row.payment_amount ? parseFloat(row.payment_amount) : undefined,
     createdAt: row.created_at,
 });
 
@@ -218,6 +222,9 @@ export function useCreateFlyerEvent() {
                 .from('flyer_events')
                 .insert({
                     campaign_id: event.campaignId,
+                    type: event.type,
+                    payment_model: event.paymentModel,
+                    fixed_payment_value: event.fixedPaymentValue,
                     event_date: event.eventDate,
                     start_time: event.startTime,
                     end_time: event.endTime,
@@ -248,6 +255,9 @@ export function useUpdateFlyerEvent() {
             const { data, error } = await supabase
                 .from('flyer_events')
                 .update({
+                    type: event.type,
+                    payment_model: event.paymentModel,
+                    fixed_payment_value: event.fixedPaymentValue,
                     event_date: event.eventDate,
                     start_time: event.startTime,
                     end_time: event.endTime,
@@ -326,6 +336,7 @@ export function useCreateFlyerAssignment() {
                     person_name: assignment.personName,
                     role: assignment.role,
                     contact: assignment.contact,
+                    payment_amount: assignment.paymentAmount,
                 })
                 .select()
                 .single();
