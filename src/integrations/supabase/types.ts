@@ -317,6 +317,195 @@ export type Database = {
                 }
                 Relationships: []
             }
+            financial_accounts: {
+                Row: {
+                    id: string
+                    company_id: string
+                    name: string
+                    description: string | null
+                    pix_key: string | null
+                    pix_key_type: string | null
+                    bank_name: string | null
+                    bank_code: string | null
+                    agency: string | null
+                    account_number: string | null
+                    account_type: string
+                    color: string
+                    icon: string
+                    initial_balance: number
+                    current_balance: number
+                    is_active: boolean
+                    is_default: boolean
+                    created_at: string
+                    updated_at: string
+                }
+                Insert: {
+                    id?: string
+                    company_id: string
+                    name: string
+                    description?: string | null
+                    pix_key?: string | null
+                    pix_key_type?: string | null
+                    bank_name?: string | null
+                    bank_code?: string | null
+                    agency?: string | null
+                    account_number?: string | null
+                    account_type?: string
+                    color?: string
+                    icon?: string
+                    initial_balance?: number
+                    current_balance?: number
+                    is_active?: boolean
+                    is_default?: boolean
+                    created_at?: string
+                    updated_at?: string
+                }
+                Update: {
+                    id?: string
+                    company_id?: string
+                    name?: string
+                    description?: string | null
+                    pix_key?: string | null
+                    pix_key_type?: string | null
+                    bank_name?: string | null
+                    bank_code?: string | null
+                    agency?: string | null
+                    account_number?: string | null
+                    account_type?: string
+                    color?: string
+                    icon?: string
+                    initial_balance?: number
+                    current_balance?: number
+                    is_active?: boolean
+                    is_default?: boolean
+                    created_at?: string
+                    updated_at?: string
+                }
+                Relationships: []
+            }
+            financial_transactions: {
+                Row: {
+                    id: string
+                    company_id: string
+                    type: Database["public"]["Enums"]["transaction_type"]
+                    status: Database["public"]["Enums"]["transaction_status"]
+                    amount: number
+                    source_account_id: string | null
+                    destination_account_id: string | null
+                    linked_transaction_id: string | null
+                    category_id: string | null
+                    category_name: string | null
+                    description: string
+                    notes: string | null
+                    beneficiary_name: string | null
+                    beneficiary_pix: string | null
+                    beneficiary_document: string | null
+                    payment_method: string
+                    reference_code: string | null
+                    receipt_url: string | null
+                    strategy_id: string | null
+                    transaction_date: string
+                    due_date: string | null
+                    completed_at: string | null
+                    created_at: string
+                    updated_at: string
+                }
+                Insert: {
+                    id?: string
+                    company_id: string
+                    type: Database["public"]["Enums"]["transaction_type"]
+                    status?: Database["public"]["Enums"]["transaction_status"]
+                    amount: number
+                    source_account_id?: string | null
+                    destination_account_id?: string | null
+                    linked_transaction_id?: string | null
+                    category_id?: string | null
+                    category_name?: string | null
+                    description: string
+                    notes?: string | null
+                    beneficiary_name?: string | null
+                    beneficiary_pix?: string | null
+                    beneficiary_document?: string | null
+                    payment_method?: string
+                    reference_code?: string | null
+                    receipt_url?: string | null
+                    strategy_id?: string | null
+                    transaction_date: string
+                    due_date?: string | null
+                    completed_at?: string | null
+                    created_at?: string
+                    updated_at?: string
+                }
+                Update: {
+                    id?: string
+                    company_id?: string
+                    type?: Database["public"]["Enums"]["transaction_type"]
+                    status?: Database["public"]["Enums"]["transaction_status"]
+                    amount?: number
+                    source_account_id?: string | null
+                    destination_account_id?: string | null
+                    linked_transaction_id?: string | null
+                    category_id?: string | null
+                    category_name?: string | null
+                    description?: string
+                    notes?: string | null
+                    beneficiary_name?: string | null
+                    beneficiary_pix?: string | null
+                    beneficiary_document?: string | null
+                    payment_method?: string
+                    reference_code?: string | null
+                    receipt_url?: string | null
+                    strategy_id?: string | null
+                    transaction_date?: string
+                    due_date?: string | null
+                    completed_at?: string | null
+                    created_at?: string
+                    updated_at?: string
+                }
+                Relationships: []
+            }
+            transaction_categories: {
+                Row: {
+                    id: string
+                    company_id: string | null
+                    name: string
+                    description: string | null
+                    type: string
+                    color: string
+                    icon: string
+                    is_system: boolean
+                    display_order: number
+                    created_at: string
+                    updated_at: string
+                }
+                Insert: {
+                    id?: string
+                    company_id?: string | null
+                    name: string
+                    description?: string | null
+                    type?: string
+                    color?: string
+                    icon?: string
+                    is_system?: boolean
+                    display_order?: number
+                    created_at?: string
+                    updated_at?: string
+                }
+                Update: {
+                    id?: string
+                    company_id?: string | null
+                    name?: string
+                    description?: string | null
+                    type?: string
+                    color?: string
+                    icon?: string
+                    is_system?: boolean
+                    display_order?: number
+                    created_at?: string
+                    updated_at?: string
+                }
+                Relationships: []
+            }
         }
         Views: {
             [_ in never]: never
@@ -332,6 +521,8 @@ export type Database = {
         }
         Enums: {
             app_role: "admin" | "user"
+            transaction_type: "inflow" | "outflow" | "transfer"
+            transaction_status: "pending" | "completed" | "cancelled"
         }
         CompositeTypes: {
             [_ in never]: never

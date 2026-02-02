@@ -943,10 +943,11 @@ export function MarketingPlanner() {
                             </div>
                         )}
 
-                        {viewMode === 'financial' && (
+                        {viewMode === 'financial' && selectedCompanyId && (
                             <FinancialView
                                 strategies={strategies || []}
                                 estimatedTotalBudget={totalBudget}
+                                companyId={selectedCompanyId}
                             />
                         )}
                         <div className="absolute -top-40 -right-40 w-96 h-96 bg-primary/20 rounded-full blur-[100px] pointer-events-none" />
