@@ -405,14 +405,14 @@ export function FinancialView({ strategies, estimatedTotalBudget, companyId }: F
                                 <div>
                                     <Label className="text-xs">Conta</Label>
                                     <Select
-                                        value={filters.accountId || ''}
-                                        onValueChange={(value) => setFilters(prev => ({ ...prev, accountId: value || undefined }))}
+                                        value={filters.accountId || '__all__'}
+                                        onValueChange={(value) => setFilters(prev => ({ ...prev, accountId: value === '__all__' ? undefined : value }))}
                                     >
                                         <SelectTrigger>
                                             <SelectValue placeholder="Todas" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="">Todas</SelectItem>
+                                            <SelectItem value="__all__">Todas</SelectItem>
                                             {accounts.map(acc => (
                                                 <SelectItem key={acc.id} value={acc.id}>
                                                     {acc.icon} {acc.name}
@@ -426,14 +426,14 @@ export function FinancialView({ strategies, estimatedTotalBudget, companyId }: F
                                 <div>
                                     <Label className="text-xs">Tipo</Label>
                                     <Select
-                                        value={filters.type || ''}
-                                        onValueChange={(value) => setFilters(prev => ({ ...prev, type: value as TransactionType || undefined }))}
+                                        value={filters.type || '__all__'}
+                                        onValueChange={(value) => setFilters(prev => ({ ...prev, type: value === '__all__' ? undefined : value as TransactionType }))}
                                     >
                                         <SelectTrigger>
                                             <SelectValue placeholder="Todos" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="">Todos</SelectItem>
+                                            <SelectItem value="__all__">Todos</SelectItem>
                                             <SelectItem value="inflow">Entradas</SelectItem>
                                             <SelectItem value="outflow">Saídas</SelectItem>
                                             <SelectItem value="transfer">Transferências</SelectItem>
@@ -445,14 +445,14 @@ export function FinancialView({ strategies, estimatedTotalBudget, companyId }: F
                                 <div>
                                     <Label className="text-xs">Status</Label>
                                     <Select
-                                        value={filters.status || ''}
-                                        onValueChange={(value) => setFilters(prev => ({ ...prev, status: value as TransactionStatus || undefined }))}
+                                        value={filters.status || '__all__'}
+                                        onValueChange={(value) => setFilters(prev => ({ ...prev, status: value === '__all__' ? undefined : value as TransactionStatus }))}
                                     >
                                         <SelectTrigger>
                                             <SelectValue placeholder="Todos" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="">Todos</SelectItem>
+                                            <SelectItem value="__all__">Todos</SelectItem>
                                             <SelectItem value="completed">Completado</SelectItem>
                                             <SelectItem value="pending">Pendente</SelectItem>
                                             <SelectItem value="cancelled">Cancelado</SelectItem>
@@ -464,14 +464,14 @@ export function FinancialView({ strategies, estimatedTotalBudget, companyId }: F
                                 <div>
                                     <Label className="text-xs">Categoria</Label>
                                     <Select
-                                        value={filters.categoryId || ''}
-                                        onValueChange={(value) => setFilters(prev => ({ ...prev, categoryId: value || undefined }))}
+                                        value={filters.categoryId || '__all__'}
+                                        onValueChange={(value) => setFilters(prev => ({ ...prev, categoryId: value === '__all__' ? undefined : value }))}
                                     >
                                         <SelectTrigger>
                                             <SelectValue placeholder="Todas" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="">Todas</SelectItem>
+                                            <SelectItem value="__all__">Todas</SelectItem>
                                             {categories.map(cat => (
                                                 <SelectItem key={cat.id} value={cat.id}>
                                                     {cat.icon} {cat.name}
@@ -866,14 +866,14 @@ export function FinancialView({ strategies, estimatedTotalBudget, companyId }: F
                         <div>
                             <Label>Vincular a Estratégia (Opcional)</Label>
                             <Select
-                                value={transactionForm.strategyId}
-                                onValueChange={(value) => setTransactionForm(prev => ({ ...prev, strategyId: value }))}
+                                value={transactionForm.strategyId || '__none__'}
+                                onValueChange={(value) => setTransactionForm(prev => ({ ...prev, strategyId: value === '__none__' ? '' : value }))}
                             >
                                 <SelectTrigger>
                                     <SelectValue placeholder="Nenhuma" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="">Nenhuma</SelectItem>
+                                    <SelectItem value="__none__">Nenhuma</SelectItem>
                                     {strategies.map(s => (
                                         <SelectItem key={s.id} value={s.id}>
                                             {s.name}
