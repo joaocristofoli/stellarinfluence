@@ -666,7 +666,7 @@ export function FinancialView({ strategies, estimatedTotalBudget, companyId }: F
 
             {/* Create Account Modal */}
             <Dialog open={modalState.open && modalState.type === 'account'} onOpenChange={(open) => !open && setModalState({ open: false, type: null })}>
-                <DialogContent>
+                <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>Nova Conta</DialogTitle>
                     </DialogHeader>
@@ -748,7 +748,7 @@ export function FinancialView({ strategies, estimatedTotalBudget, companyId }: F
                 open={modalState.open && (modalState.type === 'inflow' || modalState.type === 'outflow')}
                 onOpenChange={(open) => !open && setModalState({ open: false, type: null })}
             >
-                <DialogContent className="max-w-lg">
+                <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>
                             {modalState.type === 'inflow' ? '💰 Nova Entrada' : '💸 Nova Saída'}
@@ -911,7 +911,7 @@ export function FinancialView({ strategies, estimatedTotalBudget, companyId }: F
                 open={modalState.open && modalState.type === 'transfer'}
                 onOpenChange={(open) => !open && setModalState({ open: false, type: null })}
             >
-                <DialogContent>
+                <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>↔️ Transferência entre Contas</DialogTitle>
                     </DialogHeader>
