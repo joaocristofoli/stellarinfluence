@@ -95,6 +95,7 @@ export function FinancialView({ strategies, estimatedTotalBudget, companyId }: F
         transactionDate: new Date().toISOString().split('T')[0],
         notes: '',
         strategyId: '',
+        status: 'completed' as TransactionStatus,
     });
 
     const [transferForm, setTransferForm] = useState({
@@ -127,7 +128,7 @@ export function FinancialView({ strategies, estimatedTotalBudget, companyId }: F
         await createTransactionMutation.mutateAsync({
             companyId,
             type,
-            status: 'completed',
+            status: transactionForm.status,
             amount: transactionForm.amount,
             sourceAccountId: type === 'outflow' ? transactionForm.accountId : null,
             destinationAccountId: type === 'inflow' ? transactionForm.accountId : null,
@@ -772,6 +773,31 @@ export function FinancialView({ strategies, estimatedTotalBudget, companyId }: F
                                     value={transactionForm.transactionDate}
                                     onChange={(e) => setTransactionForm(prev => ({ ...prev, transactionDate: e.target.value }))}
                                 />
+                            </div>
+                        </div>
+
+                        {/* Status Toggle */}
+                        <div className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg">
+                            <Label className="text-sm">Status:</Label>
+                            <div className="flex gap-2">
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    variant={transactionForm.status === 'completed' ? 'default' : 'outline'}
+                                    className={transactionForm.status === 'completed' ? 'bg-green-600 hover:bg-green-700' : ''}
+                                    onClick={() => setTransactionForm(prev => ({ ...prev, status: 'completed' }))}
+                                >
+                                    ✅ Completado
+                                </Button>
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    variant={transactionForm.status === 'pending' ? 'default' : 'outline'}
+                                    className={transactionForm.status === 'pending' ? 'bg-amber-500 hover:bg-amber-600' : ''}
+                                    onClick={() => setTransactionForm(prev => ({ ...prev, status: 'pending' }))}
+                                >
+                                    ⏳ Pendente
+                                </Button>
                             </div>
                         </div>
 
