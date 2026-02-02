@@ -530,11 +530,11 @@ export function useFinancialSummary(companyId: string | null): {
     const pendingTransactions = transactions.filter(t => t.status === 'pending');
 
     const totalInflow = completedTransactions
-        .filter(t => t.type === 'inflow' || (t.type === 'transfer' && t.destinationAccountId))
+        .filter(t => t.type === 'inflow')
         .reduce((sum, t) => sum + t.amount, 0);
 
     const totalOutflow = completedTransactions
-        .filter(t => t.type === 'outflow' || (t.type === 'transfer' && t.sourceAccountId))
+        .filter(t => t.type === 'outflow')
         .reduce((sum, t) => sum + t.amount, 0);
 
     const pendingAmount = pendingTransactions.reduce((sum, t) => sum + t.amount, 0);
