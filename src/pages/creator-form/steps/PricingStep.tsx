@@ -3,6 +3,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { CreatorFormData } from "@/types/creatorForm";
 import { PRICING_FIELDS_BY_TYPE } from "@/types/profileTypes";
+import { CurrencyInput } from "@/components/ui/CurrencyInput";
+import { parseFormattedNumber } from "@/utils/formatNumbers";
 
 interface PricingStepProps {
     formData: CreatorFormData;
@@ -13,17 +15,16 @@ export function PricingStep({ formData, setFormData }: PricingStepProps) {
 
     const handleCurrencyChange = (
         field: string,
-        value: string
+        value: number
     ) => {
-        const rawValue = value.replace(/\./g, '').replace(/[^\d]/g, '');
-        if (!rawValue) {
+        if (!value) {
             setFormData({
                 ...formData,
                 admin_metadata: { ...formData.admin_metadata, [field]: '' }
             });
             return;
         }
-        const formatted = parseInt(rawValue).toLocaleString('pt-BR');
+        const formatted = value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         setFormData({
             ...formData,
             admin_metadata: { ...formData.admin_metadata, [field]: formatted }
@@ -163,19 +164,16 @@ export function PricingStep({ formData, setFormData }: PricingStepProps) {
     );
 }
 
-function PriceInput({ label, value, onChange }: { label: string, value: string, onChange: (v: string) => void }) {
+function PriceInput({ label, value, onChange }: { label: string, value: string, onChange: (v: number) => void }) {
     return (
         <div className="space-y-1">
             <Label className="text-xs">{label}</Label>
-            <div className="relative">
-                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">R$</span>
-                <Input
-                    value={value}
-                    onChange={(e) => onChange(e.target.value)}
-                    placeholder="0,00"
-                    className="bg-black/20 pl-8 h-9 text-sm"
-                />
-            </div>
+            <CurrencyInput
+                value={parseFormattedNumber(value)}
+                onChange={onChange}
+                placeholder="R$ 0,00"
+                className="h-9 text-sm bg-black/20"
+            />
         </div>
     );
 }

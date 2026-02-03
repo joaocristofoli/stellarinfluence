@@ -3,6 +3,8 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { CreatorFormData } from "@/types/creatorForm";
 import { motion } from "framer-motion";
+import { FormattedNumberInput } from "@/components/ui/FormattedNumberInput";
+import { parseFormattedNumber } from "@/utils/formatNumbers";
 
 interface SocialStepProps {
     formData: CreatorFormData;
@@ -96,9 +98,9 @@ export function SocialStep({ formData, setFormData, platformSettings }: SocialSt
 
                                     <div className="space-y-2">
                                         <Label className="text-xs uppercase tracking-wider text-muted-foreground">{social.metricLabel}</Label>
-                                        <Input
-                                            value={(formData as any)[social.metric] || ''}
-                                            onChange={e => handleNumberChange(social.metric as keyof CreatorFormData, e.target.value)}
+                                        <FormattedNumberInput
+                                            value={parseFormattedNumber((formData as any)[social.metric] || '0')}
+                                            onChange={(val) => setFormData({ ...formData, [social.metric]: val > 0 ? val.toLocaleString('pt-BR') : '' })}
                                             placeholder="0"
                                         />
                                     </div>
@@ -125,9 +127,9 @@ export function SocialStep({ formData, setFormData, platformSettings }: SocialSt
                 </div>
                 <div className="space-y-2">
                     <Label>Visualizações de Stories (Média)</Label>
-                    <Input
-                        value={formData.stories_views || ''}
-                        onChange={e => handleNumberChange('stories_views', e.target.value)}
+                    <FormattedNumberInput
+                        value={parseFormattedNumber(formData.stories_views || '0')}
+                        onChange={(val) => setFormData({ ...formData, stories_views: val > 0 ? val.toLocaleString('pt-BR') : '' })}
                         placeholder="Ex: 5.000"
                     />
                 </div>

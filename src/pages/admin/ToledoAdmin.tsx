@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { FormattedNumberInput } from "@/components/ui/FormattedNumberInput";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -339,10 +340,9 @@ export default function ToledoAdmin() {
 
                                         <div>
                                             <Label>Alcance</Label>
-                                            <Input
-                                                type="number"
+                                            <FormattedNumberInput
                                                 value={formData.alcance}
-                                                onChange={(e) => setFormData({ ...formData, alcance: parseInt(e.target.value) || 0 })}
+                                                onChange={(value) => setFormData({ ...formData, alcance: value })}
                                             />
                                         </div>
 
