@@ -609,14 +609,11 @@ export function EventDetailsDialog({
                                     onChange={e => setNewPersonContact(e.target.value)}
                                     className="col-span-1"
                                 />
-                                <div className="col-span-1 relative">
-                                    <DollarSign className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
-                                    <Input
-                                        type="number"
+                                <div className="col-span-1">
+                                    <CurrencyInput
                                         placeholder="Override (R$)"
-                                        value={newPersonPayment || ''}
-                                        onChange={e => setNewPersonPayment(e.target.value ? parseFloat(e.target.value) : undefined)}
-                                        className="pl-7"
+                                        value={newPersonPayment || 0}
+                                        onChange={(value) => setNewPersonPayment(value || undefined)}
                                     />
                                 </div>
                             </div>

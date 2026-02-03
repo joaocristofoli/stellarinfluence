@@ -4,6 +4,7 @@ import { StrategyDeliverable } from "@/types/marketing";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Trash2, Smartphone, Video, Image as ImageIcon, Film, Youtube, Music } from "lucide-react";
 import { formatCurrency } from "@/utils/formatters";
@@ -17,14 +18,6 @@ interface CreatorCartItemProps {
 }
 
 export function CreatorCartItem({ creator, deliverable, onUpdate, onRemove }: CreatorCartItemProps) {
-    // Local state for price input to prevent cursor jumping
-    const [priceInput, setPriceInput] = useState(deliverable.price.toString());
-
-    // Update local state when prop changes externally (e.g. format switch auto-price)
-    useEffect(() => {
-        setPriceInput(deliverable.price.toString());
-    }, [deliverable.price]);
-
     const handleFormatChange = (format: string) => {
         // Auto-price logic based on Admin Metadata
         let newPrice = 0;
@@ -47,12 +40,8 @@ export function CreatorCartItem({ creator, deliverable, onUpdate, onRemove }: Cr
         });
     };
 
-    const handlePriceChange = (val: string) => {
-        setPriceInput(val);
-        const num = parseFloat(val);
-        if (!isNaN(num)) {
-            onUpdate({ ...deliverable, price: num });
-        }
+    const handlePriceChange = (value: number) => {
+        onUpdate({ ...deliverable, price: value });
     };
 
     const getFormatIcon = (fmt: string) => {
@@ -129,13 +118,11 @@ export function CreatorCartItem({ creator, deliverable, onUpdate, onRemove }: Cr
                     />
                 </div>
 
-                <div className="relative w-24">
-                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">R$</span>
-                    <Input
-                        type="number"
-                        value={priceInput}
-                        onChange={(e) => handlePriceChange(e.target.value)}
-                        className="h-8 pl-7 text-xs bg-background border-input text-right font-mono"
+                <div className="w-28">
+                    <CurrencyInput
+                        value={deliverable.price}
+                        onChange={handlePriceChange}
+                        className="h-8 text-xs"
                     />
                 </div>
 

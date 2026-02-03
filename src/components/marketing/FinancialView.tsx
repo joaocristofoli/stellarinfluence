@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { CurrencyInput } from '@/components/ui/CurrencyInput';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -176,6 +177,7 @@ export function FinancialView({ strategies, estimatedTotalBudget, companyId }: F
             transactionDate: new Date().toISOString().split('T')[0],
             notes: '',
             strategyId: '',
+            status: 'completed',
         });
     };
 
@@ -525,26 +527,24 @@ export function FinancialView({ strategies, estimatedTotalBudget, companyId }: F
                                 {/* Amount Range */}
                                 <div>
                                     <Label className="text-xs">Valor Mínimo</Label>
-                                    <Input
-                                        type="number"
-                                        placeholder="0"
-                                        value={filters.amountMin || ''}
-                                        onChange={(e) => setFilters(prev => ({
+                                    <CurrencyInput
+                                        placeholder="R$ 0,00"
+                                        value={filters.amountMin || 0}
+                                        onChange={(value) => setFilters(prev => ({
                                             ...prev,
-                                            amountMin: e.target.value ? parseFloat(e.target.value) : undefined
+                                            amountMin: value || undefined
                                         }))}
                                     />
                                 </div>
 
                                 <div>
                                     <Label className="text-xs">Valor Máximo</Label>
-                                    <Input
-                                        type="number"
-                                        placeholder="∞"
-                                        value={filters.amountMax || ''}
-                                        onChange={(e) => setFilters(prev => ({
+                                    <CurrencyInput
+                                        placeholder="R$ 0,00"
+                                        value={filters.amountMax || 0}
+                                        onChange={(value) => setFilters(prev => ({
                                             ...prev,
-                                            amountMax: e.target.value ? parseFloat(e.target.value) : undefined
+                                            amountMax: value || undefined
                                         }))}
                                     />
                                 </div>
@@ -698,11 +698,9 @@ export function FinancialView({ strategies, estimatedTotalBudget, companyId }: F
                         </div>
                         <div>
                             <Label>Saldo Inicial</Label>
-                            <Input
-                                type="number"
-                                placeholder="0.00"
+                            <CurrencyInput
                                 value={accountForm.initialBalance}
-                                onChange={(e) => setAccountForm(prev => ({ ...prev, initialBalance: parseFloat(e.target.value) || 0 }))}
+                                onChange={(value) => setAccountForm(prev => ({ ...prev, initialBalance: value }))}
                             />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
@@ -759,11 +757,9 @@ export function FinancialView({ strategies, estimatedTotalBudget, companyId }: F
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <Label>Valor *</Label>
-                                <Input
-                                    type="number"
-                                    placeholder="0.00"
-                                    value={transactionForm.amount || ''}
-                                    onChange={(e) => setTransactionForm(prev => ({ ...prev, amount: parseFloat(e.target.value) || 0 }))}
+                                <CurrencyInput
+                                    value={transactionForm.amount}
+                                    onChange={(value) => setTransactionForm(prev => ({ ...prev, amount: value }))}
                                 />
                             </div>
                             <div>
@@ -944,11 +940,9 @@ export function FinancialView({ strategies, estimatedTotalBudget, companyId }: F
                     <div className="space-y-4">
                         <div>
                             <Label>Valor *</Label>
-                            <Input
-                                type="number"
-                                placeholder="0.00"
-                                value={transferForm.amount || ''}
-                                onChange={(e) => setTransferForm(prev => ({ ...prev, amount: parseFloat(e.target.value) || 0 }))}
+                            <CurrencyInput
+                                value={transferForm.amount}
+                                onChange={(value) => setTransferForm(prev => ({ ...prev, amount: value }))}
                             />
                         </div>
 
