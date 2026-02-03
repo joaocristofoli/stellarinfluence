@@ -53,6 +53,7 @@ export function FinancialView({ strategies, estimatedTotalBudget, companyId }: F
         open: boolean;
         type: 'inflow' | 'outflow' | 'transfer' | 'account' | null;
     }>({ open: false, type: null });
+    const [sortBy, setSortBy] = useState<'date_desc' | 'date_asc' | 'created_desc' | 'created_asc'>('date_desc');
 
     // Hooks
     const { data: accounts = [], isLoading: loadingAccounts } = useFinancialAccounts(companyId);
@@ -74,6 +75,23 @@ export function FinancialView({ strategies, estimatedTotalBudget, companyId }: F
         categories.filter(c => c.type === 'outflow' || c.type === 'both'),
         [categories]
     );
+
+    // Sorted transactions
+    const sortedTransactions = useMemo(() => {
+        const sorted = [...transactions];
+        switch (sortBy) {
+            case 'date_desc':
+                return sorted.sort((a, b) => new Date(b.transactionDate).getTime() - new Date(a.transactionDate).getTime());
+            case 'date_asc':
+                return sorted.sort((a, b) => new Date(a.transactionDate).getTime() - new Date(b.transactionDate).getTime());
+            case 'created_desc':
+                return sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+            case 'created_asc':
+                return sorted.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+            default:
+                return sorted;
+        }
+    }, [transactions, sortBy]);
 
     // Form states
     const [accountForm, setAccountForm] = useState({
@@ -556,6 +574,26 @@ export function FinancialView({ strategies, estimatedTotalBudget, companyId }: F
 
             {/* === TRANSACTIONS LIST === */}
             <Card className="overflow-hidden">
+                {/* Sort Controls */}
+                <div className="flex items-center justify-between p-4 border-b bg-muted/30">
+                    <span className="text-sm font-medium text-muted-foreground">
+                        {sortedTransactions.length} transação(ões)
+                    </span>
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">Ordenar por:</span>
+                        <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+                            <SelectTrigger className="w-[180px] h-8 text-xs">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="date_desc">📅 Data (mais recente)</SelectItem>
+                                <SelectItem value="date_asc">📅 Data (mais antiga)</SelectItem>
+                                <SelectItem value="created_desc">🕐 Cadastro (recente)</SelectItem>
+                                <SelectItem value="created_asc">🕐 Cadastro (antigo)</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
                 <Table>
                     <TableHeader>
                         <TableRow>
@@ -575,14 +613,14 @@ export function FinancialView({ strategies, estimatedTotalBudget, companyId }: F
                                     <RefreshCw className="w-5 h-5 animate-spin mx-auto" />
                                 </TableCell>
                             </TableRow>
-                        ) : transactions.length === 0 ? (
+                        ) : sortedTransactions.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                                     {hasActiveFilters ? 'Nenhuma transação encontrada com os filtros aplicados.' : 'Nenhuma transação registrada.'}
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            transactions.map((t) => {
+                            sortedTransactions.map((t) => {
                                 const sourceAccount = accounts.find(a => a.id === t.sourceAccountId);
                                 const destAccount = accounts.find(a => a.id === t.destinationAccountId);
                                 const category = categories.find(c => c.id === t.categoryId);
